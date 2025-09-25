@@ -26,9 +26,35 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+// TypeScript interfaces
+interface ProductVariant {
+  id: string;
+  name: string;
+  price_npr?: number;
+  price_usd?: number;
+  stock_quantity?: number;
+  stock_status?: string;
+  estimated_price_npr?: number;
+}
+
+interface ProductData {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  brand: string;
+  category: string;
+  images?: string[];
+  variants?: ProductVariant[];
+  featured?: boolean;
+  active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export default function ProductDetail() {
   const params = useParams();
-  const [product, setProduct] = useState(null);
+  const [product, setProduct] = useState<ProductData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 

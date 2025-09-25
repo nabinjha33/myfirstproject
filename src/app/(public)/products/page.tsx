@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Product } from "@/lib/entities";
@@ -29,11 +29,38 @@ const brands = ["All", "FastDrill", "Spider", "Gorkha", "General Imports"];
 const categories = ["All", "Tools", "Equipment", "Hardware", "Industrial"];
 const stockStatuses = ["All", "In Stock", "Low Stock", "Pre-Order"];
 
-export default function Products() {
+// TypeScript interfaces
+interface ProductVariant {
+  id: string;
+  name: string;
+  price_npr?: number;
+  price_usd?: number;
+  stock_quantity?: number;
+  stock_status?: string;
+  estimated_price_npr?: number;
+}
+
+interface ProductData {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  brand: string;
+  category: string;
+  images?: string[];
+  variants?: ProductVariant[];
+  featured?: boolean;
+  active?: boolean;
+  created_at?: string;
+  created_date?: string;
+  updated_at?: string;
+}
+
+function ProductsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [products, setProducts] = useState<ProductData[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<ProductData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("All");
@@ -109,7 +136,7 @@ export default function Products() {
     setIsLoading(false);
   };
 
-  const ProductCard = ({ product, isListView = false }: { product: any, isListView?: boolean }) => (
+  const ProductCard = ({ product, isListView = false }: { product: ProductData, isListView?: boolean }) => (
     <Link
       href={`/products/${product.slug}`}
       className="group block"
@@ -340,5 +367,13 @@ export default function Products() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function Products() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center min-h-screen">Loading products...</div>}>
+      <ProductsContent />
+    </Suspense>
   );
 }
