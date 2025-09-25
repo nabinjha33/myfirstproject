@@ -4,10 +4,16 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase environment variables:', {
+    url: supabaseUrl ? 'Set' : 'Missing',
+    key: supabaseAnonKey ? 'Set' : 'Missing'
+  });
   throw new Error('Missing Supabase environment variables')
 }
 
+console.log('Creating Supabase client with URL:', supabaseUrl.substring(0, 30) + '...');
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+console.log('Supabase client created successfully:', !!supabase);
 
 // Database Types
 export interface Database {

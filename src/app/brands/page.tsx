@@ -58,7 +58,6 @@ interface BrandData {
   established_year: string;
   specialty: string;
   active: boolean;
-  sort_order: number;
 }
 
 interface ProductData {
@@ -98,11 +97,58 @@ export default function Brands() {
   const loadBrandData = async () => {
     setIsLoading(true);
     try {
-      // Load all products and brands
-      const [productData, brandData] = await Promise.all([
-        Product.list('name'),
-        Brand.list('sort_order')
-      ]);
+      console.log('Loading brand data...');
+      console.log('Brand entity type:', typeof Brand);
+      console.log('Brand entity methods:', Object.getOwnPropertyNames(Brand));
+      console.log('Product entity type:', typeof Product);
+      
+      // Test direct import first
+      console.log('Testing direct brand service import...');
+      const { brandService, productService } = await import('@/lib/database');
+      console.log('Brand service:', typeof brandService);
+      console.log('Product service:', typeof productService);
+      
+      // Test direct service calls
+      try {
+        console.log('Calling brandService.list() directly...');
+        const directBrands = await brandService.list();
+        console.log('Direct brand service result:', directBrands?.length || 0);
+        
+        console.log('Calling productService.list() directly...');
+        const directProducts = await productService.list();
+        console.log('Direct product service result:', directProducts?.length || 0);
+      } catch (directError) {
+        console.error('Direct service error:', directError);
+      }
+      
+      // Now test entity methods with try-catch
+      console.log('Testing Brand.list() method...');
+      let brandData;
+      try {
+        brandData = await Brand.list('name');
+        console.log('Brands loaded via entity:', brandData?.length || 0);
+      } catch (brandError) {
+        console.error('Brand.list() failed:', brandError);
+        console.error('Brand error type:', typeof brandError);
+        console.error('Brand error constructor:', brandError?.constructor?.name);
+        console.error('Brand error message:', brandError?.message);
+        console.error('Brand error stack:', brandError?.stack);
+        throw brandError;
+      }
+      
+      console.log('Testing Product.list() method...');
+      let productData;
+      try {
+        productData = await Product.list('name');
+        console.log('Products loaded via entity:', productData?.length || 0);
+      } catch (productError) {
+        console.error('Product.list() failed:', productError);
+        console.error('Product error type:', typeof productError);
+        console.error('Product error constructor:', productError?.constructor?.name);
+        console.error('Product error message:', productError?.message);
+        console.error('Product error stack:', productError?.stack);
+        throw productError;
+      }
 
       setProducts(productData);
       setBrands(brandData.filter(brand => brand.active));
@@ -118,8 +164,16 @@ export default function Brands() {
         };
       });
       setBrandStats(stats);
-    } catch (error) {
+      console.log('Brand data loaded successfully');
+    } catch (error: any) {
       console.error('Failed to load brand data:', error);
+      console.error('Error details:', {
+        message: error?.message || 'Unknown error',
+        code: error?.code || 'No code',
+        details: error?.details || 'No details',
+        hint: error?.hint || 'No hint',
+        stack: error?.stack || 'No stack trace'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -153,8 +207,8 @@ export default function Brands() {
           return bProducts - aProducts;
         case 'established':
           return (b.established_year || '0').localeCompare(a.established_year || '0');
-        case 'sort_order':
-          return a.sort_order - b.sort_order;
+        case 'featured':
+          return a.name.localeCompare(b.name);
         default:
           return 0;
       }
@@ -315,7 +369,7 @@ export default function Brands() {
                   <SelectItem value="name">Name</SelectItem>
                   <SelectItem value="products">Products</SelectItem>
                   <SelectItem value="established">Established</SelectItem>
-                  <SelectItem value="sort_order">Featured</SelectItem>
+                  <SelectItem value="featured">Featured</SelectItem>
                 </SelectContent>
               </Select>
             </div>

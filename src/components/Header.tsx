@@ -1,127 +1,134 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from '@/components/ui/navigation-menu';
-import { Package, ShoppingCart, User, Menu } from 'lucide-react';
+import { Package, Sun, Moon, Globe, Menu, X } from 'lucide-react';
+import { useAppContext } from '@/contexts/AppContext';
+
+const publicRoutes = [
+  { title: "Home", url: "/" },
+  { title: "Brands", url: "/brands" },
+  { title: "Products", url: "/products" }
+];
 
 export default function Header() {
+  const pathname = usePathname();
+  const { isDark, toggleTheme, language, toggleLanguage, getText } = useAppContext();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
-        {/* Logo */}
-        <div className="mr-4 flex">
-          <Link href="/" className="mr-6 flex items-center space-x-2">
-            <Package className="h-6 w-6" />
-            <span className="hidden font-bold sm:inline-block">
-              Jeen Mata Impex
-            </span>
+    <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-red-100 dark:border-gray-700 sticky top-0 z-50 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <Link href="/" className="flex items-center space-x-2">
+            <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-red-700 rounded-xl flex items-center justify-center">
+              <Package className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white transition-colors">
+                Jeen Mata Impex
+              </h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors">
+                {getText('Premium Import Solutions', 'प्रिमियम आयात समाधान')}
+              </p>
+            </div>
           </Link>
-        </div>
 
-        {/* Navigation */}
-        <NavigationMenu className="hidden md:flex">
-          <NavigationMenuList>
-            <NavigationMenuItem>
-              <NavigationMenuLink asChild>
-                <Link
-                  href="/"
-                  className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50"
-                >
-                  Home
-                </Link>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
-              <NavigationMenuLink asChild>
-                <Link
-                  href="/products"
-                  className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50"
-                >
-                  Products
-                </Link>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
-              <NavigationMenuTrigger>Dealers</NavigationMenuTrigger>
-              <NavigationMenuContent>
-                <ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
-                  <li className="row-span-3">
-                    <NavigationMenuLink asChild>
-                      <a
-                        className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md"
-                        href="/dealer/login"
-                      >
-                        <User className="h-6 w-6" />
-                        <div className="mb-2 mt-4 text-lg font-medium">
-                          Dealer Portal
-                        </div>
-                        <p className="text-sm leading-tight text-muted-foreground">
-                          Access your dealer account and manage orders
-                        </p>
-                      </a>
-                    </NavigationMenuLink>
-                  </li>
-                  <li>
-                    <NavigationMenuLink asChild>
-                      <a
-                        className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                        href="/dealer/login"
-                      >
-                        <div className="text-sm font-medium leading-none">Login</div>
-                        <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                          Sign in to your dealer account
-                        </p>
-                      </a>
-                    </NavigationMenuLink>
-                  </li>
-                  <li>
-                    <NavigationMenuLink asChild>
-                      <a
-                        className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                        href="/dealer/catalog"
-                      >
-                        <div className="text-sm font-medium leading-none">Catalog</div>
-                        <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                          Browse our product catalog
-                        </p>
-                      </a>
-                    </NavigationMenuLink>
-                  </li>
-                </ul>
-              </NavigationMenuContent>
-            </NavigationMenuItem>
-          </NavigationMenuList>
-        </NavigationMenu>
-
-        {/* Right side actions */}
-        <div className="flex flex-1 items-center justify-end space-x-2">
-          <nav className="flex items-center space-x-2">
-            <Link href="/dealer/login">
-              <Button variant="ghost" size="sm" className="hidden md:flex">
-                <User className="mr-2 h-4 w-4" />
-                Dealer Login
-              </Button>
-            </Link>
-            <Link href="/admin">
-              <Button variant="ghost" size="sm" className="hidden md:flex">
-                Admin
-              </Button>
-            </Link>
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex space-x-8">
+            {publicRoutes.map((route) => (
+              <Link
+                key={route.title}
+                href={route.url}
+                className={`text-sm font-medium transition-colors hover:text-red-600 dark:hover:text-red-400 ${
+                  pathname === route.url ? 
+                    'text-red-600 dark:text-red-400' : 
+                    'text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {getText(
+                  route.title,
+                  route.title === 'Home' ? 'घर' : 
+                  route.title === 'Brands' ? 'ब्रान्डहरू' : 
+                  route.title === 'Products' ? 'उत्पादनहरू' : 
+                  route.title
+                )}
+              </Link>
+            ))}
           </nav>
 
-          {/* Mobile menu button */}
-          <Button variant="ghost" size="sm" className="md:hidden">
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle menu</span>
-          </Button>
+          {/* Right side actions */}
+          <div className="flex items-center space-x-4">
+            {/* Theme Toggle */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={toggleTheme}
+              className="text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+
+            {/* Language Toggle */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={toggleLanguage}
+              className="text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            >
+              <Globe className="w-4 h-4 mr-2" />
+              {language.toUpperCase()}
+            </Button>
+
+            {/* Dealer Login */}
+            <Link href="/dealer/login">
+              <Button className="bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-600 transition-colors">
+                {getText('Dealer Login', 'डीलर लगइन')}
+              </Button>
+            </Link>
+
+            {/* Mobile menu button */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="md:hidden"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
+
+        {/* Mobile Navigation */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-red-100 dark:border-gray-700 py-4">
+            <nav className="flex flex-col space-y-4">
+              {publicRoutes.map((route) => (
+                <Link
+                  key={route.title}
+                  href={route.url}
+                  className={`text-sm font-medium transition-colors hover:text-red-600 dark:hover:text-red-400 ${
+                    pathname === route.url ? 
+                      'text-red-600 dark:text-red-400' : 
+                      'text-gray-700 dark:text-gray-300'
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {getText(
+                    route.title,
+                    route.title === 'Home' ? 'घर' : 
+                    route.title === 'Brands' ? 'ब्रान्डहरू' : 
+                    route.title === 'Products' ? 'उत्पादनहरू' : 
+                    route.title
+                  )}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        )}
       </div>
     </header>
   );

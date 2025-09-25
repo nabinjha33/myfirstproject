@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import { AppProvider } from "@/contexts/AppContext";
 
 const inter = Inter({
@@ -27,6 +28,7 @@ export default function RootLayout({
           <main className="min-h-screen">
             {children}
           </main>
+          <Footer />
         </AppProvider>
       </body>
     </html>

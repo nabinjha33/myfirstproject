@@ -19,9 +19,27 @@ class BaseEntity {
 }
 
 // Product entity
-export class Product extends BaseEntity {
+class Product extends BaseEntity {
   static async list(sortBy?: string, filters?: any): Promise<any[]> {
     return productService.list(sortBy, filters);
+  }
+
+  static async filter(filters?: any, sortBy?: string, limit?: number): Promise<any[]> {
+    // Handle featured products specifically
+    if (filters?.featured === true) {
+      const products = await productService.getFeatured();
+      if (limit) {
+        return products.slice(0, limit);
+      }
+      return products;
+    }
+    
+    // For other filters, use the list method
+    let result = await productService.list(sortBy, filters);
+    if (limit) {
+      result = result.slice(0, limit);
+    }
+    return result;
   }
 
   static async findById(id: string): Promise<any | null> {
@@ -66,7 +84,7 @@ export class Product extends BaseEntity {
 }
 
 // Order entity
-export class Order extends BaseEntity {
+class Order extends BaseEntity {
   static async list(sortBy?: string, filters?: any): Promise<any[]> {
     return orderService.list(sortBy, filters);
   }
@@ -109,7 +127,7 @@ export class Order extends BaseEntity {
 }
 
 // Inquiry entity (now part of orders with inquiry_type = 'inquiry')
-export class Inquiry extends BaseEntity {
+class Inquiry extends BaseEntity {
   static async list(sortBy?: string, filters?: any): Promise<any[]> {
     return orderService.list(sortBy, { ...filters, inquiry_type: 'inquiry' });
   }
@@ -147,7 +165,7 @@ export class Inquiry extends BaseEntity {
 }
 
 // Shipment entity
-export class Shipment extends BaseEntity {
+class Shipment extends BaseEntity {
   static async list(sortBy?: string, filters?: any): Promise<any[]> {
     return shipmentService.list(sortBy, filters);
   }
@@ -190,7 +208,7 @@ export class Shipment extends BaseEntity {
 }
 
 // User entity
-export class User extends BaseEntity {
+class User extends BaseEntity {
   static async list(sortBy?: string, filters?: any): Promise<any[]> {
     return userService.list(sortBy, filters);
   }
@@ -237,9 +255,27 @@ export class User extends BaseEntity {
 }
 
 // Brand entity
-export class Brand extends BaseEntity {
+class Brand extends BaseEntity {
   static async list(sortBy?: string, filters?: any): Promise<any[]> {
     return brandService.list(sortBy, filters);
+  }
+
+  static async filter(filters?: any, sortBy?: string, limit?: number): Promise<any[]> {
+    // Handle active brands specifically
+    if (filters?.active === true) {
+      const brands = await brandService.getActive();
+      if (limit) {
+        return brands.slice(0, limit);
+      }
+      return brands;
+    }
+    
+    // For other filters, use the list method
+    let result = await brandService.list(sortBy, filters);
+    if (limit) {
+      result = result.slice(0, limit);
+    }
+    return result;
   }
 
   static async findById(id: string): Promise<any | null> {
@@ -276,7 +312,7 @@ export class Brand extends BaseEntity {
 }
 
 // Category entity
-export class Category extends BaseEntity {
+class Category extends BaseEntity {
   static async list(sortBy?: string, filters?: any): Promise<any[]> {
     return categoryService.list(sortBy, filters);
   }
@@ -315,7 +351,7 @@ export class Category extends BaseEntity {
 }
 
 // DealerApplication entity
-export class DealerApplication extends BaseEntity {
+class DealerApplication extends BaseEntity {
   static async list(sortBy?: string, filters?: any): Promise<any[]> {
     return dealerApplicationService.list(sortBy, filters);
   }
@@ -363,6 +399,11 @@ export class DealerApplication extends BaseEntity {
 
 // Export all entities
 export { BaseEntity };
+
+// Named exports for direct import
+export { Product, Order, Inquiry, Shipment, User, Brand, Category, DealerApplication };
+
+// Default export for backward compatibility
 export default {
   Product,
   Order,

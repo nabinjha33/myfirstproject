@@ -20,27 +20,52 @@ export class DatabaseService {
   }
 
   async list(sortBy?: string, filters?: any) {
-    let query = supabase.from(this.tableName).select('*')
+    try {
+      console.log(`Starting ${this.tableName}.list() with sortBy:`, sortBy, 'filters:', filters);
+      console.log('Supabase client:', supabase);
+      
+      let query = supabase.from(this.tableName).select('*')
+      console.log('Initial query created for table:', this.tableName);
 
-    // Apply filters
-    if (filters) {
-      Object.keys(filters).forEach(key => {
-        if (filters[key] !== undefined && filters[key] !== null) {
-          query = query.eq(key, filters[key])
+      // Apply filters
+      if (filters) {
+        Object.keys(filters).forEach(key => {
+          if (filters[key] !== undefined && filters[key] !== null) {
+            query = query.eq(key, filters[key])
+            console.log(`Applied filter: ${key} = ${filters[key]}`);
+          }
+        })
+      }
+
+      // Apply sorting
+      if (sortBy) {
+        const isDescending = sortBy.startsWith('-')
+        const field = isDescending ? sortBy.substring(1) : sortBy
+        query = query.order(field, { ascending: !isDescending })
+        console.log(`Applied sorting: ${field} ${isDescending ? 'DESC' : 'ASC'}`);
+      }
+
+      console.log('Executing query...');
+      const { data, error } = await query
+      console.log('Query result:', { data: data?.length || 0, error });
+      
+      if (error) {
+        console.error(`Database error in ${this.tableName}.list():`, error)
+        
+        // If it's an RLS policy error, provide helpful guidance
+        if (error.message?.includes('infinite recursion detected in policy')) {
+          console.error('RLS Policy Error: Please run the fix-policies.sql or disable-rls-dev.sql script in your Supabase SQL editor')
+          throw new Error(`RLS Policy Error in ${this.tableName}: ${error.message}. Please check the database policies.`)
         }
-      })
+        
+        throw error
+      }
+      console.log(`Successfully retrieved ${data?.length || 0} records from ${this.tableName}`);
+      return data || []
+    } catch (error) {
+      console.error(`Error in ${this.tableName}.list():`, error)
+      throw error
     }
-
-    // Apply sorting
-    if (sortBy) {
-      const isDescending = sortBy.startsWith('-')
-      const field = isDescending ? sortBy.substring(1) : sortBy
-      query = query.order(field, { ascending: !isDescending })
-    }
-
-    const { data, error } = await query
-    if (error) throw error
-    return data || []
   }
 
   async findById(id: string) {
@@ -181,14 +206,22 @@ export class BrandService extends DatabaseService {
   }
 
   async getActive(): Promise<Brand[]> {
-    const { data, error } = await supabase
-      .from('brands')
-      .select('*')
-      .eq('active', true)
-      .order('name')
+    try {
+      const { data, error } = await supabase
+        .from('brands')
+        .select('*')
+        .eq('active', true)
+        .order('name')
 
-    if (error) throw error
-    return data || []
+      if (error) {
+        console.error('Database error in brands.getActive():', error)
+        throw error
+      }
+      return data || []
+    } catch (error) {
+      console.error('Error in brands.getActive():', error)
+      throw error
+    }
   }
 }
 
