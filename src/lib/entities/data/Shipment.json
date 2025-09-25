@@ -1,0 +1,55 @@
+{
+    "name": "Shipment",
+    "type": "object",
+    "properties": {
+      "tracking_number": {
+        "type": "string",
+        "description": "Shipment tracking number"
+      },
+      "origin_country": {
+        "type": "string",
+        "enum": [
+          "China",
+          "India"
+        ],
+        "description": "Origin country"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "Booked",
+          "In Transit",
+          "At Port",
+          "Customs",
+          "In Warehouse"
+        ],
+        "description": "Current shipment status"
+      },
+      "eta_date": {
+        "type": "string",
+        "format": "date",
+        "description": "Estimated time of arrival"
+      },
+      "product_names": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Names of products in this shipment"
+      },
+      "port_name": {
+        "type": "string",
+        "description": "Port name for customs"
+      },
+      "last_updated": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "tracking_number",
+      "origin_country",
+      "status",
+      "eta_date"
+    ]
+  }

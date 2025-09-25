@@ -1,0 +1,26 @@
+{
+    "name": "SiteSettings",
+    "type": "object",
+    "properties": {
+      "company_name": {
+        "type": "string",
+        "default": "Jeen Mata Impex"
+      },
+      "tagline": {
+        "type": "string",
+        "default": "Premium Import Solutions"
+      },
+      "contact_email": {
+        "type": "string"
+      },
+      "contact_phone": {
+        "type": "string"
+      },
+      "contact_address": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "company_name"
+    ]
+  }

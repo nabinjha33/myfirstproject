@@ -1,0 +1,26 @@
+{
+    "name": "PageVisit",
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "The URL path of the page visited"
+      },
+      "page": {
+        "type": "string",
+        "description": "The name of the page component"
+      },
+      "user_email": {
+        "type": "string",
+        "description": "Email of the logged-in user, if any"
+      },
+      "user_agent": {
+        "type": "string",
+        "description": "The browser user agent of the visitor"
+      }
+    },
+    "required": [
+      "path",
+      "page"
+    ]
+  }

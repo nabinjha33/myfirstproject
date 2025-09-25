@@ -1,0 +1,50 @@
+{
+    "name": "DealerApplication",
+    "type": "object",
+    "properties": {
+      "business_name": {
+        "type": "string"
+      },
+      "contact_person": {
+        "type": "string"
+      },
+      "email": {
+        "type": "string"
+      },
+      "phone": {
+        "type": "string"
+      },
+      "address": {
+        "type": "string"
+      },
+      "business_type": {
+        "type": "string"
+      },
+      "vat_pan": {
+        "type": "string"
+      },
+      "whatsapp": {
+        "type": "string"
+      },
+      "application_message": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "Pending",
+          "Approved",
+          "Rejected"
+        ],
+        "default": "Pending"
+      }
+    },
+    "required": [
+      "business_name",
+      "contact_person",
+      "email",
+      "phone",
+      "address",
+      "vat_pan"
+    ]
+  }

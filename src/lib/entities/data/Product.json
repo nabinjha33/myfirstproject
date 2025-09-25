@@ -1,0 +1,78 @@
+{
+    "name": "Product",
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Product name"
+      },
+      "slug": {
+        "type": "string",
+        "description": "URL-friendly product identifier"
+      },
+      "description": {
+        "type": "string",
+        "description": "Product description"
+      },
+      "brand": {
+        "type": "string",
+        "enum": [
+          "FastDrill",
+          "Spider",
+          "Gorkha",
+          "General Imports"
+        ],
+        "description": "Product brand"
+      },
+      "category": {
+        "type": "string",
+        "description": "Product category"
+      },
+      "images": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Array of image URLs"
+      },
+      "variants": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "size": {
+              "type": "string"
+            },
+            "packaging": {
+              "type": "string"
+            },
+            "estimated_price_npr": {
+              "type": "number"
+            },
+            "stock_status": {
+              "type": "string",
+              "enum": [
+                "In Stock",
+                "Low Stock",
+                "Out of Stock",
+                "Pre-Order"
+              ]
+            }
+          }
+        }
+      },
+      "featured": {
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "required": [
+      "name",
+      "slug",
+      "brand",
+      "category"
+    ]
+  }

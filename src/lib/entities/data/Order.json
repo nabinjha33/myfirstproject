@@ -1,0 +1,62 @@
+{
+    "name": "Order",
+    "type": "object",
+    "properties": {
+      "dealer_email": {
+        "type": "string",
+        "description": "Email of the dealer placing order"
+      },
+      "order_number": {
+        "type": "string",
+        "description": "Unique order identifier"
+      },
+      "product_items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "product_id": {
+              "type": "string"
+            },
+            "variant_id": {
+              "type": "string"
+            },
+            "quantity": {
+              "type": "number"
+            },
+            "unit_price_npr": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "total_amount_npr": {
+        "type": "number",
+        "description": "Total order amount in NPR"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "Draft",
+          "Submitted",
+          "Confirmed",
+          "Processing",
+          "Shipped",
+          "Delivered"
+        ],
+        "default": "Draft"
+      },
+      "delivery_address": {
+        "type": "string"
+      },
+      "notes": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "dealer_email",
+      "order_number",
+      "product_items",
+      "total_amount_npr"
+    ]
+  }

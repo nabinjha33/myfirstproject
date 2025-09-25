@@ -1,0 +1,57 @@
+{
+    "name": "Inquiry",
+    "type": "object",
+    "properties": {
+      "dealer_email": {
+        "type": "string",
+        "description": "Email of the dealer making inquiry"
+      },
+      "product_items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "product_id": {
+              "type": "string"
+            },
+            "variant_id": {
+              "type": "string"
+            },
+            "quantity": {
+              "type": "number"
+            },
+            "notes": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "Pending",
+          "Reviewed",
+          "Quoted",
+          "Closed"
+        ],
+        "default": "Pending"
+      },
+      "message": {
+        "type": "string",
+        "description": "Additional message from dealer"
+      },
+      "priority": {
+        "type": "string",
+        "enum": [
+          "Low",
+          "Medium",
+          "High"
+        ],
+        "default": "Medium"
+      }
+    },
+    "required": [
+      "dealer_email",
+      "product_items"
+    ]
+  }

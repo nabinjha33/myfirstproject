@@ -1,0 +1,49 @@
+{
+    "name": "User",
+    "type": "object",
+    "properties": {
+      "email": {
+        "type": "string",
+        "description": "User email address"
+      },
+      "name": {
+        "type": "string",
+        "description": "User full name"
+      },
+      "role": {
+        "type": "string",
+        "enum": [
+          "admin",
+          "dealer",
+          "public"
+        ],
+        "description": "User role"
+      },
+      "company": {
+        "type": "string",
+        "description": "Company name for dealers"
+      },
+      "phone": {
+        "type": "string",
+        "description": "Phone number"
+      },
+      "address": {
+        "type": "string",
+        "description": "Business address"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "active",
+          "inactive",
+          "pending"
+        ],
+        "default": "pending"
+      }
+    },
+    "required": [
+      "email",
+      "name",
+      "role"
+    ]
+  }
