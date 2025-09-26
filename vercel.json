@@ -1,0 +1,24 @@
+{
+  "functions": {
+    "app/brands/[slug]/page.tsx": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/brands/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "s-maxage=1, stale-while-revalidate=59"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/brands/:slug",
+      "destination": "/brands/:slug"
+    }
+  ]
+}

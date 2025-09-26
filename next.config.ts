@@ -12,6 +12,27 @@ const nextConfig: NextConfig = {
     // type errors. We'll tighten this back up once errors are resolved.
     ignoreBuildErrors: true,
   },
+  // Force fresh builds and disable aggressive caching
+  experimental: {
+    staleTimes: {
+      dynamic: 0,
+      static: 180,
+    },
+  },
+  // Ensure proper revalidation
+  async headers() {
+    return [
+      {
+        source: '/brands/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 's-maxage=1, stale-while-revalidate=59',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

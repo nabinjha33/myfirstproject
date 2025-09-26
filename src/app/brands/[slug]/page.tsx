@@ -10,6 +10,9 @@ export default function BrandPage({ params }: BrandPageProps) {
   return <BrandPageLayout brandSlug={params.slug} />;
 }
 
+// Enable ISR with revalidation
+export const revalidate = 60; // Revalidate every 60 seconds
+
 // Generate static params for known brands (optional, for better SEO)
 export async function generateStaticParams() {
   // You can fetch this from your database or define statically
