@@ -31,11 +31,9 @@ const iconComponents = {
   CheckSquare, Zap, Shield, Thermometer, HardHat, SunSnow, UserCheck, Hammer, Heart, Users, Globe
 };
 
-// Brand page mapping for dedicated brand pages (removed General Imports)
-const brandPageMap: { [key: string]: string } = {
-  'FastDrill': '/brands/fastdrill',
-  'Spider': '/brands/spider', 
-  'Gorkha': '/brands/gorkha'
+// Generate brand page URL from brand slug
+const getBrandPageUrl = (brand: any): string => {
+  return `/brands/${brand.slug}`;
 };
 
 export default function Brands() {
@@ -97,8 +95,8 @@ export default function Brands() {
   };
 
   const BrandCard = ({ brand, stats, index }: { brand: any, stats: any, index: number }) => {
-    // Check if brand has dedicated page
-    const dedicatedPage = brandPageMap[brand.name];
+    // Generate brand page URL from slug
+    const brandPageUrl = getBrandPageUrl(brand);
     
     return (
       <Card className="h-full overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col">
@@ -161,24 +159,21 @@ export default function Brands() {
           
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t border-gray-100 mt-4">
-            {dedicatedPage ? (
-              <Link href={dedicatedPage} className="flex-1">
-                <Button className="w-full bg-red-600 hover:bg-red-700">
-                  <Award className="w-4 h-4 mr-2" />
-                  Explore Brand
-                </Button>
-              </Link>
-            ) : (
-              <Link 
-                href={`/products?brand=${encodeURIComponent(brand.name)}`}
-                className="flex-1"
-              >
-                <Button className="w-full bg-red-600 hover:bg-red-700">
-                  <ShoppingBag className="w-4 h-4 mr-2" />
-                  View Products
-                </Button>
-              </Link>
-            )}
+            <Link href={brandPageUrl} className="flex-1">
+              <Button className="w-full bg-red-600 hover:bg-red-700">
+                <Award className="w-4 h-4 mr-2" />
+                Explore Brand
+              </Button>
+            </Link>
+            <Link 
+              href={`/products?brand=${encodeURIComponent(brand.name)}`}
+              className="flex-1"
+            >
+              <Button className="w-full bg-red-600 hover:bg-red-700" variant="outline">
+                <ShoppingBag className="w-4 h-4 mr-2" />
+                View Products
+              </Button>
+            </Link>
             <Button variant="outline" size="icon">
               <Star className="w-4 h-4" />
             </Button>
