@@ -21,18 +21,13 @@ export class DatabaseService {
 
   async list(sortBy?: string, filters?: any) {
     try {
-      console.log(`Starting ${this.tableName}.list() with sortBy:`, sortBy, 'filters:', filters);
-      console.log('Supabase client:', supabase);
-      
       let query = supabase.from(this.tableName).select('*')
-      console.log('Initial query created for table:', this.tableName);
 
       // Apply filters
       if (filters) {
         Object.keys(filters).forEach(key => {
           if (filters[key] !== undefined && filters[key] !== null) {
             query = query.eq(key, filters[key])
-            console.log(`Applied filter: ${key} = ${filters[key]}`);
           }
         })
       }
@@ -42,12 +37,9 @@ export class DatabaseService {
         const isDescending = sortBy.startsWith('-')
         const field = isDescending ? sortBy.substring(1) : sortBy
         query = query.order(field, { ascending: !isDescending })
-        console.log(`Applied sorting: ${field} ${isDescending ? 'DESC' : 'ASC'}`);
       }
 
-      console.log('Executing query...');
       const { data, error } = await query
-      console.log('Query result:', { data: data?.length || 0, error });
       
       if (error) {
         console.error(`Database error in ${this.tableName}.list():`, error)
@@ -60,7 +52,6 @@ export class DatabaseService {
         
         throw error
       }
-      console.log(`Successfully retrieved ${data?.length || 0} records from ${this.tableName}`);
       return data || []
     } catch (error) {
       console.error(`Error in ${this.tableName}.list():`, error)
@@ -455,6 +446,93 @@ export class ShipmentService extends DatabaseService {
   }
 }
 
+// SiteSettings service
+export class SiteSettingsService extends DatabaseService {
+  constructor() {
+    super('site_settings')
+  }
+
+  async getSettings() {
+    try {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('*')
+        .limit(1)
+        .single()
+
+      if (error && error.code === 'PGRST116') {
+        // No settings found, return default
+        return {
+          id: '1',
+          company_name: 'Jeen Mata Impex',
+          tagline: 'Premium Import Solutions',
+          contact_email: 'jeenmataimpex8@gmail.com',
+          contact_phone: '+977-1-XXXXXXX',
+          contact_address: 'Kathmandu, Nepal',
+          created_at: new Date().toISOString()
+        }
+      }
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error fetching site settings:', error)
+      // Return default settings on error
+      return {
+        id: '1',
+        company_name: 'Jeen Mata Impex',
+        tagline: 'Premium Import Solutions',
+        contact_email: 'jeenmataimpex8@gmail.com',
+        contact_phone: '+977-1-XXXXXXX',
+        contact_address: 'Kathmandu, Nepal',
+        created_at: new Date().toISOString()
+      }
+    }
+  }
+}
+
+// PageVisit service
+export class PageVisitService extends DatabaseService {
+  constructor() {
+    super('page_visits')
+  }
+
+  async trackVisit(visitData: {
+    path: string
+    page: string
+    user_email?: string
+    user_agent: string
+  }) {
+    try {
+      return await this.create({
+        ...visitData,
+        visited_at: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error('Error tracking page visit:', error)
+      // Don't throw error for analytics - just log it
+      return null
+    }
+  }
+
+  async getVisitsByDateRange(startDate: string, endDate: string) {
+    try {
+      const { data, error } = await supabase
+        .from('page_visits')
+        .select('*')
+        .gte('visited_at', startDate)
+        .lte('visited_at', endDate)
+        .order('visited_at', { ascending: false })
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching page visits:', error)
+      return []
+    }
+  }
+}
+
 // Export service instances
 export const userService = new UserService()
 export const brandService = new BrandService()
@@ -463,6 +541,8 @@ export const productService = new ProductService()
 export const dealerApplicationService = new DealerApplicationService()
 export const orderService = new OrderService()
 export const shipmentService = new ShipmentService()
+export const siteSettingsService = new SiteSettingsService()
+export const pageVisitService = new PageVisitService()
 
 // Export types
 export type {

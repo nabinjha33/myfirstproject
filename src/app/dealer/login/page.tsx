@@ -1,29 +1,35 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { User, DealerApplication } from "@/lib/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Mail, 
-  Lock, 
-  User, 
-  Phone, 
-  MapPin, 
-  Building, 
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Mail,
+  Lock,
+  User as UserIcon,
+  Phone,
+  MapPin,
+  Building,
   ArrowLeft,
   Shield,
-  CheckCircle
+  CheckCircle,
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 
 export default function DealerLogin() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<any>(null);
+  const [ownerEmail, setOwnerEmail] = useState('jeenmataimpex8@gmail.com');
   const [loginForm, setLoginForm] = useState({
     email: "",
     password: ""
@@ -35,32 +41,138 @@ export default function DealerLogin() {
     phone: "",
     address: "",
     businessType: "",
+    vatPan: "",
+    whatsapp: "",
     message: ""
   });
+
+  useEffect(() => {
+    const fetchOwnerEmail = async () => {
+      try {
+        // In a real implementation, fetch from SiteSettings
+        // const settings = await SiteSettings.list();
+        // if (settings.length > 0 && settings[0].contact_email) {
+        //   setOwnerEmail(settings[0].contact_email);
+        // }
+      } catch (error) {
+        console.error("Failed to fetch owner email for notification:", error);
+      }
+    };
+    fetchOwnerEmail();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Mock authentication
-    setTimeout(() => {
-      // In real implementation, validate credentials here
-      localStorage.setItem('dealerLoggedIn', 'true');
-      localStorage.setItem('dealerEmail', loginForm.email);
-      router.push('/dealer/catalog');
-      setIsLoading(false);
-    }, 1000);
+
+    try {
+      // Check if user exists and has approved dealer status
+      const users = await User.list();
+      const user = users.find((u: any) =>
+        u.email === loginForm.email &&
+        u.role === 'user' &&
+        u.dealer_status === 'Approved'
+      );
+
+      if (user) {
+        localStorage.setItem('dealerLoggedIn', 'true');
+        localStorage.setItem('dealerEmail', loginForm.email);
+        router.push('/dealer/catalog');
+      } else {
+        setSubmitStatus({
+          type: 'error',
+          message: 'Invalid credentials or your dealer account is not approved yet.'
+        });
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setSubmitStatus({
+        type: 'error',
+        message: 'Login failed. Please try again.'
+      });
+    }
+
+    setIsLoading(false);
+  };
+
+  const generateSlug = (text: string) => {
+    return text.toLowerCase()
+      .replace(/[^a-z0-9 -]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim('-');
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Mock signup process
-    setTimeout(() => {
-      alert("Thank you for your application! Our team will review your request and contact you within 24 hours.");
-      setIsLoading(false);
-    }, 1000);
+    setSubmitStatus(null);
+
+    try {
+      // Check if email already exists in Users or Applications
+      const [existingUsers, existingApplications] = await Promise.all([
+        User.list(),
+        DealerApplication.list()
+      ]);
+
+      const emailExists = existingUsers.some((user: any) => user.email === signupForm.email) ||
+                          existingApplications.some((app: any) => app.email === signupForm.email && app.status !== 'Rejected');
+
+      if (emailExists) {
+        setSubmitStatus({
+          type: 'error',
+          message: 'An account or pending application with this email address already exists.'
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Create new dealer application
+      await DealerApplication.create({
+        email: signupForm.email,
+        contact_person: signupForm.contactPerson,
+        business_name: signupForm.businessName,
+        vat_pan: signupForm.vatPan,
+        address: signupForm.address,
+        phone: signupForm.phone,
+        whatsapp: signupForm.whatsapp || signupForm.phone,
+        business_type: signupForm.businessType,
+        application_message: signupForm.message,
+        status: 'Pending'
+      });
+
+      // Send notifications (placeholder for notification service)
+      console.log('Sending notifications to owner...');
+      
+      let successMessage = 'Your dealer application has been submitted successfully! Our team will review your request and contact you within 24 hours.';
+      
+      setSubmitStatus({
+        type: 'success',
+        message: successMessage
+      });
+
+      // Clear form
+      setSignupForm({
+        businessName: "",
+        contactPerson: "",
+        email: "",
+        phone: "",
+        address: "",
+        businessType: "",
+        vatPan: "",
+        whatsapp: "",
+        message: ""
+      });
+
+    } catch (error) {
+      console.error('Signup error:', error);
+      setSubmitStatus({
+        type: 'error',
+        message: 'There was an error submitting your application. Please try again.'
+      });
+    }
+
+    setIsLoading(false);
   };
 
   return (
@@ -111,7 +223,7 @@ export default function DealerLogin() {
 
               <div className="flex items-start gap-4 p-4 bg-white rounded-xl shadow-sm">
                 <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="w-6 h-6 text-red-600" />
+                  <UserIcon className="w-6 h-6 text-red-600" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">Dedicated Support</h3>
@@ -127,6 +239,20 @@ export default function DealerLogin() {
               <CardTitle className="text-2xl">Dealer Portal Access</CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Status Messages */}
+              {submitStatus && (
+                <Alert className={`mb-4 ${
+                  submitStatus.type === 'success'
+                    ? 'bg-green-50 border-green-200 text-green-800'
+                    : 'bg-red-50 border-red-200 text-red-800'
+                }`}>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {submitStatus.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <Tabs defaultValue="login" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="login">Login</TabsTrigger>
@@ -167,16 +293,23 @@ export default function DealerLogin() {
                       </div>
                     </div>
 
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-red-600 hover:bg-red-700 h-11" 
+                    <Button
+                      type="submit"
+                      className="w-full bg-red-600 hover:bg-red-700 h-11"
                       disabled={isLoading}
                     >
-                      {isLoading ? "Signing In..." : "Sign In to Dealer Portal"}
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Signing In...
+                        </>
+                      ) : (
+                        "Sign In to Dealer Portal"
+                      )}
                     </Button>
 
                     <p className="text-center text-sm text-gray-600">
-                      Demo credentials: any email/password combination
+                      Note: Only approved dealers can login
                     </p>
                   </form>
                 </TabsContent>
@@ -185,7 +318,7 @@ export default function DealerLogin() {
                   <form onSubmit={handleSignup} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="businessName">Business Name</Label>
+                        <Label htmlFor="businessName">Business Name *</Label>
                         <div className="relative">
                           <Building className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                           <Input
@@ -200,9 +333,9 @@ export default function DealerLogin() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="contactPerson">Contact Person</Label>
+                        <Label htmlFor="contactPerson">Contact Person *</Label>
                         <div className="relative">
-                          <User className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                          <UserIcon className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                           <Input
                             id="contactPerson"
                             placeholder="Full name"
@@ -217,7 +350,7 @@ export default function DealerLogin() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="signupEmail">Email Address</Label>
+                        <Label htmlFor="signupEmail">Email Address *</Label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                           <Input
@@ -233,7 +366,7 @@ export default function DealerLogin() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Phone Number</Label>
+                        <Label htmlFor="phone">Phone Number *</Label>
                         <div className="relative">
                           <Phone className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                           <Input
@@ -248,8 +381,35 @@ export default function DealerLogin() {
                       </div>
                     </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="vatPan">VAT/PAN Number *</Label>
+                        <Input
+                          id="vatPan"
+                          placeholder="e.g., 301234567"
+                          value={signupForm.vatPan}
+                          onChange={(e) => setSignupForm({...signupForm, vatPan: e.target.value})}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="whatsapp">WhatsApp Number</Label>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                          <Input
+                            id="whatsapp"
+                            placeholder="Same as phone if empty"
+                            value={signupForm.whatsapp}
+                            onChange={(e) => setSignupForm({...signupForm, whatsapp: e.target.value})}
+                            className="pl-9"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="address">Business Address</Label>
+                      <Label htmlFor="address">Business Address *</Label>
                       <div className="relative">
                         <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                         <Input
@@ -264,7 +424,7 @@ export default function DealerLogin() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="businessType">Business Type</Label>
+                      <Label htmlFor="businessType">Business Type *</Label>
                       <Input
                         id="businessType"
                         placeholder="e.g., Retail, Wholesale, Construction, etc."
@@ -285,18 +445,26 @@ export default function DealerLogin() {
                       />
                     </div>
 
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-red-600 hover:bg-red-700 h-11" 
+                    <Button
+                      type="submit"
+                      className="w-full bg-red-600 hover:bg-red-700 h-11"
                       disabled={isLoading}
                     >
-                      {isLoading ? "Submitting Application..." : "Submit Dealer Application"}
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Submitting Application...
+                        </>
+                      ) : (
+                        "Submit Dealer Application"
+                      )}
                     </Button>
 
                     <p className="text-center text-xs text-gray-600">
-                      By applying, you agree to our terms and conditions. 
+                      By applying, you agree to our terms and conditions.
                       We'll review your application within 24 hours.
                     </p>
+
                   </form>
                 </TabsContent>
               </Tabs>

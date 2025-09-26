@@ -11,9 +11,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-console.log('Creating Supabase client with URL:', supabaseUrl.substring(0, 30) + '...');
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-console.log('Supabase client created successfully:', !!supabase);
 
 // Database Types
 export interface Database {

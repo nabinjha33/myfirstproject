@@ -1,70 +1,91 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Product, Brand } from '@/lib/entities';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { 
-  ArrowLeft, 
-  Package, 
-  Star, 
-  Search,
-  Filter,
-  Grid3X3,
-  List,
-  MapPin,
-  Calendar,
-  Award,
-  ShoppingCart,
-  Eye
-} from 'lucide-react';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue 
 } from "@/components/ui/select";
+import {
+  ArrowLeft,
+  Package,
+  Search,
+  Star,
+  ArrowRight,
+  ShoppingCart,
+  Award,
+  TrendingUp,
+  MapPin,
+  Users,
+  CheckCircle,
+  Globe,
+  Factory,
+  Shield,
+  Zap,
+  Calendar,
+  Flag,
+  Filter,
+  Grid3X3,
+  List,
+  Eye
+} from 'lucide-react';
 
-interface BrandPageLayoutProps {
-  brandSlug: string;
-}
+// Brand-specific themes
+const brandThemes: any = {
+  'FastDrill': {
+    primary: 'from-blue-900 to-blue-950',
+    secondary: 'from-blue-50 to-cyan-50',
+    accent: 'blue-600',
+    accentHover: 'blue-700',
+    text: 'blue-800',
+    gradient: 'bg-gradient-to-br from-blue-900 via-blue-950 to-slate-900'
+  },
+  'Spider': {
+    primary: 'from-red-600 to-red-800',
+    secondary: 'from-red-50 to-orange-50',
+    accent: 'red-600',
+    accentHover: 'red-700',
+    text: 'red-800',
+    gradient: 'bg-gradient-to-br from-red-600 via-red-700 to-orange-700'
+  },
+  'Gorkha': {
+    primary: 'from-amber-700 to-red-900',
+    secondary: 'from-amber-50 to-red-50',
+    accent: 'amber-600',
+    accentHover: 'amber-700',
+    text: 'amber-800',
+    gradient: 'bg-gradient-to-br from-[#1D3557] via-[#1D3557] to-[#2A4A72]',
+    special: 'from-yellow-400 to-amber-600'
+  }
+};
 
-interface BrandData {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  logo: string;
-  origin_country: string;
-  established_year: string;
-  specialty: string;
-  active: boolean;
-}
-
+// Type definitions
 interface ProductData {
   id: string;
   name: string;
-  slug: string;
   description: string;
-  brand: string;
   category: string;
-  images: string[];
-  variants: Array<{
+  brand: string;
+  slug?: string;
+  images?: string[];
+  featured?: boolean;
+  variants?: Array<{
     id: string;
-    size: string;
-    packaging: string;
-    estimated_price_npr: number;
+    price_npr: number;
     stock_status: string;
   }>;
-  featured: boolean;
 }
 
-export default function BrandPageLayout({ brandSlug }: BrandPageLayoutProps) {
-  const [brand, setBrand] = useState<BrandData | null>(null);
+export default function BrandPageLayout({ brandSlug }: { brandSlug: string }) {
+  const [brand, setBrand] = useState<any>(null);
   const [products, setProducts] = useState<ProductData[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<ProductData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,7 +93,11 @@ export default function BrandPageLayout({ brandSlug }: BrandPageLayoutProps) {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState(['All']);
+  const [brandStats, setBrandStats] = useState<any>({});
+
+  // Default to FastDrill theme if brand not found
+  const theme = brandThemes[brand?.name] || brandThemes['FastDrill'];
 
   useEffect(() => {
     loadBrandData();
@@ -87,17 +112,46 @@ export default function BrandPageLayout({ brandSlug }: BrandPageLayoutProps) {
     try {
       // Load brand information
       const brandData = await Brand.getBySlug(brandSlug);
+      
+      if (!brandData) {
+        // If brand not found, create a default brand object
+        const defaultBrand = {
+          id: brandSlug,
+          name: brandSlug.charAt(0).toUpperCase() + brandSlug.slice(1),
+          slug: brandSlug,
+          description: `Premium ${brandSlug} products and tools`,
+          logo: null,
+          active: true
+        };
+        setBrand(defaultBrand);
+        setProducts([]);
+        setCategories(['All']);
+        return;
+      }
+      
       setBrand(brandData);
 
       // Load products for this brand
       const productData = await Product.list('name', { brand: brandData.name });
-      setProducts(productData);
+      setProducts(productData || []);
 
       // Extract unique categories
-      const uniqueCategories = [...new Set(productData.map(p => p.category))];
+      const uniqueCategories = ['All', ...new Set((productData || []).map(p => p.category).filter(Boolean))];
       setCategories(uniqueCategories);
     } catch (error) {
       console.error('Failed to load brand data:', error);
+      // Set a fallback brand to prevent undefined errors
+      const fallbackBrand = {
+        id: brandSlug,
+        name: brandSlug.charAt(0).toUpperCase() + brandSlug.slice(1),
+        slug: brandSlug,
+        description: `Premium ${brandSlug} products and tools`,
+        logo: null,
+        active: true
+      };
+      setBrand(fallbackBrand);
+      setProducts([]);
+      setCategories(['All']);
     } finally {
       setIsLoading(false);
     }
@@ -120,16 +174,16 @@ export default function BrandPageLayout({ brandSlug }: BrandPageLayoutProps) {
     }
 
     // Sort products
-    filtered.sort((a, b) => {
+    filtered.sort((a: ProductData, b: ProductData) => {
       switch (sortBy) {
         case 'name':
           return a.name.localeCompare(b.name);
         case 'price':
-          const aPrice = a.variants[0]?.estimated_price_npr || 0;
-          const bPrice = b.variants[0]?.estimated_price_npr || 0;
+          const aPrice = a.variants?.[0]?.price_npr || 0;
+          const bPrice = b.variants?.[0]?.price_npr || 0;
           return aPrice - bPrice;
         case 'featured':
-          return b.featured ? 1 : -1;
+          return (b as any).featured ? 1 : -1;
         default:
           return 0;
       }
@@ -140,7 +194,7 @@ export default function BrandPageLayout({ brandSlug }: BrandPageLayoutProps) {
 
   const getProductPrice = (product: ProductData) => {
     if (product.variants && product.variants.length > 0) {
-      const prices = product.variants.map(v => v.estimated_price_npr).filter(p => p > 0);
+      const prices = product.variants.map((v: any) => v.price_npr).filter((p: number) => p > 0);
       if (prices.length > 0) {
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
@@ -154,7 +208,7 @@ export default function BrandPageLayout({ brandSlug }: BrandPageLayoutProps) {
 
   const getStockStatus = (product: ProductData) => {
     if (product.variants && product.variants.length > 0) {
-      const statuses = product.variants.map(v => v.stock_status);
+      const statuses = product.variants.map((v: any) => v.stock_status);
       if (statuses.includes('In Stock')) return 'In Stock';
       if (statuses.includes('Low Stock')) return 'Low Stock';
       if (statuses.includes('Pre-Order')) return 'Pre-Order';

@@ -45,8 +45,8 @@ const statusConfig = {
 };
 
 export default function Shipments() {
-  const [shipments, setShipments] = useState([]);
-  const [filteredShipments, setFilteredShipments] = useState([]);
+  const [shipments, setShipments] = useState<any[]>([]);
+  const [filteredShipments, setFilteredShipments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All");
@@ -72,13 +72,6 @@ export default function Shipments() {
   }, [shipments, searchQuery, selectedStatus]);
 
   useEffect(() => {
-    // Check authentication
-    const isLoggedIn = localStorage.getItem('dealerLoggedIn');
-    if (!isLoggedIn) {
-      window.location.href = '/dealer/login';
-      return;
-    }
-
     loadShipments();
   }, []);
 

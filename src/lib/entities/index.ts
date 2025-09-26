@@ -6,7 +6,9 @@ import {
   productService,
   dealerApplicationService,
   orderService,
-  shipmentService
+  shipmentService,
+  siteSettingsService,
+  pageVisitService
 } from '../database'
 
 // Base entity class wrapper for database services
@@ -317,6 +319,24 @@ class Category extends BaseEntity {
     return categoryService.list(sortBy, filters);
   }
 
+  static async filter(filters?: any, sortBy?: string, limit?: number): Promise<any[]> {
+    // Handle active categories specifically
+    if (filters?.active === true) {
+      const categories = await categoryService.getActive();
+      if (limit) {
+        return categories.slice(0, limit);
+      }
+      return categories;
+    }
+    
+    // For other filters, use the list method
+    let result = await categoryService.list(sortBy, filters);
+    if (limit) {
+      result = result.slice(0, limit);
+    }
+    return result;
+  }
+
   static async findById(id: string): Promise<any | null> {
     return categoryService.findById(id);
   }
@@ -397,11 +417,66 @@ class DealerApplication extends BaseEntity {
   }
 }
 
+// PageVisit entity (for analytics)
+class PageVisit extends BaseEntity {
+  static async list(sortBy?: string, limit?: number): Promise<any[]> {
+    try {
+      const visits = await pageVisitService.list(sortBy);
+      return limit ? visits.slice(0, limit) : visits;
+    } catch (error) {
+      console.error('Error fetching page visits:', error);
+      // Return empty array on error to prevent breaking the UI
+      return [];
+    }
+  }
+
+  static async create(itemData: any): Promise<any> {
+    try {
+      return await pageVisitService.trackVisit(itemData);
+    } catch (error) {
+      console.error('Error tracking page visit:', error);
+      // Don't throw error for analytics - just log it
+      return null;
+    }
+  }
+}
+
+// SiteSettings entity (for dynamic site configuration)
+class SiteSettings extends BaseEntity {
+  static async list(): Promise<any[]> {
+    try {
+      const settings = await siteSettingsService.getSettings();
+      return [settings]; // Return as array to match expected interface
+    } catch (error) {
+      console.error('Error fetching site settings:', error);
+      // Return default settings on error
+      return [{
+        id: 1,
+        company_name: 'Jeen Mata Impex',
+        tagline: 'Premium Import Solutions',
+        contact_email: 'jeenmataimpex8@gmail.com',
+        contact_phone: '+977-1-XXXXXXX',
+        contact_address: 'Kathmandu, Nepal',
+        created_date: new Date().toISOString()
+      }];
+    }
+  }
+
+  static async update(id: string, updates: any): Promise<any> {
+    try {
+      return await siteSettingsService.update(id, updates);
+    } catch (error) {
+      console.error('Error updating site settings:', error);
+      throw error;
+    }
+  }
+}
+
 // Export all entities
 export { BaseEntity };
 
 // Named exports for direct import
-export { Product, Order, Inquiry, Shipment, User, Brand, Category, DealerApplication };
+export { Product, Order, Inquiry, Shipment, User, Brand, Category, DealerApplication, PageVisit, SiteSettings };
 
 // Default export for backward compatibility
 export default {
@@ -412,5 +487,7 @@ export default {
   User,
   Brand,
   Category,
-  DealerApplication
+  DealerApplication,
+  PageVisit,
+  SiteSettings
 };

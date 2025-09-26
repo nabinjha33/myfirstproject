@@ -6,7 +6,6 @@ import { Product, Brand } from "@/lib/entities";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { 
   ArrowRight, 
   Package, 
@@ -25,516 +24,305 @@ import {
   Hammer,
   Heart,
   Users,
-  Globe,
-  Search,
-  Filter
+  Globe
 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const iconComponents = {
-  CheckSquare, Zap, Shield, Thermometer, HardHat, SunSnow, UserCheck, Hammer, Heart, Users, Globe, Package
+  CheckSquare, Zap, Shield, Thermometer, HardHat, SunSnow, UserCheck, Hammer, Heart, Users, Globe
 };
 
-// Brand page mapping for dedicated brand pages
+// Brand page mapping for dedicated brand pages (removed General Imports)
 const brandPageMap: { [key: string]: string } = {
-  'FastDrill': 'fastdrill',
-  'Spider': 'spider', 
-  'Gorkha': 'gorkha'
+  'FastDrill': '/brands/fastdrill',
+  'Spider': '/brands/spider', 
+  'Gorkha': '/brands/gorkha'
 };
-
-interface BrandData {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  logo: string;
-  origin_country: string;
-  established_year: string;
-  specialty: string;
-  active: boolean;
-}
-
-interface ProductData {
-  id: string;
-  name: string;
-  brand: string;
-  category: string;
-  featured: boolean;
-}
-
-interface BrandStats {
-  [brandName: string]: {
-    totalProducts: number;
-    featuredProducts: number;
-    categories: string[];
-  };
-}
 
 export default function Brands() {
-  const [products, setProducts] = useState<ProductData[]>([]);
-  const [brands, setBrands] = useState<BrandData[]>([]);
-  const [filteredBrands, setFilteredBrands] = useState<BrandData[]>([]);
-  const [brandStats, setBrandStats] = useState<BrandStats>({});
+  const [products, setProducts] = useState<any[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
+  const [brandStats, setBrandStats] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [countryFilter, setCountryFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('name');
 
   useEffect(() => {
     loadBrandData();
   }, []);
 
-  useEffect(() => {
-    filterBrands();
-  }, [brands, searchTerm, countryFilter, sortBy]);
-
   const loadBrandData = async () => {
     setIsLoading(true);
     try {
-      console.log('Loading brand data...');
-      console.log('Brand entity type:', typeof Brand);
-      console.log('Brand entity methods:', Object.getOwnPropertyNames(Brand));
-      console.log('Product entity type:', typeof Product);
+      const [allProducts, activeBrands] = await Promise.all([
+        Product.list('-created_date'),
+        Brand.filter({ active: true }, 'sort_order')
+      ]);
       
-      // Test direct import first
-      console.log('Testing direct brand service import...');
-      const { brandService, productService } = await import('@/lib/database');
-      console.log('Brand service:', typeof brandService);
-      console.log('Product service:', typeof productService);
-      
-      // Test direct service calls
-      try {
-        console.log('Calling brandService.list() directly...');
-        const directBrands = await brandService.list();
-        console.log('Direct brand service result:', directBrands?.length || 0);
+      setProducts(allProducts);
+      setBrands(activeBrands);
+
+      // Calculate statistics for each brand
+      const stats: any = {};
+      activeBrands.forEach((brand: any) => {
+        const brandProducts = allProducts.filter((product: any) => product.brand === brand.name);
+        const featuredCount = brandProducts.filter((product: any) => product.featured).length;
         
-        console.log('Calling productService.list() directly...');
-        const directProducts = await productService.list();
-        console.log('Direct product service result:', directProducts?.length || 0);
-      } catch (directError) {
-        console.error('Direct service error:', directError);
-      }
-      
-      // Now test entity methods with try-catch
-      console.log('Testing Brand.list() method...');
-      let brandData;
-      try {
-        brandData = await Brand.list('name');
-        console.log('Brands loaded via entity:', brandData?.length || 0);
-      } catch (brandError) {
-        console.error('Brand.list() failed:', brandError);
-        console.error('Brand error type:', typeof brandError);
-        console.error('Brand error constructor:', brandError?.constructor?.name);
-        console.error('Brand error message:', brandError?.message);
-        console.error('Brand error stack:', brandError?.stack);
-        throw brandError;
-      }
-      
-      console.log('Testing Product.list() method...');
-      let productData;
-      try {
-        productData = await Product.list('name');
-        console.log('Products loaded via entity:', productData?.length || 0);
-      } catch (productError) {
-        console.error('Product.list() failed:', productError);
-        console.error('Product error type:', typeof productError);
-        console.error('Product error constructor:', productError?.constructor?.name);
-        console.error('Product error message:', productError?.message);
-        console.error('Product error stack:', productError?.stack);
-        throw productError;
-      }
-
-      setProducts(productData);
-      setBrands(brandData.filter(brand => brand.active));
-
-      // Calculate brand statistics
-      const stats: BrandStats = {};
-      brandData.forEach(brand => {
-        const brandProducts = productData.filter(p => p.brand === brand.name);
         stats[brand.name] = {
           totalProducts: brandProducts.length,
-          featuredProducts: brandProducts.filter(p => p.featured).length,
-          categories: [...new Set(brandProducts.map(p => p.category))]
+          featuredProducts: featuredCount,
+          inStockProducts: brandProducts.filter((product: any) => 
+            product.variants?.some((variant: any) => variant.stock_status === 'In Stock')
+          ).length
         };
       });
+      
       setBrandStats(stats);
-      console.log('Brand data loaded successfully');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to load brand data:', error);
-      console.error('Error details:', {
-        message: error?.message || 'Unknown error',
-        code: error?.code || 'No code',
-        details: error?.details || 'No details',
-        hint: error?.hint || 'No hint',
-        stack: error?.stack || 'No stack trace'
-      });
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   };
 
-  const filterBrands = () => {
-    let filtered = [...brands];
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(brand =>
-        brand.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        brand.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        brand.specialty.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Country filter
-    if (countryFilter !== 'all') {
-      filtered = filtered.filter(brand => brand.origin_country === countryFilter);
-    }
-
-    // Sort brands
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'products':
-          const aProducts = brandStats[a.name]?.totalProducts || 0;
-          const bProducts = brandStats[b.name]?.totalProducts || 0;
-          return bProducts - aProducts;
-        case 'established':
-          return (b.established_year || '0').localeCompare(a.established_year || '0');
-        case 'featured':
-          return a.name.localeCompare(b.name);
-        default:
-          return 0;
-      }
-    });
-
-    setFilteredBrands(filtered);
-  };
-
-  const getUniqueCountries = () => {
-    return [...new Set(brands.map(brand => brand.origin_country).filter(Boolean))];
-  };
-
-  const getBrandIcon = (brandName: string) => {
-    // You can customize this logic based on brand names or categories
-    const iconMap: { [key: string]: keyof typeof iconComponents } = {
-      'FastDrill': 'Zap',
-      'Spider': 'Shield',
-      'Gorkha': 'Hammer',
-      'General Imports': 'Globe'
-    };
+  const BrandCard = ({ brand, stats, index }: { brand: any, stats: any, index: number }) => {
+    // Check if brand has dedicated page
+    const dedicatedPage = brandPageMap[brand.name];
     
-    const IconComponent = iconComponents[iconMap[brandName]] || iconComponents.Package;
-    return IconComponent;
-  };
-
-  const getBrandColor = (index: number) => {
-    const colors = [
-      'from-blue-500 to-blue-600',
-      'from-green-500 to-green-600', 
-      'from-purple-500 to-purple-600',
-      'from-red-500 to-red-600',
-      'from-yellow-500 to-yellow-600',
-      'from-indigo-500 to-indigo-600',
-      'from-pink-500 to-pink-600',
-      'from-teal-500 to-teal-600'
-    ];
-    return colors[index % colors.length];
-  };
-
-  if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading brands...</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Our Brands</h1>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          Discover premium quality products from trusted international brands. 
-          We partner with leading manufacturers to bring you the best tools and equipment.
-        </p>
-      </div>
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Package className="h-6 w-6 text-blue-600" />
+      <Card className="h-full overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col">
+        <div className="relative h-64 overflow-hidden">
+          {brand.logo ? (
+            <img 
+              src={brand.logo} 
+              alt={brand.name}
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-red-500 to-amber-500 opacity-80 flex items-center justify-center">
+              <Package className="w-24 h-24 text-white" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+          <div className="absolute top-6 left-6 text-white">
+            <h3 className="text-3xl font-bold mb-2">{brand.name}</h3>
+            <p className="text-lg text-white/90">{brand.description}</p>
+          </div>
+          <div className="absolute top-6 right-6">
+            <Badge className="bg-white/20 text-white border-white/30">
+              {brand.origin_country || 'Import'}
+            </Badge>
+          </div>
+        </div>
+        
+        <CardContent className="p-6 flex flex-col flex-1">
+          <div className="space-y-4 flex-1">
+            {/* Brand Info */}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <Award className="w-4 h-4 text-gray-500" />
+                <span className="text-gray-600">Est. {brand.established_year || 'N/A'}</span>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-blue-600">{brands.length}</div>
-                <div className="text-sm text-gray-600">Total Brands</div>
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-gray-500" />
+                <span className="text-gray-600">{brand.specialty || 'General'}</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <ShoppingBag className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-green-600">{products.length}</div>
-                <div className="text-sm text-gray-600">Total Products</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Star className="h-6 w-6 text-yellow-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-yellow-600">
-                  {products.filter(p => p.featured).length}
+            {/* Statistics */}
+            {stats && (
+              <div className="grid grid-cols-3 gap-4 py-4 border-t border-gray-100">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">{stats.totalProducts}</div>
+                  <div className="text-xs text-gray-600">Products</div>
                 </div>
-                <div className="text-sm text-gray-600">Featured Products</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Globe className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-purple-600">
-                  {getUniqueCountries().length}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{stats.inStockProducts}</div>
+                  <div className="text-xs text-gray-600">In Stock</div>
                 </div>
-                <div className="text-sm text-gray-600">Countries</div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-yellow-600">{stats.featuredProducts}</div>
+                  <div className="text-xs text-gray-600">Featured</div>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search brands by name, specialty, or description..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <Select value={countryFilter} onValueChange={setCountryFilter}>
-                <SelectTrigger className="w-48">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Countries</SelectItem>
-                  {getUniqueCountries().map(country => (
-                    <SelectItem key={country} value={country}>{country}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-40">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="products">Products</SelectItem>
-                  <SelectItem value="established">Established</SelectItem>
-                  <SelectItem value="featured">Featured</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            )}
+          </div>
+          
+          {/* Actions */}
+          <div className="flex gap-3 pt-4 border-t border-gray-100 mt-4">
+            {dedicatedPage ? (
+              <Link href={dedicatedPage} className="flex-1">
+                <Button className="w-full bg-red-600 hover:bg-red-700">
+                  <Award className="w-4 h-4 mr-2" />
+                  Explore Brand
+                </Button>
+              </Link>
+            ) : (
+              <Link 
+                href={`/products?brand=${encodeURIComponent(brand.name)}`}
+                className="flex-1"
+              >
+                <Button className="w-full bg-red-600 hover:bg-red-700">
+                  <ShoppingBag className="w-4 h-4 mr-2" />
+                  View Products
+                </Button>
+              </Link>
+            )}
+            <Button variant="outline" size="icon">
+              <Star className="w-4 h-4" />
+            </Button>
           </div>
         </CardContent>
       </Card>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800 text-white">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
+              Our Premium Brands
+            </h1>
+            <p className="text-xl md:text-2xl mb-8 text-gray-100 max-w-3xl mx-auto">
+              Discover quality products from trusted manufacturers across China, India, and Nepal
+            </p>
+            <div className="flex justify-center items-center gap-8 text-sm text-gray-300">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                <span>Global Import</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Award className="w-4 h-4" />
+                <span>Quality Assured</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                <span>Competitive Pricing</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Brands Grid */}
-      {filteredBrands.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredBrands.map((brand, index) => {
-            const BrandIcon = getBrandIcon(brand.name);
-            const stats = brandStats[brand.name] || { totalProducts: 0, featuredProducts: 0, categories: [] };
-            const hasDedicatedPage = brandPageMap[brand.name];
-            
-            return (
-              <Card key={brand.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden">
-                <div className={`h-32 bg-gradient-to-br ${getBrandColor(index)} relative`}>
-                  <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-                  <div className="absolute top-4 left-4">
-                    <BrandIcon className="h-8 w-8 text-white" />
-                  </div>
-                  {brand.logo && (
-                    <div className="absolute top-4 right-4">
-                      <img 
-                        src={brand.logo} 
-                        alt={brand.name}
-                        className="w-12 h-12 object-contain bg-white rounded-lg p-1"
-                      />
-                    </div>
-                  )}
-                  <div className="absolute bottom-4 left-4 text-white">
-                    <h3 className="text-2xl font-bold">{brand.name}</h3>
-                    {brand.specialty && (
-                      <p className="text-sm opacity-90">{brand.specialty}</p>
-                    )}
-                  </div>
-                </div>
-
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    {brand.description && (
-                      <p className="text-gray-600 text-sm line-clamp-2">
-                        {brand.description}
-                      </p>
-                    )}
-
-                    <div className="flex flex-wrap gap-2 text-sm text-gray-500">
-                      {brand.origin_country && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          <span>{brand.origin_country}</span>
-                        </div>
-                      )}
-                      {brand.established_year && (
-                        <div className="flex items-center gap-1">
-                          <Award className="h-3 w-3" />
-                          <span>Est. {brand.established_year}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4 py-3 border-t border-gray-100">
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-blue-600">{stats.totalProducts}</div>
-                        <div className="text-xs text-gray-500">Products</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-green-600">{stats.featuredProducts}</div>
-                        <div className="text-xs text-gray-500">Featured</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-purple-600">{stats.categories.length}</div>
-                        <div className="text-xs text-gray-500">Categories</div>
-                      </div>
-                    </div>
-
-                    {stats.categories.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="text-sm font-medium text-gray-700">Categories:</div>
-                        <div className="flex flex-wrap gap-1">
-                          {stats.categories.slice(0, 3).map(category => (
-                            <Badge key={category} variant="secondary" className="text-xs">
-                              {category}
-                            </Badge>
-                          ))}
-                          {stats.categories.length > 3 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{stats.categories.length - 3} more
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2 pt-2">
-                      {hasDedicatedPage ? (
-                        <Link href={`/brands/${brand.slug}`} className="flex-1">
-                          <Button className="w-full group-hover:bg-blue-600 transition-colors">
-                            <TrendingUp className="h-4 w-4 mr-2" />
-                            Explore Brand
-                          </Button>
-                        </Link>
-                      ) : (
-                        <Link href={`/products?brand=${encodeURIComponent(brand.name)}`} className="flex-1">
-                          <Button variant="outline" className="w-full">
-                            <Package className="h-4 w-4 mr-2" />
-                            View Products
-                          </Button>
-                        </Link>
-                      )}
-                      
-                      <Link href={`/products?brand=${encodeURIComponent(brand.name)}`}>
-                        <Button variant="ghost" size="sm">
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Brands Found</h3>
-            <p className="text-gray-600">
-              {searchTerm || countryFilter !== 'all'
-                ? 'No brands match your search criteria. Try adjusting your filters.'
-                : 'No brands are currently available.'
-              }
+      <section className="py-16 lg:py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Trusted Manufacturing Partners
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Each brand represents years of partnership and commitment to quality
             </p>
-          </CardContent>
-        </Card>
-      )}
+          </div>
 
-      {/* Call to Action */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardContent className="text-center py-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Looking for a Specific Brand or Product?
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[...Array(6)].map((_, i) => (
+                <Card key={i} className="animate-pulse">
+                  <div className="h-64 bg-gray-200"></div>
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      <div className="h-4 bg-gray-200 rounded"></div>
+                      <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-16 bg-gray-200 rounded"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : brands.length === 0 ? (
+            <div className="text-center py-16">
+              <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">No brands available</h3>
+              <p className="text-gray-600">Brands will appear here once they are added through the admin panel.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {brands.map((brand: any, index: number) => (
+                <BrandCard 
+                  key={brand.id} 
+                  brand={brand} 
+                  stats={brandStats[brand.name]}
+                  index={index}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-16 lg:py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Why Our Brand Partners Choose Us
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Building lasting relationships through trust, quality, and mutual growth
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center group">
+              <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-r from-red-50 to-amber-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <Package className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Quality Assurance</h3>
+              <p className="text-gray-600">
+                Rigorous quality control processes ensure only the best products reach our customers
+              </p>
+            </div>
+
+            <div className="text-center group">
+              <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-r from-red-50 to-amber-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <TrendingUp className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Market Growth</h3>
+              <p className="text-gray-600">
+                Supporting brand growth in the Nepali market through strategic partnerships
+              </p>
+            </div>
+
+            <div className="text-center group">
+              <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-r from-red-50 to-amber-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <Award className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Brand Excellence</h3>
+              <p className="text-gray-600">
+                Maintaining brand integrity and reputation through professional service
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 lg:py-24 bg-gradient-to-r from-red-600 to-amber-600 text-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">
+            Ready to Explore Our Brands?
           </h2>
-          <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-            Can't find what you're looking for? Our team can help you source products from 
-            additional brands and manufacturers. Contact us for custom import solutions.
+          <p className="text-xl mb-8 text-red-100">
+            Browse our complete product catalog and discover the perfect tools for your business.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/contact">
-              <Button size="lg">
-                <Users className="h-5 w-5 mr-2" />
-                Contact Our Team
-              </Button>
-            </Link>
             <Link href="/products">
-              <Button variant="outline" size="lg">
-                <Package className="h-5 w-5 mr-2" />
+              <Button size="lg" className="h-12 px-8 bg-white text-red-600 hover:bg-red-50">
+                <Package className="w-5 h-5 mr-2" />
                 Browse All Products
               </Button>
             </Link>
+            <Link href="/dealer/login">
+              <Button size="lg" variant="outline" className="h-12 px-8 border-white text-white hover:bg-white/10">
+                <ArrowRight className="w-5 h-5 mr-2" />
+                Become a Dealer
+              </Button>
+            </Link>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }

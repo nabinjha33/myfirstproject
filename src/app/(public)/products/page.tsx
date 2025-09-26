@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Product } from "@/lib/entities";
+import { Product, Category } from "@/lib/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 
 const brands = ["All", "FastDrill", "Spider", "Gorkha", "General Imports"];
-const categories = ["All", "Tools", "Equipment", "Hardware", "Industrial"];
 const stockStatuses = ["All", "In Stock", "Low Stock", "Pre-Order"];
 
 // TypeScript interfaces
@@ -64,6 +63,7 @@ function ProductsContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("All");
+  const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedStock, setSelectedStock] = useState("All");
   const [viewMode, setViewMode] = useState("grid");
@@ -117,6 +117,7 @@ function ProductsContent() {
 
   useEffect(() => {
     loadProducts();
+    loadCategories();
     // Check URL parameters for initial filters
     const brand = searchParams.get('brand');
     const search = searchParams.get('search');
@@ -131,21 +132,31 @@ function ProductsContent() {
 
   const loadProducts = async () => {
     setIsLoading(true);
-    const allProducts = await Product.list();
+    const allProducts = await Product.list('-created_date');
     setProducts(allProducts);
     setIsLoading(false);
   };
 
+  const loadCategories = async () => {
+    try {
+      const activeCategories = await Category.filter({ active: true }, 'sort_order');
+      setCategories(['All', ...activeCategories.map((cat: any) => cat.name)]);
+    } catch (error) {
+      console.error("Failed to load categories:", error);
+      setCategories(['All']);
+    }
+  };
+
   const ProductCard = ({ product, isListView = false }: { product: ProductData, isListView?: boolean }) => (
     <Link
-      href={`/products/${product.slug}`}
-      className="group block"
+      href={`/products/${product.slug}?from=Products`}
+      className="group block h-full"
     >
       <Card className={`h-full overflow-hidden hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1 ${
-        isListView ? 'flex' : ''
+        isListView ? 'flex' : 'flex flex-col'
       }`}>
-        <div className={`relative overflow-hidden bg-gray-100 ${
-          isListView ? 'w-48 flex-shrink-0' : 'h-48'
+        <div className={`relative overflow-hidden bg-gray-100 flex-shrink-0 ${
+          isListView ? 'w-48' : 'h-44'
         }`}>
           {product.images && product.images.length > 0 ? (
             <img
@@ -168,39 +179,56 @@ function ProductsContent() {
           )}
         </div>
         
-        <CardContent className="p-6 flex-1">
-          <h3 className="text-xl font-semibold mb-2 group-hover:text-red-600 transition-colors">
-            {product.name}
-          </h3>
-          <p className="text-gray-600 mb-4 line-clamp-2">
-            {product.description}
-          </p>
-          
-          {product.variants && product.variants.length > 0 && (
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className={
-                  product.variants[0].stock_status === 'In Stock' ? 'text-green-600 border-green-600' :
-                  product.variants[0].stock_status === 'Low Stock' ? 'text-yellow-600 border-yellow-600' :
-                  product.variants[0].stock_status === 'Out of Stock' ? 'text-red-600 border-red-600' :
-                  'text-blue-600 border-blue-600'
-                }>
-                  {product.variants[0].stock_status}
-                </Badge>
-                {product.variants[0].estimated_price_npr && (
-                  <span className="text-lg font-semibold text-red-600">
-                    NPR {product.variants[0].estimated_price_npr.toLocaleString()}
+        <CardContent className="p-5 flex-1 flex flex-col">
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold mb-2 group-hover:text-red-600 transition-colors line-clamp-2 min-h-[3rem]">
+              {product.name}
+            </h3>
+
+            {/* Variants Display */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-3">
+                {product.variants.slice(0, 4).map((variant: any, index: number) => (
+                  <span
+                    key={index}
+                    className="text-xs px-2 py-1 bg-gray-100 text-gray-600 border border-gray-200 rounded"
+                  >
+                    {variant.size || 'Standard'}
+                  </span>
+                ))}
+                {product.variants.length > 4 && (
+                  <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 border border-gray-200 rounded">
+                    +{product.variants.length - 4} more
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-500">
-                {product.variants.length} variant{product.variants.length > 1 ? 's' : ''} available
-              </p>
-            </div>
-          )}
+            )}
+            
+            <p className="text-gray-600 mb-3 line-clamp-2 text-sm min-h-[2.5rem]">
+              {product.description || 'No description available'}
+            </p>
+            
+            {product.variants && product.variants.length > 0 && (
+              <div className="mb-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className={
+                    product.variants[0].stock_status === 'In Stock' ? 'text-green-600 border-green-600 bg-green-50' :
+                    product.variants[0].stock_status === 'Low Stock' ? 'text-yellow-600 border-yellow-600 bg-yellow-50' :
+                    product.variants[0].stock_status === 'Out of Stock' ? 'text-red-600 border-red-600 bg-red-50' :
+                    'text-blue-600 border-blue-600 bg-blue-50'
+                  }>
+                    {product.variants[0].stock_status}
+                  </Badge>
+                </div>
+                <p className="text-xs text-gray-500">
+                  {product.variants.length} variant{product.variants.length > 1 ? 's' : ''} available
+                </p>
+              </div>
+            )}
+          </div>
           
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">{product.category}</span>
+          <div className="flex items-center justify-between mt-auto">
+            <span className="text-sm text-gray-500">{product.category || 'Uncategorized'}</span>
             <div className="flex items-center text-red-600 group-hover:translate-x-2 transition-transform">
               <span className="text-sm font-medium">View Details</span>
               <ArrowRight className="ml-1 w-4 h-4" />
@@ -327,11 +355,11 @@ function ProductsContent() {
           }`}>
             {[...Array(8)].map((_, i) => (
               <Card key={i} className="animate-pulse">
-                <div className="h-48 bg-gray-200"></div>
-                <CardContent className="p-6">
+                <div className="h-44 bg-gray-200"></div>
+                <CardContent className="p-5">
                   <div className="h-4 bg-gray-200 rounded mb-2"></div>
                   <div className="h-3 bg-gray-200 rounded mb-4"></div>
-                  <div className="h-8 bg-gray-200 rounded"></div>
+                  <div className="h-6 bg-gray-200 rounded"></div>
                 </CardContent>
               </Card>
             ))}

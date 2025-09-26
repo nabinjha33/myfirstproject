@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { User } from "@/lib/entities";
+import { User, DealerApplication } from "@/lib/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,17 +31,52 @@ export default function DealerProfile() {
     try {
       const currentUser = await User.me();
       setUser(currentUser);
-      setProfile({
-        business_name: currentUser.business_name || "Jeen Mata Hardware",
-        contact_person: currentUser.full_name || "Demo User",
-        vat_pan: currentUser.vat_pan || "301234567",
-        address: currentUser.address || "Kathmandu, Nepal",
-        phone: currentUser.phone || "+977-98XXXXXXXX",
-        whatsapp: currentUser.whatsapp || "+977-98XXXXXXXX",
-      });
+
+      // If user profile is missing business data, check for an approved application and sync it.
+      if (!currentUser.business_name && currentUser.email) {
+        const apps = await DealerApplication.filter({ email: currentUser.email, status: 'Approved' });
+        if (apps.length > 0) {
+          const app = apps[0];
+          const profileData = {
+            business_name: app.business_name || "",
+            full_name: app.contact_person || currentUser.full_name || "", // Update full_name as well
+            vat_pan: app.vat_pan || "",
+            address: app.address || "",
+            phone: app.phone || "",
+            whatsapp: app.whatsapp || app.phone || "",
+            dealer_status: 'Approved' // Set status to approved
+          };
+          // Update user record in the backend with application data
+          await User.updateMyUserData(profileData);
+          // Set local state with the newly synced data
+          setProfile({ ...profileData, contact_person: profileData.full_name });
+          setUser({ ...currentUser, ...profileData }); // Update local user object
+        } else {
+          // If no business_name and no approved application, populate with existing user data or empty strings
+          setProfile({
+            business_name: "",
+            contact_person: currentUser.full_name || "",
+            vat_pan: "",
+            address: currentUser.address || "",
+            phone: currentUser.phone || "",
+            whatsapp: currentUser.whatsapp || "",
+          });
+        }
+      } else {
+         // If business data already exists, populate from current user's profile
+         setProfile({
+          business_name: currentUser.business_name || "",
+          contact_person: currentUser.full_name || "",
+          vat_pan: currentUser.vat_pan || "",
+          address: currentUser.address || "",
+          phone: currentUser.phone || "",
+          whatsapp: currentUser.whatsapp || "",
+        });
+      }
+
     } catch (error) {
       console.error("Failed to fetch user data:", error);
-      // Mock data for display if not logged in
+      // Mock data for display if not logged in or on error
        setProfile({
         business_name: "Jeen Mata Hardware",
         contact_person: "Demo User",
@@ -64,9 +99,11 @@ export default function DealerProfile() {
     setSaveStatus(null);
     try {
       if (user) {
-        await User.updateMyUserData(profile);
+        // When saving, send the contact_person value as full_name to the backend
+        await User.updateMyUserData({ ...profile, full_name: profile.contact_person });
+        setUser((prevUser: any) => ({ ...prevUser, ...profile, full_name: profile.contact_person })); // Update local user state upon successful save
       }
-      // Mock success if no user object
+      // Mock success if no user object (though unlikely to happen with User.me())
       setSaveStatus("success");
     } catch (error) {
       console.error("Failed to save profile:", error);
@@ -77,7 +114,7 @@ export default function DealerProfile() {
   };
   
   if (isLoading) {
-      return <div>Loading profile...</div>
+      return <div className="p-6 text-center text-lg">Loading profile...</div>
   }
 
   return (

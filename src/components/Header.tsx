@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Package, Sun, Moon, Globe, Menu, X } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
+import { SiteSettings, PageVisit, User } from '@/lib/entities';
 
 const publicRoutes = [
   { title: "Home", url: "/" },
@@ -17,6 +18,70 @@ export default function Header() {
   const pathname = usePathname();
   const { isDark, toggleTheme, language, toggleLanguage, getText } = useAppContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [siteInfo, setSiteInfo] = useState({
+    company_name: 'Jeen Mata Impex',
+    tagline: 'Premium Import Solutions',
+    contact_email: 'jeenmataimpex8@gmail.com',
+    contact_phone: '+977-1-XXXXXXX',
+    contact_address: 'Kathmandu, Nepal'
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const settingsList = await SiteSettings.list();
+        if (settingsList.length > 0) {
+          setSiteInfo(settingsList[0]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch site settings:", error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  // Effect to track page visits
+  useEffect(() => {
+    const trackVisit = async () => {
+      // Don't track visits for admin pages
+      if (pathname?.startsWith('/admin')) {
+        return;
+      }
+      
+      try {
+        let userEmail = null;
+        try {
+          const currentUser = await User.me();
+          if (currentUser) {
+            userEmail = currentUser.email;
+          }
+        } catch (e) {
+          // User is not logged in, which is fine.
+        }
+
+        // Determine page name from pathname
+        let pageName = 'Unknown';
+        if (pathname === '/') pageName = 'Home';
+        else if (pathname === '/brands') pageName = 'Brands';
+        else if (pathname === '/products') pageName = 'Products';
+        else if (pathname.startsWith('/brands/')) {
+          const brandName = pathname.split('/')[2];
+          pageName = `${brandName}Brand`;
+        }
+
+        await PageVisit.create({
+          path: pathname,
+          page: pageName,
+          user_email: userEmail,
+          user_agent: navigator.userAgent
+        });
+      } catch (error) {
+        console.warn("Failed to track page visit:", error);
+      }
+    };
+
+    trackVisit();
+  }, [pathname]);
 
   return (
     <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-red-100 dark:border-gray-700 sticky top-0 z-50 transition-colors duration-300">
@@ -29,10 +94,10 @@ export default function Header() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white transition-colors">
-                Jeen Mata Impex
+                {siteInfo.company_name}
               </h1>
               <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors">
-                {getText('Premium Import Solutions', 'प्रिमियम आयात समाधान')}
+                {getText(siteInfo.tagline, 'प्रिमियम आयात समाधान')}
               </p>
             </div>
           </Link>

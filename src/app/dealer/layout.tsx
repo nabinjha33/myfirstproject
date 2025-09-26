@@ -39,7 +39,6 @@ import {
 
 const dealerRoutes = [
   { title: "Catalog", url: "/dealer/catalog", icon: Package },
-  { title: "Inquiry Cart", url: "/dealer/inquiry-cart", icon: ShoppingCart },
   { title: "Order Cart", url: "/dealer/order-cart", icon: ShoppingCart },
   { title: "My Orders", url: "/dealer/my-orders", icon: FileText },
   { title: "Shipments", url: "/dealer/shipments", icon: Ship },

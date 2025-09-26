@@ -1,579 +1,312 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Order, User } from '@/lib/entities';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { 
-  ShoppingCart, 
-  Eye, 
-  Search, 
-  Filter, 
-  Download,
-  Package,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Truck,
-  Calendar,
-  DollarSign,
-  FileText,
-  RefreshCw
-} from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-interface OrderData {
-  id: string;
-  order_number: string;
-  dealer_email: string;
-  status: 'Pending' | 'Confirmed' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
-  total_amount: number;
-  product_items: Array<{
-    product_id: string;
-    product_name: string;
-    quantity: number;
-    unit_price: number;
-  }>;
-  notes?: string;
-  created_date: string;
-  updated_date?: string;
-  tracking_number?: string;
-  estimated_delivery?: string;
-}
-
-const statusColors = {
-  'Pending': 'bg-yellow-100 text-yellow-800',
-  'Confirmed': 'bg-blue-100 text-blue-800',
-  'Processing': 'bg-purple-100 text-purple-800',
-  'Shipped': 'bg-orange-100 text-orange-800',
-  'Delivered': 'bg-green-100 text-green-800',
-  'Cancelled': 'bg-red-100 text-red-800'
-};
-
-const statusIcons = {
-  'Pending': Clock,
-  'Confirmed': CheckCircle,
-  'Processing': Package,
-  'Shipped': Truck,
-  'Delivered': CheckCircle,
-  'Cancelled': XCircle
-};
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Eye, Package, FileText, Printer } from 'lucide-react';
+import { format } from 'date-fns';
 
 export default function MyOrders() {
-  const [orders, setOrders] = useState<OrderData[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<OrderData[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState<OrderData | null>(null);
-  const [isOrderDetailOpen, setIsOrderDetailOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('all');
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+
+  const applyFilters = useCallback(() => {
+    let filtered = [...orders];
+    if (statusFilter !== 'All') {
+      filtered = filtered.filter((order: any) => order.status === statusFilter);
+    }
+    setFilteredOrders(filtered);
+  }, [orders, statusFilter]);
 
   useEffect(() => {
-    loadCurrentUser();
+    fetchData();
   }, []);
 
   useEffect(() => {
-    if (currentUser) {
-      loadOrders();
-    }
-  }, [currentUser]);
+    applyFilters();
+  }, [applyFilters]);
 
-  useEffect(() => {
-    filterOrders();
-  }, [orders, searchTerm, statusFilter, dateFilter]);
-
-  const loadCurrentUser = async () => {
+  const fetchData = async () => {
+    setIsLoading(true);
     try {
       const user = await User.me();
       setCurrentUser(user);
-    } catch (error) {
-      console.error('Failed to load current user:', error);
-    }
-  };
-
-  const loadOrders = async () => {
-    if (!currentUser?.email) return;
-    
-    setIsLoading(true);
-    try {
-      const data = await Order.list('-created_date', { dealer_email: currentUser.email });
-      setOrders(data);
-    } catch (error) {
-      console.error('Failed to load orders:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const filterOrders = () => {
-    let filtered = [...orders];
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(order => 
-        order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.product_items.some(item => 
-          item.product_name.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      );
-    }
-
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === statusFilter);
-    }
-
-    // Date filter
-    if (dateFilter !== 'all') {
-      const now = new Date();
-      const filterDate = new Date();
-      
-      switch (dateFilter) {
-        case 'week':
-          filterDate.setDate(now.getDate() - 7);
-          break;
-        case 'month':
-          filterDate.setMonth(now.getMonth() - 1);
-          break;
-        case 'quarter':
-          filterDate.setMonth(now.getMonth() - 3);
-          break;
-        case 'year':
-          filterDate.setFullYear(now.getFullYear() - 1);
-          break;
+      if (user?.email) {
+        const allOrders = await Order.list('-created_date');
+        const orderData = allOrders.filter((order: any) => order.dealer_email === user.email);
+        setOrders(orderData);
       }
-      
-      if (dateFilter !== 'all') {
-        filtered = filtered.filter(order => 
-          new Date(order.created_date) >= filterDate
-        );
-      }
+    } catch (error) {
+      console.error("Failed to fetch orders:", error);
     }
-
-    setFilteredOrders(filtered);
+    setIsLoading(false);
   };
 
-  const handleViewOrder = (order: OrderData) => {
-    setSelectedOrder(order);
-    setIsOrderDetailOpen(true);
+  const generatePrintableSlip = async (order: any) => {
+    const allUsers = await User.list();
+    const dealers = allUsers.filter((user: any) => user.email === order.dealer_email);
+    const dealer = dealers.length > 0 ? dealers[0] : null;
+
+    const slipHTML = `
+      <html>
+        <head>
+          <title>Order Slip - ${order.order_number}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; color: #1f2937; }
+            .slip-container { max-width: 800px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; }
+            h1, h2, h3 { color: #dc2626; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+            th { background-color: #f3f4f6; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 2px solid #dc2626; }
+            .total { text-align: right; margin-top: 20px; font-size: 1.5em; font-weight: bold; }
+            .item-notes { font-size: 0.8em; color: #555; }
+            @media print {
+              body { padding: 0; }
+              .slip-container { border: none; box-shadow: none; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="slip-container">
+            <div class="header">
+              <div>
+                <h1>Order Slip</h1>
+                <p><strong>Order #:</strong> ${order.order_number}</p>
+                <p><strong>Date:</strong> ${format(new Date(order.created_date), 'MMMM d, yyyy')}</p>
+              </div>
+              <div>
+                <h2>Jeen Mata Impex</h2>
+              </div>
+            </div>
+            
+            <h3 style="margin-top: 30px;">Dealer Information</h3>
+            ${dealer ? `
+              <p><strong>Business:</strong> ${dealer.business_name || 'N/A'}</p>
+              <p><strong>Contact:</strong> ${dealer.full_name || 'N/A'}</p>
+              <p><strong>Email:</strong> ${dealer.email}</p>
+              <p><strong>Address:</strong> ${dealer.address || 'N/A'}</p>
+            ` : `<p><strong>Email:</strong> ${order.dealer_email}</p>`}
+
+            <h3 style="margin-top: 30px;">Order Items</h3>
+            <table>
+              <thead>
+                <tr><th>Product</th><th>Variant</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr>
+              </thead>
+              <tbody>
+                ${order.product_items.map((item: any) => `
+                  <tr>
+                    <td>
+                      ${item.product_name}
+                      ${item.notes ? `<p class="item-notes"><em>Note: ${item.notes}</em></p>` : ''}
+                    </td>
+                    <td>${item.variant_details}</td>
+                    <td style="text-align: center;">${item.quantity}</td>
+                    <td style="text-align: right;">NPR ${item.unit_price_npr.toLocaleString('en-US')}</td>
+                    <td style="text-align: right;">NPR ${(item.unit_price_npr * item.quantity).toLocaleString('en-US')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            
+            <div class="total">
+              Total Amount: NPR ${order.total_amount_npr.toLocaleString('en-US')}
+            </div>
+            <button class="no-print" onclick="window.print()">Print this slip</button>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(slipHTML);
+      printWindow.document.close();
+      printWindow.focus();
+    }
   };
 
-  const exportOrders = () => {
-    const csvContent = [
-      ['Order Number', 'Status', 'Total Amount', 'Items', 'Date'].join(','),
-      ...filteredOrders.map(order => [
-        order.order_number,
-        order.status,
-        order.total_amount,
-        order.product_items.length,
-        new Date(order.created_date).toLocaleDateString()
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `my_orders_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const getOrderStats = () => {
-    const stats = {
-      total: orders.length,
-      pending: orders.filter(o => o.status === 'Pending').length,
-      confirmed: orders.filter(o => o.status === 'Confirmed').length,
-      processing: orders.filter(o => o.status === 'Processing').length,
-      shipped: orders.filter(o => o.status === 'Shipped').length,
-      delivered: orders.filter(o => o.status === 'Delivered').length,
-      cancelled: orders.filter(o => o.status === 'Cancelled').length,
-      totalValue: orders.reduce((sum, order) => sum + order.total_amount, 0)
+  const getStatusBadgeClass = (status: string) => {
+    const statusClasses: { [key: string]: string } = {
+      'Submitted': 'bg-blue-100 text-blue-800 border-blue-200',
+      'Confirmed': 'bg-green-100 text-green-800 border-green-200',
+      'Processing': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'Shipped': 'bg-purple-100 text-purple-800 border-purple-200',
+      'Delivered': 'bg-green-100 text-green-800 border-green-200',
+      'Cancelled': 'bg-red-100 text-red-800 border-red-200',
+      'Archived': 'bg-gray-100 text-gray-800 border-gray-200'
     };
-    return stats;
+    return statusClasses[status] || 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
-  const stats = getOrderStats();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading your orders...</div>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="p-6">Loading your orders...</div>;
+  if (!currentUser) return <div className="p-6">You must be logged in to view this page.</div>
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">My Orders</h1>
-          <p className="text-gray-600">Track and manage your order history</p>
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Status</SelectItem>
+              <SelectItem value="Submitted">Submitted</SelectItem>
+              <SelectItem value="Confirmed">Confirmed</SelectItem>
+              <SelectItem value="Processing">Processing</SelectItem>
+              <SelectItem value="Shipped">Shipped</SelectItem>
+              <SelectItem value="Delivered">Delivered</SelectItem>
+              <SelectItem value="Cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={loadOrders} variant="outline" className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
-          <Button onClick={exportOrders} variant="outline" className="flex items-center gap-2">
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-        </div>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
         <Card>
-          <CardContent className="pt-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-              <div className="text-sm text-gray-600">Total Orders</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-              <div className="text-sm text-gray-600">Pending</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{stats.confirmed}</div>
-              <div className="text-sm text-gray-600">Confirmed</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{stats.processing}</div>
-              <div className="text-sm text-gray-600">Processing</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{stats.shipped}</div>
-              <div className="text-sm text-gray-600">Shipped</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{stats.delivered}</div>
-              <div className="text-sm text-gray-600">Delivered</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{stats.cancelled}</div>
-              <div className="text-sm text-gray-600">Cancelled</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-center">
-              <div className="text-lg font-bold text-green-600">
-                NPR {stats.totalValue.toLocaleString()}
-              </div>
-              <div className="text-sm text-gray-600">Total Value</div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search by order number or product name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="w-full md:w-48">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="Confirmed">Confirmed</SelectItem>
-                  <SelectItem value="Processing">Processing</SelectItem>
-                  <SelectItem value="Shipped">Shipped</SelectItem>
-                  <SelectItem value="Delivered">Delivered</SelectItem>
-                  <SelectItem value="Cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-full md:w-48">
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger>
-                  <Calendar className="h-4 w-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="week">Last Week</SelectItem>
-                  <SelectItem value="month">Last Month</SelectItem>
-                  <SelectItem value="quarter">Last 3 Months</SelectItem>
-                  <SelectItem value="year">Last Year</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Orders Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            Orders ({filteredOrders.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
+          <CardHeader>
+            <CardTitle>Your Placed Orders ({filteredOrders.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Order Number</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Order #</TableHead>
                   <TableHead>Items</TableHead>
-                  <TableHead>Total Amount</TableHead>
-                  <TableHead>Order Date</TableHead>
-                  <TableHead>Tracking</TableHead>
+                  <TableHead>Total (NPR)</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.map((order) => {
-                  const StatusIcon = statusIcons[order.status];
-                  return (
-                    <TableRow key={order.id}>
-                      <TableCell>
-                        <div className="font-medium">{order.order_number}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={statusColors[order.status]}>
-                          <StatusIcon className="h-3 w-3 mr-1" />
-                          {order.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {order.product_items.length} item{order.product_items.length !== 1 ? 's' : ''}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">NPR {order.total_amount.toLocaleString()}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {new Date(order.created_date).toLocaleDateString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {order.tracking_number ? (
-                            <Badge variant="outline">{order.tracking_number}</Badge>
-                          ) : (
-                            <span className="text-gray-400">Not available</span>
+                {filteredOrders.length > 0 ? filteredOrders.map((order: any) => (
+                  <TableRow key={order.id}>
+                    <TableCell>{format(new Date(order.created_date), 'MMM d, yyyy')}</TableCell>
+                    <TableCell>{order.order_number}</TableCell>
+                    <TableCell>{order.product_items.length} items</TableCell>
+                    <TableCell>{order.total_amount_npr.toLocaleString('en-US')}</TableCell>
+                    <TableCell>
+                      <Badge className={getStatusBadgeClass(order.status)}>
+                        {order.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Details
+                            </Button>
+                          </DialogTrigger>
+                          {selectedOrder && selectedOrder.id === order.id && (
+                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>Order Details - {selectedOrder.order_number}</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-6 py-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg border">
+                                  <div>
+                                    <h4 className="font-semibold text-gray-700 text-sm">Order Date</h4>
+                                    <p className="text-base">{format(new Date(selectedOrder.created_date), 'MMMM d, yyyy')}</p>
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-gray-700 text-sm">Status</h4>
+                                    <Badge className={getStatusBadgeClass(selectedOrder.status)}>{selectedOrder.status}</Badge>
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-gray-700 text-sm">Total Amount</h4>
+                                    <p className="text-base font-bold text-red-600">NPR {selectedOrder.total_amount_npr.toLocaleString('en-US')}</p>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <h4 className="font-semibold mb-4 text-lg">Order Items</h4>
+                                  <div className="space-y-4">
+                                    {selectedOrder.product_items.map((item: any, index: number) => (
+                                      <Card key={index} className="border border-gray-200 shadow-sm">
+                                        <CardContent className="p-4">
+                                          <div className="flex flex-col sm:flex-row gap-4">
+                                            {item.product_image ? (
+                                              <img 
+                                                src={item.product_image} 
+                                                alt={item.product_name}
+                                                className="w-24 h-24 object-cover rounded-lg border flex-shrink-0"
+                                              />
+                                            ) : (
+                                              <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center border flex-shrink-0">
+                                                <Package className="w-8 h-8 text-gray-400" />
+                                              </div>
+                                            )}
+                                            <div className="flex-1">
+                                              <h5 className="font-semibold text-lg">{item.product_name || `Product ID: ${item.product_id}`}</h5>
+                                              <p className="text-sm text-gray-600 mb-1">
+                                                <span className="font-medium">Variant:</span> {item.variant_details || 'Standard'}
+                                              </p>
+                                              <p className="text-sm text-gray-600 mb-2">
+                                                <span className="font-medium">Unit Price:</span> NPR {item.unit_price_npr.toLocaleString('en-US')}
+                                              </p>
+                                               <p className="text-sm text-gray-600 mb-1">
+                                                <span className="font-medium">Quantity:</span> {item.quantity}
+                                              </p>
+                                            </div>
+                                            <div className="text-right mt-4 sm:mt-0">
+                                              <p className="font-bold text-lg">NPR {(item.unit_price_npr * item.quantity).toLocaleString('en-US')}</p>
+                                            </div>
+                                          </div>
+                                          {item.notes && (
+                                            <div className="mt-4 pt-3 border-t">
+                                              <div className="flex items-start gap-2 text-sm">
+                                                <FileText className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                                <div>
+                                                  <span className="font-medium text-blue-800">Special Notes:</span>
+                                                  <p className="text-blue-700 mt-1">{item.notes}</p>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </CardContent>
+                                      </Card>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </DialogContent>
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
+                        </Dialog>
+
+                        <Button 
+                          variant="outline" 
                           size="sm"
-                          onClick={() => handleViewOrder(order)}
+                          onClick={() => generatePrintableSlip(order)}
                         >
-                          <Eye className="h-4 w-4" />
+                          <Printer className="w-4 h-4 mr-2" />
+                          Print Slip
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center">No orders found with the selected filters.</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
-          </div>
-
-          {filteredOrders.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              {searchTerm || statusFilter !== 'all' || dateFilter !== 'all'
-                ? 'No orders match your search criteria.' 
-                : 'You haven\'t placed any orders yet.'}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Order Detail Dialog */}
-      <Dialog open={isOrderDetailOpen} onOpenChange={setIsOrderDetailOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Order Details - {selectedOrder?.order_number}</DialogTitle>
-          </DialogHeader>
-
-          {selectedOrder && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Order Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="font-medium">Order Number:</span>
-                      <span>{selectedOrder.order_number}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Status:</span>
-                      <Badge className={statusColors[selectedOrder.status]}>
-                        {selectedOrder.status}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Total Amount:</span>
-                      <span className="font-bold">NPR {selectedOrder.total_amount.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Order Date:</span>
-                      <span>{new Date(selectedOrder.created_date).toLocaleDateString()}</span>
-                    </div>
-                    {selectedOrder.updated_date && (
-                      <div className="flex justify-between">
-                        <span className="font-medium">Last Updated:</span>
-                        <span>{new Date(selectedOrder.updated_date).toLocaleDateString()}</span>
-                      </div>
-                    )}
-                    {selectedOrder.tracking_number && (
-                      <div className="flex justify-between">
-                        <span className="font-medium">Tracking Number:</span>
-                        <Badge variant="outline">{selectedOrder.tracking_number}</Badge>
-                      </div>
-                    )}
-                    {selectedOrder.estimated_delivery && (
-                      <div className="flex justify-between">
-                        <span className="font-medium">Est. Delivery:</span>
-                        <span>{new Date(selectedOrder.estimated_delivery).toLocaleDateString()}</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <DollarSign className="h-5 w-5" />
-                      Order Summary
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Items ({selectedOrder.product_items.length}):</span>
-                        <span>NPR {selectedOrder.total_amount.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Shipping:</span>
-                        <span>Included</span>
-                      </div>
-                      <div className="border-t pt-2">
-                        <div className="flex justify-between font-bold">
-                          <span>Total:</span>
-                          <span>NPR {selectedOrder.total_amount.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Package className="h-5 w-5" />
-                    Order Items
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Quantity</TableHead>
-                        <TableHead>Unit Price</TableHead>
-                        <TableHead>Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedOrder.product_items.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">{item.product_name}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>NPR {item.unit_price.toLocaleString()}</TableCell>
-                          <TableCell>NPR {(item.quantity * item.unit_price).toLocaleString()}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              {selectedOrder.notes && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Order Notes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-600">{selectedOrder.notes}</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

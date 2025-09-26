@@ -1,70 +1,123 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+// Removed lodash dependency - using native JavaScript methods instead
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import dynamic from 'next/dynamic';
 
-const BarChart = dynamic(() => import('recharts').then((mod) => mod.BarChart), { ssr: false });
-const Bar = dynamic(() => import('recharts').then((mod) => mod.Bar), { ssr: false });
+const LineChart = dynamic(() => import('recharts').then((mod) => mod.LineChart), { ssr: false });
+const Line = dynamic(() => import('recharts').then((mod) => mod.Line), { ssr: false });
 const XAxis = dynamic(() => import('recharts').then((mod) => mod.XAxis), { ssr: false });
 const YAxis = dynamic(() => import('recharts').then((mod) => mod.YAxis), { ssr: false });
 const Tooltip = dynamic(() => import('recharts').then((mod) => mod.Tooltip), { ssr: false });
 const ResponsiveContainer = dynamic(() => import('recharts').then((mod) => mod.ResponsiveContainer), { ssr: false });
-import { Product, Shipment, User, Inquiry, Order } from '@/lib/entities';
-import { Package, Users, Truck, MessageSquare, ShoppingCart, Activity } from 'lucide-react';
+const CartesianGrid = dynamic(() => import('recharts').then((mod) => mod.CartesianGrid), { ssr: false });
+
+import { Product, Shipment, User, Order, DealerApplication, PageVisit } from '@/lib/entities';
+import { Button } from '@/components/ui/button';
+import {
+  Package,
+  Users,
+  Truck,
+  ShoppingCart,
+  Activity,
+  UserCheck,
+  UserX,
+  Eye,
+  Clock
+} from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import Link from 'next/link';
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({ products: 0, dealers: 0, shipments: 0, inquiries: 0, orders: 0 });
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    products: 0,
+    approvedDealers: 0,
+    pendingApplications: 0,
+    shipments: 0,
+    visitorsToday: 0,
+    totalVisits: 0,
+    orderStats: { submitted: 0, confirmed: 0, processing: 0, shipped: 0, delivered: 0, cancelled: 0 }
+  });
+  const [trafficData, setTrafficData] = useState<any[]>([]);
+  const [recentPending, setRecentPending] = useState<any[]>([]);
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const chartData = [
-    { name: 'Jan', inquiries: 40, orders: 24 },
-    { name: 'Feb', inquiries: 30, orders: 13 },
-    { name: 'Mar', inquiries: 20, orders: 98 },
-    { name: 'Apr', inquiries: 27, orders: 39 },
-    { name: 'May', inquiries: 18, orders: 48 },
-    { name: 'Jun', inquiries: 23, orders: 38 },
-  ];
-  
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const [products, users, shipments, inquiries, orders] = await Promise.all([
-          Product.list(),
-          User.list(),
-          Shipment.list(),
-          Inquiry.list(),
-          Order.list()
-        ]);
-        
-        setStats({
-          products: products.length,
-          dealers: users.filter((u: any) => u.role === 'user').length,
-          shipments: shipments.length,
-          inquiries: inquiries.length,
-          orders: orders.length
-        });
-        
-        const combinedActivity = [
-            ...products.slice(0, 2).map((p: any) => ({ ...p, type: 'Product', date: p.created_date })),
-            ...users.slice(0, 2).map((u: any) => ({ ...u, type: 'Dealer', date: u.created_date })),
-            ...inquiries.slice(0, 2).map((i: any) => ({ ...i, type: 'Inquiry', date: i.created_date })),
-        ].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        setRecentActivity(combinedActivity);
-
-      } catch (error) {
-        console.error("Failed to fetch dashboard data", error);
-      }
-      setIsLoading(false);
-    };
     fetchData();
   }, []);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [products, users, shipments, recentOrdersData, applications, visits] = await Promise.all([
+        Product.list(),
+        User.list(),
+        Shipment.list(),
+        Order.list('-created_date', 5),
+        DealerApplication.list(),
+        PageVisit.list('-created_date', 1000)
+      ]);
+
+      const allOrders = await Order.list();
+      const orderStats = {
+        submitted: allOrders.filter((o: any) => o.status === 'Submitted').length,
+        confirmed: allOrders.filter((o: any) => o.status === 'Confirmed').length,
+        processing: allOrders.filter((o: any) => o.status === 'Processing').length,
+        shipped: allOrders.filter((o: any) => o.status === 'Shipped').length,
+        delivered: allOrders.filter((o: any) => o.status === 'Delivered').length,
+        cancelled: allOrders.filter((o: any) => o.status === 'Cancelled').length
+      };
+
+      const today = new Date();
+      const visitorsTodayCount = visits.filter((v: any) => new Date(v.created_date) >= startOfDay(today)).length;
+      const approvedDealersCount = users.filter((u: any) => u.dealer_status === 'Approved').length;
+      const pendingApps = applications.filter((app: any) => app.status === 'Pending');
+
+      setStats({
+        products: products.length,
+        approvedDealers: approvedDealersCount,
+        pendingApplications: pendingApps.length,
+        shipments: shipments.length,
+        visitorsToday: visitorsTodayCount,
+        totalVisits: visits.length,
+        orderStats
+      });
+      
+      setRecentPending(pendingApps.slice(0, 5));
+      setRecentOrders(recentOrdersData);
+
+      const sevenDaysAgo = subDays(new Date(), 6);
+      const recentVisits = visits.filter((v: any) => new Date(v.created_date) >= startOfDay(sevenDaysAgo));
+      
+      // Group visits by day using native JavaScript
+      const visitsByDay = recentVisits.reduce((acc: any, v: any) => {
+        const dateKey = format(new Date(v.created_date), 'yyyy-MM-dd');
+        if (!acc[dateKey]) acc[dateKey] = [];
+        acc[dateKey].push(v);
+        return acc;
+      }, {});
+      
+      // Create chart data for last 7 days using native JavaScript
+      const chartData = Array.from({ length: 7 }, (_, i) => {
+        const date = subDays(new Date(), i);
+        const formattedDate = format(date, 'yyyy-MM-dd');
+        return {
+          date: format(date, 'MMM d'),
+          visits: visitsByDay[formattedDate]?.length || 0,
+        };
+      }).reverse();
+
+      setTrafficData(chartData);
+
+    } catch (error) {
+      console.error("Failed to fetch dashboard data", error);
+    }
+    setIsLoading(false);
+  };
 
   const StatCard = ({ title, value, icon, description }: { title: string, value: number, icon: React.ReactNode, description: string }) => (
     <Card>
@@ -84,71 +137,139 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-8">
-          <StatCard title="Total Products" value={stats.products} icon={<Package className="h-4 w-4 text-muted-foreground" />} description="All variants included" />
-          <StatCard title="Active Dealers" value={stats.dealers} icon={<Users className="h-4 w-4 text-muted-foreground" />} description="Approved accounts" />
-          <StatCard title="Ongoing Shipments" value={stats.shipments} icon={<Truck className="h-4 w-4 text-muted-foreground" />} description="ETA tracking active" />
-          <StatCard title="New Inquiries" value={stats.inquiries} icon={<MessageSquare className="h-4 w-4 text-muted-foreground" />} description="Past 30 days" />
-          <StatCard title="Completed Orders" value={stats.orders} icon={<ShoppingCart className="h-4 w-4 text-muted-foreground" />} description="Past 30 days" />
-        </div>
+        {isLoading ? <p>Loading dashboard...</p> : (
+          <>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
+              <StatCard title="Visitors Today" value={stats.visitorsToday} icon={<Eye className="h-4 w-4 text-muted-foreground" />} description="Unique page views" />
+              <StatCard title="Pending Applications" value={stats.pendingApplications} icon={<Clock className="h-4 w-4 text-muted-foreground" />} description="Awaiting review" />
+              <StatCard title="Approved Dealers" value={stats.approvedDealers} icon={<Users className="h-4 w-4 text-muted-foreground" />} description="Active dealer accounts" />
+              <StatCard title="Total Products" value={stats.products} icon={<Package className="h-4 w-4 text-muted-foreground" />} description="All variants included" />
+            </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-7 gap-4">
-          <Card className="lg:col-span-4">
-            <CardHeader>
-              <CardTitle>Inquiries vs Orders Overview</CardTitle>
-            </CardHeader>
-            <CardContent className="pl-2">
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={chartData}>
-                  <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-                  <Tooltip />
-                  <Bar dataKey="inquiries" fill="#8884d8" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="orders" fill="#82ca9d" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-          
-          <Card className="lg:col-span-3">
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivity.map((item: any) => (
-                  <div key={item.id} className="flex items-center">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
-                      {item.type === 'Product' && <Package className="h-4 w-4" />}
-                      {item.type === 'Dealer' && <Users className="h-4 w-4" />}
-                      {item.type === 'Inquiry' && <MessageSquare className="h-4 w-4" />}
+            <div className="grid gap-6 md:grid-cols-1 mb-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShoppingCart className="h-5 w-5" />
+                    Order Status Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">{stats.orderStats.submitted}</div>
+                      <p className="text-sm text-gray-600">Submitted</p>
                     </div>
-                    <div className="ml-4 space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {item.type === 'Product' && `New Product: ${item.name}`}
-                        {item.type === 'Dealer' && `New Dealer: ${item.full_name}`}
-                        {item.type === 'Inquiry' && `New Inquiry from ${item.dealer_email}`}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {(() => {
-                          if (!item.date) return 'No date available';
-                          const date = new Date(item.date);
-                          return isNaN(date.getTime()) ? 'Invalid date' : format(date, 'MMM d, yyyy');
-                        })()}
-                      </p>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">{stats.orderStats.confirmed}</div>
+                      <p className="text-sm text-gray-600">Confirmed</p>
                     </div>
-                    <div className="ml-auto font-medium">
-                      <Badge variant={
-                          item.type === 'Product' ? 'default' : 
-                          item.type === 'Dealer' ? 'secondary' : 'outline'
-                        }>{item.type}</Badge>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-yellow-600">{stats.orderStats.processing}</div>
+                      <p className="text-sm text-gray-600">Processing</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600">{stats.orderStats.shipped}</div>
+                      <p className="text-sm text-gray-600">Shipped</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-emerald-600">{stats.orderStats.delivered}</div>
+                      <p className="text-sm text-gray-600">Delivered</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-600">{stats.orderStats.cancelled}</div>
+                      <p className="text-sm text-gray-600">Cancelled</p>
                     </div>
                   </div>
-                ))}
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Site Traffic (Last 7 Days)</CardTitle>
+                    <CardDescription>Page visits across the public-facing site.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pl-2">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={trafficData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" stroke="#888888" fontSize={12} />
+                        <YAxis stroke="#888888" fontSize={12} allowDecimals={false} />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="visits" stroke="#dc2626" strokeWidth={2} activeDot={{ r: 8 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Recent Orders</CardTitle>
+                    <CardDescription>Latest orders from dealers.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Order #</TableHead>
+                          <TableHead>Dealer</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {recentOrders.slice(0, 5).map((order: any) => (
+                          <TableRow key={order.id}>
+                            <TableCell className="font-medium">{order.order_number}</TableCell>
+                            <TableCell>{order.dealer_email}</TableCell>
+                            <TableCell>NPR {order.total_amount_npr?.toLocaleString() || 'N/A'}</TableCell>
+                            <TableCell><Badge variant="outline">{order.status}</Badge></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+
+              <div className="lg:col-span-1 space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Pending Dealer Applications</CardTitle>
+                    <CardDescription>Review and take action on new applications.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {recentPending.length > 0 ? (
+                      <div className="space-y-4">
+                        {recentPending.map((app: any) => (
+                          <div key={app.id} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-100">
+                            <div>
+                              <p className="font-medium text-sm">{app.business_name}</p>
+                              <p className="text-xs text-muted-foreground">{app.contact_person}</p>
+                            </div>
+                            <Link href="/admin/dealers">
+                              <Button variant="ghost" size="sm">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            </Link>
+                          </div>
+                        ))}
+                         <Link href="/admin/dealers">
+                           <Button variant="outline" className="w-full mt-4">View All Applications</Button>
+                         </Link>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-center text-muted-foreground py-4">No pending applications.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
