@@ -81,17 +81,30 @@ export default function DealerCatalog() {
 
   const loadProducts = async () => {
     setIsLoading(true);
-    const allProducts = await Product.list('-created_date');
-    setProducts(allProducts);
+    try {
+      console.log('Loading products for dealer catalog...');
+      const allProducts = await Product.list('-created_at');
+      console.log('Products loaded:', allProducts.length);
+      console.log('Products data:', allProducts);
+      setProducts(allProducts);
+    } catch (error: any) {
+      console.error("Failed to load products:", error);
+      console.error('Error details:', error?.message || 'Unknown error');
+      setProducts([]);
+    }
     setIsLoading(false);
   };
 
   const loadCategories = async () => {
     try {
-      const activeCategories = await Category.filter({ active: true }, 'sort_order');
+      console.log('Loading categories for dealer catalog...');
+      const activeCategories = await Category.getActive();
+      console.log('Categories loaded:', activeCategories.length);
+      console.log('Categories data:', activeCategories);
       setCategories(['All', ...activeCategories.map((cat: any) => cat.name)]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load categories:", error);
+      console.error('Error details:', error?.message || 'Unknown error');
       setCategories(['All']);
     }
   };

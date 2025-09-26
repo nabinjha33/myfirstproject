@@ -23,7 +23,8 @@ class BaseEntity {
 // Product entity
 class Product extends BaseEntity {
   static async list(sortBy?: string, filters?: any): Promise<any[]> {
-    return productService.list(sortBy, filters);
+    // Always use getWithRelations for products to include brand and category names
+    return productService.getWithRelations();
   }
 
   static async filter(filters?: any, sortBy?: string, limit?: number): Promise<any[]> {
@@ -49,7 +50,7 @@ class Product extends BaseEntity {
   }
 
   static async findBySlug(slug: string): Promise<any | null> {
-    return productService.findBySlug(slug);
+    return productService.findBySlugWithRelations(slug);
   }
 
   static async create(itemData: any): Promise<any> {

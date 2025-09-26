@@ -21,8 +21,12 @@ export default function OrderCart() {
     setIsSubmitting(true);
     setSubmissionStatus(null);
     try {
+      console.log('Placing order...');
       const currentUser = await User.me();
+      console.log('Current user for order:', currentUser);
+      
       if (!currentUser || !currentUser.email) {
+        console.log('User not logged in');
         setSubmissionStatus({
           type: 'error',
           message: 'You must be logged in to place an order. Please log in and try again.'

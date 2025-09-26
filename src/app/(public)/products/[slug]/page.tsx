@@ -198,7 +198,7 @@ export default function ProductDetail() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/dealer/login" className="flex-1">
+              <Link href="/dealer-login" className="flex-1">
                 <Button className="w-full bg-red-600 hover:bg-red-700 h-12">
                   <ShoppingCart className="w-5 h-5 mr-2" />
                   Request Quote as Dealer
@@ -424,7 +424,7 @@ export default function ProductDetail() {
           <p className="text-red-100 mb-6 max-w-2xl mx-auto">
             Join our dealer network to access wholesale pricing and place orders for this and thousands of other premium products.
           </p>
-          <Link href="/dealer/login">
+          <Link href="/dealer-login">
             <Button size="lg" className="bg-white text-red-600 hover:bg-red-50 h-12 px-8">
               Request Dealer Access
             </Button>

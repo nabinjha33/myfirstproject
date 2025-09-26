@@ -132,14 +132,25 @@ function ProductsContent() {
 
   const loadProducts = async () => {
     setIsLoading(true);
-    const allProducts = await Product.list('-created_date');
-    setProducts(allProducts);
+    try {
+      console.log('Loading products...');
+      const allProducts = await Product.list('-created_at');
+      console.log('Loaded products:', allProducts.length);
+      console.log('Products data:', allProducts);
+      setProducts(allProducts);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+      setProducts([]);
+    }
     setIsLoading(false);
   };
 
   const loadCategories = async () => {
     try {
-      const activeCategories = await Category.filter({ active: true }, 'sort_order');
+      console.log('Loading categories...');
+      const activeCategories = await Category.getActive();
+      console.log('Loaded categories:', activeCategories.length);
+      console.log('Categories data:', activeCategories);
       setCategories(['All', ...activeCategories.map((cat: any) => cat.name)]);
     } catch (error) {
       console.error("Failed to load categories:", error);

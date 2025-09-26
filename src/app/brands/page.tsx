@@ -43,6 +43,7 @@ export default function Brands() {
   const [brands, setBrands] = useState<any[]>([]);
   const [brandStats, setBrandStats] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadBrandData();
@@ -51,10 +52,17 @@ export default function Brands() {
   const loadBrandData = async () => {
     setIsLoading(true);
     try {
+      console.log('Loading brand data...');
+      
       const [allProducts, activeBrands] = await Promise.all([
-        Product.list('-created_date'),
-        Brand.filter({ active: true }, 'sort_order')
+        Product.list('-created_at'),
+        Brand.getActive()
       ]);
+      
+      console.log('Loaded products:', allProducts.length);
+      console.log('Loaded brands:', activeBrands.length);
+      console.log('Brands data:', activeBrands);
+      console.log('Products data:', allProducts);
       
       setProducts(allProducts);
       setBrands(activeBrands);
@@ -62,8 +70,11 @@ export default function Brands() {
       // Calculate statistics for each brand
       const stats: any = {};
       activeBrands.forEach((brand: any) => {
-        const brandProducts = allProducts.filter((product: any) => product.brand === brand.name);
+        // Fix: Match by brand_id instead of brand name
+        const brandProducts = allProducts.filter((product: any) => product.brand_id === brand.id);
         const featuredCount = brandProducts.filter((product: any) => product.featured).length;
+        
+        console.log(`Brand ${brand.name} has ${brandProducts.length} products`);
         
         stats[brand.name] = {
           totalProducts: brandProducts.length,
@@ -74,9 +85,13 @@ export default function Brands() {
         };
       });
       
+      console.log('Brand stats:', stats);
       setBrandStats(stats);
-    } catch (error) {
+      setError(null); // Clear any previous errors
+    } catch (error: any) {
       console.error('Failed to load brand data:', error);
+      console.error('Error details:', error);
+      setError(error?.message || 'Failed to load brand data');
     }
     setIsLoading(false);
   };
@@ -216,7 +231,21 @@ export default function Brands() {
             </p>
           </div>
 
-          {isLoading ? (
+          {error ? (
+            <div className="text-center py-16">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-8 max-w-md mx-auto">
+                <Package className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2 text-red-800">Error Loading Brands</h3>
+                <p className="text-red-600 mb-4">{error}</p>
+                <button 
+                  onClick={loadBrandData}
+                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          ) : isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[...Array(6)].map((_, i) => (
                 <Card key={i} className="animate-pulse">

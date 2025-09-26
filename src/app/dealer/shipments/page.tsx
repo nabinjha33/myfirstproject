@@ -81,8 +81,17 @@ export default function Shipments() {
 
   const loadShipments = async () => {
     setIsLoading(true);
-    const data = await Shipment.list('-eta_date');
-    setShipments(data);
+    try {
+      console.log('Loading shipments for dealer...');
+      const data = await Shipment.list('-created_at');
+      console.log('Shipments loaded:', data.length);
+      console.log('Shipments data:', data);
+      setShipments(data);
+    } catch (error: any) {
+      console.error('Failed to load shipments:', error);
+      console.error('Error details:', error?.message || 'Unknown error');
+      setShipments([]);
+    }
     setIsLoading(false);
   };
 

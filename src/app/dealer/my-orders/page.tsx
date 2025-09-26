@@ -38,15 +38,21 @@ export default function MyOrders() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      console.log('Loading dealer orders...');
       const user = await User.me();
+      console.log('Current user:', user);
       setCurrentUser(user);
+      
       if (user?.email) {
-        const allOrders = await Order.list('-created_date');
+        const allOrders = await Order.list('-created_at');
+        console.log('All orders loaded:', allOrders.length);
         const orderData = allOrders.filter((order: any) => order.dealer_email === user.email);
+        console.log('Dealer orders:', orderData.length);
         setOrders(orderData);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch orders:", error);
+      console.error('Error details:', error?.message || 'Unknown error');
     }
     setIsLoading(false);
   };

@@ -202,7 +202,7 @@ export class BrandService extends DatabaseService {
         .from('brands')
         .select('*')
         .eq('active', true)
-        .order('name')
+        .order('sort_order', { ascending: true })
 
       if (error) {
         console.error('Database error in brands.getActive():', error)
@@ -231,7 +231,7 @@ export class CategoryService extends DatabaseService {
       .from('categories')
       .select('*')
       .eq('active', true)
-      .order('name')
+      .order('sort_order', { ascending: true })
 
     if (error) throw error
     return data || []
@@ -258,13 +258,24 @@ export class ProductService extends DatabaseService {
   async getFeatured(): Promise<Product[]> {
     const { data, error } = await supabase
       .from('products')
-      .select('*, brands(*), categories(*)')
+      .select(`
+        *,
+        brands!inner(id, name, slug),
+        categories!inner(id, name, slug)
+      `)
       .eq('featured', true)
       .eq('active', true)
-      .order('name')
+      .order('created_at', { ascending: false })
 
     if (error) throw error
-    return data || []
+    
+    // Transform the data to match expected format
+    return (data || []).map(product => ({
+      ...product,
+      brand: product.brands?.name || 'Unknown',
+      category: product.categories?.name || 'Uncategorized',
+      created_date: product.created_at // Add compatibility field
+    }))
   }
 
   async getByCategory(categoryId: string): Promise<Product[]> {
@@ -281,12 +292,48 @@ export class ProductService extends DatabaseService {
   async getWithRelations() {
     const { data, error } = await supabase
       .from('products')
-      .select('*, brands(*), categories(*)')
+      .select(`
+        *,
+        brands!inner(id, name, slug),
+        categories!inner(id, name, slug)
+      `)
       .eq('active', true)
-      .order('name')
+      .order('created_at', { ascending: false })
 
     if (error) throw error
-    return data || []
+    
+    // Transform the data to match expected format
+    return (data || []).map(product => ({
+      ...product,
+      brand: product.brands?.name || 'Unknown',
+      category: product.categories?.name || 'Uncategorized',
+      created_date: product.created_at // Add compatibility field
+    }))
+  }
+
+  async findBySlugWithRelations(slug: string) {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        brands!inner(id, name, slug),
+        categories!inner(id, name, slug)
+      `)
+      .eq('slug', slug)
+      .eq('active', true)
+      .single()
+
+    if (error && error.code !== 'PGRST116') throw error
+    
+    if (!data) return null
+    
+    // Transform the data to match expected format
+    return {
+      ...data,
+      brand: data.brands?.name || 'Unknown',
+      category: data.categories?.name || 'Uncategorized',
+      created_date: data.created_at // Add compatibility field
+    }
   }
 }
 

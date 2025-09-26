@@ -52,8 +52,8 @@ const features = [
 
 export default function Home() {
   const router = useRouter();
-  const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [brands, setBrands] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -76,13 +76,13 @@ export default function Home() {
       
       // Fetch all active brands
       console.log('Fetching active brands...');
-      const activeBrands = await Brand.filter({ active: true }, 'name');
+      const activeBrands = await Brand.getActive();
       console.log('Active brands loaded:', activeBrands.length);
       
       setFeaturedProducts(products);
       setBrands(activeBrands);
       console.log('Home page data loaded successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load data:', error);
       console.error('Error details:', {
         message: error?.message || 'Unknown error',
@@ -150,7 +150,7 @@ export default function Home() {
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <Link href="/dealer/login">
+              <Link href="/dealer-login">
                 <Button size="lg" className="h-12 px-8 bg-white text-blue-800 hover:bg-blue-50 dark:bg-cyan-600 dark:hover:bg-cyan-700 dark:text-white dark:border-0">
                   {getText("Become a Dealer", "डिलर बन्नुहोस्")}
                 </Button>
@@ -361,7 +361,7 @@ export default function Home() {
             )}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/dealer/login">
+            <Link href="/dealer-login">
               <Button size="lg" className="h-12 px-8 bg-white text-blue-800 hover:bg-blue-50 dark:bg-teal-600 dark:hover:bg-teal-700 dark:text-white dark:border-0">
                 {getText("Request Dealer Access", "डिलर पहुँच अनुरोध गर्नुहोस्")}
               </Button>

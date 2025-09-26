@@ -74,7 +74,7 @@ export default function PublicLayout({
                 <Globe className="w-4 h-4 mr-2" />
                 {language.toUpperCase()}
               </Button>
-              <Link href="/dealer/login">
+              <Link href="/dealer-login">
                 <Button className="bg-red-600 hover:bg-red-700 text-white">
                   Dealer Login
                 </Button>
