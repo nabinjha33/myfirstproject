@@ -33,7 +33,7 @@ export default function AdminProducts() {
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
-    const data = await Product.list('-created_date');
+    const data = await Product.list('-created_at');
     setProducts(data);
     setIsLoading(false);
   }, []);

@@ -88,8 +88,9 @@ class Product extends BaseEntity {
 
 // Order entity
 class Order extends BaseEntity {
-  static async list(sortBy?: string, filters?: any): Promise<any[]> {
-    return orderService.list(sortBy, filters);
+  static async list(sortBy?: string, limit?: number): Promise<any[]> {
+    const result = await orderService.list(sortBy);
+    return limit ? result.slice(0, limit) : result;
   }
 
   static async findById(id: string): Promise<any | null> {

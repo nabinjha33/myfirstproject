@@ -9,6 +9,8 @@ ALTER TABLE public.products DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dealer_applications DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shipments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.page_visits DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.site_settings DISABLE ROW LEVEL SECURITY;
 
 -- Grant full access to anonymous and authenticated users for development
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;

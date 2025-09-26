@@ -57,9 +57,9 @@ export default function AdminDashboard() {
         Product.list(),
         User.list(),
         Shipment.list(),
-        Order.list('-created_date', 5),
+        Order.list('-created_at', 5),
         DealerApplication.list(),
-        PageVisit.list('-created_date', 1000)
+        PageVisit.list('-created_at', 1000)
       ]);
 
       const allOrders = await Order.list();
@@ -73,7 +73,7 @@ export default function AdminDashboard() {
       };
 
       const today = new Date();
-      const visitorsTodayCount = visits.filter((v: any) => new Date(v.created_date) >= startOfDay(today)).length;
+      const visitorsTodayCount = visits.filter((v: any) => new Date(v.visited_at || v.created_at) >= startOfDay(today)).length;
       const approvedDealersCount = users.filter((u: any) => u.dealer_status === 'Approved').length;
       const pendingApps = applications.filter((app: any) => app.status === 'Pending');
 
@@ -91,11 +91,11 @@ export default function AdminDashboard() {
       setRecentOrders(recentOrdersData);
 
       const sevenDaysAgo = subDays(new Date(), 6);
-      const recentVisits = visits.filter((v: any) => new Date(v.created_date) >= startOfDay(sevenDaysAgo));
+      const recentVisits = visits.filter((v: any) => new Date(v.visited_at || v.created_at) >= startOfDay(sevenDaysAgo));
       
       // Group visits by day using native JavaScript
       const visitsByDay = recentVisits.reduce((acc: any, v: any) => {
-        const dateKey = format(new Date(v.created_date), 'yyyy-MM-dd');
+        const dateKey = format(new Date(v.visited_at || v.created_at), 'yyyy-MM-dd');
         if (!acc[dateKey]) acc[dateKey] = [];
         acc[dateKey].push(v);
         return acc;

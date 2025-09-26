@@ -50,6 +50,12 @@ export class DatabaseService {
           throw new Error(`RLS Policy Error in ${this.tableName}: ${error.message}. Please check the database policies.`)
         }
         
+        // If table doesn't exist, return empty array for graceful degradation
+        if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+          console.warn(`Table ${this.tableName} does not exist. Please run the database migration scripts.`)
+          return []
+        }
+        
         throw error
       }
       return data || []

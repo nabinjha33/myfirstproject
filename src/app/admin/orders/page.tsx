@@ -25,7 +25,7 @@ export default function AdminOrders() {
     setIsLoading(true);
     try {
       const [orderData, user] = await Promise.all([
-        Order.list('-created_date'),
+        Order.list('-created_at'),
         User.me()
       ]);
       setOrders(orderData.filter((o: any) => o.status !== 'Archived'));
@@ -94,10 +94,10 @@ export default function AdminOrders() {
               <TableBody>
                 {orders.length > 0 ? orders.map((order: any) => (
                   <TableRow key={order.id}>
-                    <TableCell>{format(new Date(order.created_date), 'MMM d, yyyy')}</TableCell>
+                    <TableCell>{format(new Date(order.created_at), 'MMM d, yyyy')}</TableCell>
                     <TableCell>{order.order_number}</TableCell>
                     <TableCell>{order.dealer_email}</TableCell>
-                    <TableCell>{order.total_amount_npr.toLocaleString()}</TableCell>
+                    <TableCell>{order.estimated_total_value?.toLocaleString() || 'N/A'}</TableCell>
                     <TableCell>
                       <Select value={order.status} onValueChange={(newStatus) => handleStatusChange(order.id, newStatus)}>
                         <SelectTrigger className="w-36">
@@ -130,7 +130,7 @@ export default function AdminOrders() {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg border">
                                   <div>
                                     <h4 className="font-semibold text-gray-700 text-sm">Order Date</h4>
-                                    <p className="text-base">{format(new Date(selectedOrder.created_date), 'MMMM d, yyyy')}</p>
+                                    <p className="text-base">{format(new Date(selectedOrder.created_at), 'MMMM d, yyyy')}</p>
                                   </div>
                                   <div>
                                     <h4 className="font-semibold text-gray-700 text-sm">Status</h4>
@@ -138,13 +138,13 @@ export default function AdminOrders() {
                                   </div>
                                   <div>
                                     <h4 className="font-semibold text-gray-700 text-sm">Total Amount</h4>
-                                    <p className="text-base font-bold text-red-600">NPR {selectedOrder.total_amount_npr.toLocaleString('en-US')}</p>
+                                    <p className="text-base font-bold text-red-600">NPR {selectedOrder.estimated_total_value?.toLocaleString('en-US') || 'N/A'}</p>
                                   </div>
                                 </div>
                                 <div>
                                   <h4 className="font-semibold mb-4 text-lg">Order Items</h4>
                                   <div className="space-y-4">
-                                    {selectedOrder.product_items.map((item: any, index: number) => (
+                                    {(selectedOrder.items || []).map((item: any, index: number) => (
                                       <Card key={index} className="border border-gray-200 shadow-sm">
                                         <CardContent className="p-4">
                                           <div className="flex flex-col sm:flex-row gap-4">
@@ -158,11 +158,11 @@ export default function AdminOrders() {
                                             <div className="flex-1">
                                               <h5 className="font-semibold text-lg">{item.product_name}</h5>
                                               <p className="text-sm text-gray-600 mb-1"><span className="font-medium">Variant:</span> {item.variant_details || 'Standard'}</p>
-                                              <p className="text-sm text-gray-600 mb-2"><span className="font-medium">Unit Price:</span> NPR {item.unit_price_npr.toLocaleString('en-US')}</p>
-                                              <p className="text-sm text-gray-600 mb-1"><span className="font-medium">Quantity:</span> {item.quantity}</p>
+                                              <p className="text-sm text-gray-600 mb-2"><span className="font-medium">Unit Price:</span> NPR {(item.unit_price_npr || item.price || 0).toLocaleString('en-US')}</p>
+                                              <p className="text-sm text-gray-600 mb-1"><span className="font-medium">Quantity:</span> {item.quantity || 1}</p>
                                             </div>
                                             <div className="text-right mt-4 sm:mt-0">
-                                              <p className="font-bold text-lg">NPR {(item.unit_price_npr * item.quantity).toLocaleString('en-US')}</p>
+                                              <p className="font-bold text-lg">NPR {((item.unit_price_npr || item.price || 0) * (item.quantity || 1)).toLocaleString('en-US')}</p>
                                             </div>
                                           </div>
                                           {item.notes && (

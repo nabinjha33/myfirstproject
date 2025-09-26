@@ -331,6 +331,73 @@ export interface Database {
           updated_at?: string
         }
       }
+      page_visits: {
+        Row: {
+          id: string
+          path: string
+          page: string
+          user_email?: string
+          user_agent?: string
+          visited_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          path: string
+          page: string
+          user_email?: string
+          user_agent?: string
+          visited_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          path?: string
+          page?: string
+          user_email?: string
+          user_agent?: string
+          visited_at?: string
+          created_at?: string
+        }
+      }
+      site_settings: {
+        Row: {
+          id: string
+          company_name: string
+          tagline?: string
+          contact_email?: string
+          contact_phone?: string
+          contact_address?: string
+          logo_url?: string
+          website_url?: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          company_name: string
+          tagline?: string
+          contact_email?: string
+          contact_phone?: string
+          contact_address?: string
+          logo_url?: string
+          website_url?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          company_name?: string
+          tagline?: string
+          contact_email?: string
+          contact_phone?: string
+          contact_address?: string
+          logo_url?: string
+          website_url?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

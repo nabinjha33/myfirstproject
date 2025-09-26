@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Product } from '@/lib/entities';
+import { Product, Brand, Category } from '@/lib/entities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,8 +15,8 @@ interface ProductFormData {
   name: string;
   slug: string;
   description: string;
-  brand: string;
-  category: string;
+  brand_id: string;
+  category_id: string;
   images: string[];
   variants: any[];
   featured: boolean;
@@ -28,26 +28,52 @@ interface ProductFormProps {
 }
 
 export default function ProductForm({ product, onSubmitSuccess }: ProductFormProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ProductFormData>({
     name: '',
     slug: '',
     description: '',
-    brand: 'FastDrill',
-    category: 'Tools',
+    brand_id: '',
+    category_id: '',
     images: [],
     variants: [],
     featured: false,
   });
+  const [brands, setBrands] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    // Load brands and categories
+    const loadData = async () => {
+      try {
+        const [brandsData, categoriesData] = await Promise.all([
+          Brand.list(),
+          Category.list()
+        ]);
+        setBrands(brandsData);
+        setCategories(categoriesData);
+        
+        // Set default values if no brands/categories exist
+        if (brandsData.length > 0 && !formData.brand_id) {
+          setFormData(prev => ({ ...prev, brand_id: brandsData[0].id }));
+        }
+        if (categoriesData.length > 0 && !formData.category_id) {
+          setFormData(prev => ({ ...prev, category_id: categoriesData[0].id }));
+        }
+      } catch (error) {
+        console.error('Failed to load brands/categories:', error);
+      }
+    };
+    
+    loadData();
+    
     if (product) {
       setFormData({
         name: product.name || '',
         slug: product.slug || '',
         description: product.description || '',
-        brand: product.brand || 'FastDrill',
-        category: product.category || 'Tools',
+        brand_id: product.brand_id || '',
+        category_id: product.category_id || '',
         images: product.images || [],
         variants: product.variants || [],
         featured: product.featured || false,
@@ -55,20 +81,27 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
     }
   }, [product]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
   };
   
-  const handleSelectChange = (id, value) => {
+  const handleSelectChange = (id: string, value: string) => {
     setFormData(prev => ({ ...prev, [id]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const dataToSave = { ...formData };
+      const dataToSave = {
+        ...formData,
+        // Generate slug if empty
+        slug: formData.slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+        // Ensure active is set
+        active: true
+      };
+      
       if (product && product.id) {
         await Product.update(product.id, dataToSave);
       } else {
@@ -77,6 +110,7 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
       onSubmitSuccess();
     } catch (error) {
       console.error('Failed to save product', error);
+      alert('Failed to save product. Please check the console for details.');
     }
     setIsSaving(false);
   };
@@ -101,20 +135,26 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="brand">Brand</Label>
-          <Select id="brand" value={formData.brand} onValueChange={(value) => handleSelectChange('brand', value)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Label htmlFor="brand_id">Brand</Label>
+          <Select value={formData.brand_id} onValueChange={(value) => handleSelectChange('brand_id', value)}>
+            <SelectTrigger><SelectValue placeholder="Select a brand" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="FastDrill">FastDrill</SelectItem>
-              <SelectItem value="Spider">Spider</SelectItem>
-              <SelectItem value="Gorkha">Gorkha</SelectItem>
-              <SelectItem value="General Imports">General Imports</SelectItem>
+              {brands.map((brand) => (
+                <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
-          <Input id="category" value={formData.category} onChange={handleChange} />
+          <Label htmlFor="category_id">Category</Label>
+          <Select value={formData.category_id} onValueChange={(value) => handleSelectChange('category_id', value)}>
+            <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+            <SelectContent>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

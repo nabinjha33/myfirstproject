@@ -33,6 +33,7 @@ import {
   Calendar,
   Flag 
 } from 'lucide-react';
+import { generateBrandTheme, enhanceBrandData } from './BrandThemeGenerator';
 
 // Brand-specific themes
 const brandThemes: any = {
@@ -63,7 +64,9 @@ const brandThemes: any = {
   }
 };
 
-export default function BrandPageLayout({ brand }: { brand: any }) {
+export default function BrandPageLayout({ brand: originalBrand }: { brand: any }) {
+  // Enhance brand data with defaults for new brands
+  const brand = enhanceBrandData(originalBrand);
   const [products, setProducts] = useState<any[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,8 +75,8 @@ export default function BrandPageLayout({ brand }: { brand: any }) {
   const [categories, setCategories] = useState(['All']);
   const [brandStats, setBrandStats] = useState<any>({});
 
-  // Default to FastDrill theme if brand not found
-  const theme = brandThemes[brand.name] || brandThemes['FastDrill'];
+  // Use existing theme or generate new one for new brands
+  const theme = brandThemes[brand.name] || generateBrandTheme(brand.name);
 
   const loadBrandProducts = useCallback(async () => {
     setIsLoading(true);
