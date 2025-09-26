@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Product, Brand } from '@/lib/entities';
+import { Product } from '@/lib/entities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,11 +31,7 @@ import {
   Shield,
   Zap,
   Calendar,
-  Flag,
-  Filter,
-  Grid3X3,
-  List,
-  Eye
+  Flag 
 } from 'lucide-react';
 
 // Brand-specific themes
@@ -84,17 +80,17 @@ interface ProductData {
   }>;
 }
 
-export default function BrandPageLayout({ brandSlug }: { brandSlug: string }) {
-  const [brand, setBrand] = useState<any>(null);
+export default function BrandPageLayout({ brand }: { brand: any }) {
   const [products, setProducts] = useState<ProductData[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<ProductData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('name');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
   const [categories, setCategories] = useState(['All']);
   const [brandStats, setBrandStats] = useState<any>({});
+  
+  // Cache busting - force fresh data load
+  const [lastUpdated] = useState(() => Date.now());
 
   // Default to FastDrill theme if brand not found
   const theme = brandThemes[brand?.name] || brandThemes['FastDrill'];
@@ -254,15 +250,15 @@ export default function BrandPageLayout({ brandSlug }: { brandSlug: string }) {
     <div className="space-y-8">
       {/* Breadcrumb */}
       <nav className="flex items-center space-x-2 text-sm text-gray-600">
-        <Link href="/" className="hover:text-blue-600">Home</Link>
+        <Link href="/" className="hover:text-red-600">Home</Link>
         <span>/</span>
-        <Link href="/brands" className="hover:text-blue-600">Brands</Link>
+        <Link href="/brands" className="hover:text-red-600">Brands</Link>
         <span>/</span>
         <span className="text-gray-900">{brand.name}</span>
       </nav>
 
       {/* Brand Header */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-8">
+      <div className="bg-gradient-to-r from-red-50 to-amber-50 rounded-lg p-8">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
           {brand.logo && (
             <div className="flex-shrink-0">
@@ -413,7 +409,7 @@ export default function BrandPageLayout({ brandSlug }: { brandSlug: string }) {
               <CardContent className={`${viewMode === 'list' ? 'flex-1' : 'p-4'}`}>
                 <div className={viewMode === 'list' ? 'flex flex-col justify-between h-full py-4' : ''}>
                   <div>
-                    <h3 className="font-semibold text-lg mb-2 group-hover:text-blue-600 transition-colors">
+                    <h3 className="font-semibold text-lg mb-2 group-hover:text-red-600 transition-colors">
                       {product.name}
                     </h3>
                     <p className="text-gray-600 text-sm mb-3 line-clamp-2">
@@ -426,7 +422,7 @@ export default function BrandPageLayout({ brandSlug }: { brandSlug: string }) {
                   
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-lg text-blue-600">
+                      <span className="font-bold text-lg text-red-600">
                         {getProductPrice(product)}
                       </span>
                     </div>
