@@ -132,7 +132,7 @@ export default function Header() {
               variant="ghost" 
               size="sm" 
               onClick={toggleTheme}
-              className="text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              className="text-gray-600 dark:text-gray-100 hover:text-red-600 dark:hover:text-red-400 transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-600"
             >
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
@@ -142,7 +142,7 @@ export default function Header() {
               variant="ghost" 
               size="sm" 
               onClick={toggleLanguage}
-              className="text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              className="text-gray-600 dark:text-gray-100 hover:text-red-600 dark:hover:text-red-400 transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-600"
             >
               <Globe className="w-4 h-4 mr-2" />
               {language.toUpperCase()}

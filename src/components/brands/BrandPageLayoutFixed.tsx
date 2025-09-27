@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { useAppContext } from '@/contexts/AppContext';
 import {
   Select,
   SelectContent,
@@ -74,6 +77,7 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [categories, setCategories] = useState(['All']);
   const [brandStats, setBrandStats] = useState<any>({});
+  const { getText } = useAppContext();
 
   // Use existing theme or generate new one for new brands
   const theme = brandThemes[brand.name] || generateBrandTheme(brand.name);
@@ -87,8 +91,13 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
       const allProducts = await Product.getWithRelations();
       console.log('All products loaded with relations:', allProducts.length);
       
-      // Filter by brand name (case-insensitive)
+      // Filter by brand ID or brand name (case-insensitive)
       const brandProducts = allProducts.filter((product: any) => {
+        // First try to match by brand_id if available
+        if (product.brand_id && brand.id) {
+          return product.brand_id === brand.id;
+        }
+        // Fallback to brand name matching
         const productBrand = product.brand?.toLowerCase();
         const targetBrand = brand.name?.toLowerCase();
         return productBrand === targetBrand;
@@ -204,7 +213,7 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
           
           <CardContent className="p-6 flex-1 flex flex-col bg-white">
             <div className="flex-1">
-              <h3 className={`text-lg font-bold mb-3 group-hover:text-${theme.accent} transition-colors leading-tight h-14 line-clamp-2`}>
+              <h3 className="text-lg font-bold mb-3 group-hover:text-amber-600 transition-colors leading-tight h-14 line-clamp-2 text-gray-900">
                 {product.name}
               </h3>
 
@@ -213,12 +222,12 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
                   {product.variants.slice(0, 3).map((variant: any, idx: number) => (
                     <span
                       key={idx}
-                      className={`text-xs px-3 py-1 bg-gradient-to-r ${theme.secondary} text-${theme.text} border border-${theme.accent}/20 rounded-full font-medium`}>
+                      className="text-xs px-3 py-1 bg-gradient-to-r from-amber-50 to-red-50 text-amber-800 border border-amber-200 rounded-full font-medium">
                       {variant.size || 'Standard'}
                     </span>
                   ))}
                   {product.variants.length > 3 && (
-                    <span className={`text-xs px-3 py-1 bg-gradient-to-r ${theme.secondary} text-${theme.text} border border-${theme.accent}/20 rounded-full font-medium`}>
+                    <span className="text-xs px-3 py-1 bg-gradient-to-r from-amber-50 to-red-50 text-amber-800 border border-amber-200 rounded-full font-medium">
                       +{product.variants.length - 3} more
                     </span>
                   )}
@@ -249,7 +258,7 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
             
             <div className="flex items-center justify-between pt-4 border-t border-gray-100">
               <span className="text-sm font-medium text-gray-600">{product.category || 'Premium'}</span>
-              <div className={`flex items-center text-${theme.accent} group-hover:translate-x-2 transition-all duration-300`}>
+              <div className="flex items-center text-amber-600 group-hover:translate-x-2 transition-all duration-300">
                 <span className="text-sm font-semibold">Explore</span>
                 <ArrowRight className="ml-2 w-4 h-4" />
               </div>
@@ -260,39 +269,35 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
     </div>
   );
 
-  const StatCard = ({ icon: Icon, title, value, subtitle }: { icon: any, title: string, value: number, subtitle: string }) => (
-    <div className={`bg-gradient-to-br ${theme.secondary} p-6 rounded-2xl border border-${theme.accent}/20 hover:shadow-lg transition-all duration-300 group`}>
+  const StatCard = ({ icon: Icon, title, value, subtitle }: { icon: any, title: string, value: number, subtitle: string }) => {
+    const getTextColor = () => {
+      switch (brand.name) {
+        case 'Gorkha': return 'text-amber-800';
+        case 'FastDrill': return 'text-blue-800';
+        case 'Spider': return 'text-red-800';
+        default: return 'text-gray-800';
+      }
+    };
+    
+    return (
+    <div className={`bg-gradient-to-br ${theme.secondary} p-6 rounded-2xl border border-amber-200 hover:shadow-lg transition-all duration-300 group`}>
       <div className="flex items-center justify-between mb-4">
         <div className={`p-3 rounded-xl bg-gradient-to-br ${theme.primary} shadow-lg group-hover:scale-110 transition-transform duration-300`}>
           <Icon className="w-6 h-6 text-white" />
         </div>
         <div className="text-right">
-          <div className={`text-2xl font-bold text-${theme.text}`}>{value}</div>
+          <div className={`text-2xl font-bold ${getTextColor()}`}>{value}</div>
           <div className="text-xs text-gray-600 uppercase tracking-wide">{subtitle}</div>
         </div>
       </div>
-      <h4 className={`font-semibold text-${theme.text}`}>{title}</h4>
+      <h4 className={`font-semibold ${getTextColor()}`}>{title}</h4>
     </div>
-  );
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Enhanced Breadcrumb */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-2 text-sm">
-            <Link href="/" className={`text-gray-600 hover:text-${theme.accent} transition-colors font-medium`}>
-              Home
-            </Link>
-            <span className="text-gray-400">/</span>
-            <Link href="/brands" className={`text-gray-600 hover:text-${theme.accent} transition-colors font-medium`}>
-              Brands
-            </Link>
-            <span className="text-gray-400">/</span>
-            <span className={`text-${theme.text} font-semibold`}>{brand.name}</span>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-slate-900 dark:to-blue-950">
+      <Header />
 
       {/* Premium Hero Section with Enhanced Brand Information */}
       <section className={`relative overflow-hidden ${theme.gradient} text-white`}>
@@ -381,18 +386,12 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <Button size="lg" className="h-14 px-8 bg-white/90 hover:bg-white text-gray-900 hover:shadow-2xl transition-all duration-300 font-semibold" asChild>
-                  <Link href={`/products?brand=${encodeURIComponent(brand.name)}`}>
-                    <Package className="w-5 h-5 mr-2" />
-                    Explore Products
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline" className="h-14 px-8 border-2 border-white/50 text-white hover:bg-white/10 hover:border-white backdrop-blur-sm transition-all duration-300 font-semibold" asChild>
-                  <Link href="/dealer-login">
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    Get Quote
-                  </Link>
-                </Button>
+                <Link href="/dealer-login">
+                  <button className="h-14 px-8 border-2 border-white/50 text-white hover:bg-white hover:text-gray-900 hover:border-white backdrop-blur-sm transition-all duration-300 font-semibold rounded-md flex items-center justify-center gap-2" style={{ color: 'white' }}>
+                    <ShoppingCart className="w-5 h-5" />
+                    {getText('Get Quote', 'कोटेशन प्राप्त गर्नुहोस्')}
+                  </button>
+                </Link>
               </div>
             </div>
             
@@ -560,15 +559,16 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
                 Become a Dealer
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="h-16 px-10 border-2 border-white/50 text-white hover:bg-white/10 backdrop-blur-sm transition-all duration-300 font-bold text-lg rounded-2xl" asChild>
-              <Link href="/products">
-                <Globe className="w-6 h-6 mr-3" />
+            <Link href="/products">
+              <button className="h-16 px-10 border-2 border-white/50 text-white hover:bg-white hover:text-gray-900 hover:border-white backdrop-blur-sm transition-all duration-300 font-bold text-lg rounded-2xl flex items-center justify-center gap-3" style={{ color: 'white' }}>
+                <Globe className="w-6 h-6" />
                 Explore Catalog
-              </Link>
-            </Button>
+              </button>
+            </Link>
           </div>
         </div>
       </section>
+      <Footer />
     </div>
   );
 }

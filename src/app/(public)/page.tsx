@@ -140,7 +140,7 @@ export default function Home() {
                     placeholder={getText("Search products, brands, categories...", "उत्पादनहरू, ब्रान्डहरू, कोटीहरू खोज्नुहोस्...")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-14 pl-12 text-lg bg-white/95 border-0 shadow-lg dark:bg-slate-800/90 dark:text-slate-100 dark:placeholder-slate-300 dark:border-slate-600" />
+                    className="h-14 pl-12 text-lg text-gray-900 bg-white/95 border-0 shadow-lg dark:bg-slate-800/90 dark:text-slate-100 dark:placeholder-slate-300 dark:border-slate-600" />
                   <Search className="absolute left-4 top-4 w-6 h-6 text-gray-400 dark:text-slate-300" />
                 </div>
                 <Button

@@ -6,6 +6,9 @@ import { Product, Brand } from "@/lib/entities";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { useAppContext } from "@/contexts/AppContext";
 import { 
   ArrowRight, 
   Package, 
@@ -42,6 +45,7 @@ export default function Brands() {
   const [brandStats, setBrandStats] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getText } = useAppContext();
 
   useEffect(() => {
     loadBrandData();
@@ -105,7 +109,7 @@ export default function Brands() {
             <img 
               src={brand.logo} 
               alt={brand.name}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+              className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300 p-4"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-red-500 to-amber-500 opacity-80 flex items-center justify-center">
@@ -162,16 +166,7 @@ export default function Brands() {
             <Link href={brandPageUrl} className="flex-1">
               <Button className="w-full bg-red-600 hover:bg-red-700">
                 <Award className="w-4 h-4 mr-2" />
-                Explore Brand
-              </Button>
-            </Link>
-            <Link 
-              href={`/products?brand=${encodeURIComponent(brand.name)}`}
-              className="flex-1"
-            >
-              <Button className="w-full bg-red-600 hover:bg-red-700" variant="outline">
-                <ShoppingBag className="w-4 h-4 mr-2" />
-                View Products
+                {getText('Explore Brand', 'ब्रान्ड पत्ता लगाउनुहोस्')}
               </Button>
             </Link>
             <Button variant="outline" size="icon">
@@ -184,7 +179,8 @@ export default function Brands() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-slate-900 dark:to-blue-950">
+      <Header />
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800 text-white">
         <div className="absolute inset-0 bg-black/20"></div>
@@ -347,6 +343,7 @@ export default function Brands() {
           </div>
         </div>
       </section>
+      <Footer />
     </div>
   );
 }
