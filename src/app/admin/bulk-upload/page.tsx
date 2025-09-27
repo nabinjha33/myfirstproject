@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BulkUploader from '@/components/admin/BulkUploader';
+import ExcelTemplateGenerator from '@/components/admin/ExcelTemplateGenerator';
 import { Package, Award, Upload, Ship } from 'lucide-react';
 
 export default function AdminBulkUpload() {
@@ -83,45 +84,54 @@ export default function AdminBulkUpload() {
           </TabsList>
 
           <TabsContent value="products" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-5 h-5" />
-                  Import Products
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BulkUploader />
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <ExcelTemplateGenerator entityType="Product" />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="w-5 h-5" />
+                    Import Products
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BulkUploader />
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="brands" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="w-5 h-5" />
-                  Import Brands
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BulkUploader />
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <ExcelTemplateGenerator entityType="Brand" />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="w-5 h-5" />
+                    Import Brands
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BulkUploader />
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="shipments" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Ship className="w-5 h-5" />
-                  Import Shipments
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BulkUploader />
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <ExcelTemplateGenerator entityType="Shipment" />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Ship className="w-5 h-5" />
+                    Import Shipments
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BulkUploader />
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

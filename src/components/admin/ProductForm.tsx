@@ -169,7 +169,7 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
       </div>
 
       <div className="flex items-center space-x-2">
-        <Checkbox id="featured" checked={formData.featured} onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: checked }))} />
+        <Checkbox id="featured" checked={formData.featured} onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: checked === true }))} />
         <Label htmlFor="featured">Featured Product</Label>
       </div>
       

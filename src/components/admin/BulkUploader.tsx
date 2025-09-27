@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Product, Brand, Shipment } from '@/lib/entities';
-import { Upload, FileText, CheckCircle, AlertCircle, Download, Eye, Loader2 } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Download, Eye, Loader2, Image } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface EntitySchema {
@@ -100,6 +100,7 @@ export default function BulkUploader() {
   const [extractedData, setExtractedData] = useState<any[]>([]);
   const [processedData, setProcessedData] = useState<ProcessedData>({ valid: [], invalid: [], errors: [] });
   const [uploadStep, setUploadStep] = useState<'upload' | 'preview' | 'results'>('upload');
+  const [imageProcessingStatus, setImageProcessingStatus] = useState<string>('');
 
   const parseCSV = (csvText: string): any[] => {
     const lines = csvText.split('\n').filter(line => line.trim());
@@ -122,43 +123,127 @@ export default function BulkUploader() {
     return data;
   };
 
+  const parseExcel = async (file: File): Promise<any[]> => {
+    // Dynamic import for xlsx to avoid SSR issues
+    const XLSX = await import('xlsx');
+    
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          
+          // Get the Products sheet
+          if (!workbook.SheetNames.includes('Products')) {
+            reject(new Error('Products sheet not found in Excel file'));
+            return;
+          }
+          
+          const worksheet = workbook.Sheets['Products'];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+          resolve(jsonData);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  const processImages = async (imagesPaths: string[], productSlug: string): Promise<string[]> => {
+    if (!imagesPaths || imagesPaths.length === 0) {
+      return [];
+    }
+
+    const processedImages: string[] = [];
+    
+    for (let i = 0; i < imagesPaths.length; i++) {
+      const imagePath = imagesPaths[i].trim();
+      
+      // Skip if empty
+      if (!imagePath) continue;
+
+      // If it's already a web URL, keep it as is
+      if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('/')) {
+        processedImages.push(imagePath);
+        continue;
+      }
+
+      // For local files, we'll need to handle them differently in the browser
+      // For now, we'll just keep the path and show a warning
+      setImageProcessingStatus(`⚠️ Local image paths detected. Please use web URLs or upload images separately.`);
+      processedImages.push(imagePath);
+    }
+
+    return processedImages;
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith('.csv')) {
-      alert('Please upload a CSV file');
+    const isCSV = file.name.endsWith('.csv');
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+
+    if (!isCSV && !isExcel) {
+      alert('Please upload a CSV or Excel file');
       return;
     }
 
     setUploadedFile(file);
     setIsUploading(true);
+    setImageProcessingStatus('');
 
     try {
-      const text = await file.text();
-      const data = parseCSV(text);
+      let data: any[];
+      
+      if (isCSV) {
+        const text = await file.text();
+        data = parseCSV(text);
+      } else {
+        // Excel file
+        data = await parseExcel(file);
+      }
+      
+      if (data.length === 0) {
+        alert('No data found in file. Please check the file format.');
+        return;
+      }
       
       setExtractedData(data);
       setUploadStep('preview');
     } catch (error) {
       console.error('File upload error:', error);
-      alert('Failed to process file. Please try again.');
+      alert(`Failed to process file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsUploading(false);
     }
   };
 
-  const validateAndProcessData = () => {
+  const validateAndProcessData = async () => {
     setIsProcessing(true);
+    setImageProcessingStatus('🖼️ Processing images...');
     
     const schema = entitySchemas[selectedEntity];
     const valid: any[] = [];
     const invalid: any[] = [];
     const errors: ValidationError[] = [];
 
-    extractedData.forEach((row, index) => {
+    for (let index = 0; index < extractedData.length; index++) {
+      const row = extractedData[index];
       const processedRow = { ...row };
       let isValid = true;
+      
+      // Clean up the data
+      Object.keys(processedRow).forEach(key => {
+        if (processedRow[key] === null || processedRow[key] === undefined) {
+          processedRow[key] = '';
+        } else {
+          processedRow[key] = processedRow[key].toString().trim();
+        }
+      });
       
       // Check required fields
       Object.entries(schema).forEach(([field, fieldConfig]) => {
@@ -217,16 +302,23 @@ export default function BulkUploader() {
           .replace(/^-+|-+$/g, '');
       }
       
+      // Process images for products
+      if (selectedEntity === 'Product' && processedRow.images) {
+        const imagesPaths = processedRow.images.split(',').map((img: string) => img.trim()).filter((img: string) => img);
+        processedRow.images = await processImages(imagesPaths, processedRow.slug);
+      }
+      
       if (isValid) {
         valid.push(processedRow);
       } else {
         invalid.push({ ...processedRow, _errors: errors.filter(e => e.row === index + 1) });
       }
-    });
+    }
 
     setProcessedData({ valid, invalid, errors });
     setUploadStep('results');
     setIsProcessing(false);
+    setImageProcessingStatus('');
   };
 
   const saveValidData = async () => {
@@ -364,6 +456,16 @@ export default function BulkUploader() {
                   onChange={handleFileUpload}
                   disabled={isUploading}
                 />
+                <div className="text-sm text-gray-600 mt-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <FileText className="w-4 h-4" />
+                    <span>Supported formats: CSV, Excel (.xlsx, .xls)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Image className="w-4 h-4" />
+                    <span>Images: Use web URLs (http/https) for best results</span>
+                  </div>
+                </div>
               </div>
               
               {isUploading && (
@@ -371,6 +473,13 @@ export default function BulkUploader() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Processing file...
                 </div>
+              )}
+              
+              {imageProcessingStatus && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{imageProcessingStatus}</AlertDescription>
+                </Alert>
               )}
             </div>
           </CardContent>
@@ -393,7 +502,7 @@ export default function BulkUploader() {
                   {isProcessing ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Validating...
+                      {imageProcessingStatus ? 'Processing Images...' : 'Validating...'}
                     </>
                   ) : (
                     'Validate & Process'
