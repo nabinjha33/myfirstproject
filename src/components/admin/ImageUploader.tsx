@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -347,7 +346,12 @@ export default function ImageUploader({
                       </div>
 
                       {image.status === 'uploading' && image.progress !== undefined && (
-                        <Progress value={image.progress} className="h-2" />
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                            style={{ width: `${image.progress}%` }}
+                          />
+                        </div>
                       )}
 
                       {image.status === 'error' && image.error && (
