@@ -26,43 +26,98 @@ function ShipmentForm({ shipment, products, onSubmitSuccess }: { shipment: any, 
         eta_date: '',
         product_names: [] as string[]
     });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (shipment) setFormData(shipment);
+        if (shipment) {
+            setFormData({
+                tracking_number: shipment.tracking_number || '',
+                origin_country: shipment.origin_country || 'China',
+                status: shipment.status || 'Booked',
+                eta_date: shipment.eta_date || '',
+                product_names: shipment.product_names || []
+            });
+        }
     }, [shipment]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const dataToSave = {
-            ...formData,
-            last_updated: new Date().toISOString()
-        };
-        if (shipment && shipment.id) {
-            await Shipment.update(shipment.id, dataToSave);
-        } else {
-            await Shipment.create(dataToSave);
+        setIsSubmitting(true);
+        setError(null);
+
+        try {
+            const dataToSave = {
+                ...formData,
+                last_updated: new Date().toISOString()
+            };
+
+            console.log('Saving shipment data:', dataToSave);
+
+            if (shipment && shipment.id) {
+                await Shipment.update(shipment.id, dataToSave);
+                console.log('Shipment updated successfully');
+            } else {
+                await Shipment.create(dataToSave);
+                console.log('Shipment created successfully');
+            }
+            
+            onSubmitSuccess();
+        } catch (error) {
+            console.error('Error saving shipment:', error);
+            setError(error instanceof Error ? error.message : 'Failed to save shipment');
+        } finally {
+            setIsSubmitting(false);
         }
-        onSubmitSuccess();
     };
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
-            <Input id="tracking_number" placeholder="Tracking Number" value={formData.tracking_number} onChange={e => setFormData({...formData, tracking_number: e.target.value})} required />
-            <Select value={formData.origin_country} onValueChange={v => setFormData({...formData, origin_country: v})}>
-                <SelectTrigger><SelectValue/></SelectTrigger>
-                <SelectContent><SelectItem value="China">China</SelectItem><SelectItem value="India">India</SelectItem></SelectContent>
-            </Select>
-            <Input type="date" value={formData.eta_date} onChange={e => setFormData({...formData, eta_date: e.target.value})} />
-             <Select value={formData.status} onValueChange={v => setFormData({...formData, status: v})}>
-                <SelectTrigger><SelectValue/></SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="Booked">Booked</SelectItem>
-                    <SelectItem value="In Transit">In Transit</SelectItem>
-                    <SelectItem value="At Port">At Port</SelectItem>
-                    <SelectItem value="Customs">Customs</SelectItem>
-                    <SelectItem value="In Warehouse">In Warehouse</SelectItem>
-                </SelectContent>
-            </Select>
+            <div>
+                <Label htmlFor="tracking_number">Tracking Number *</Label>
+                <Input 
+                    id="tracking_number" 
+                    placeholder="Enter tracking number" 
+                    value={formData.tracking_number} 
+                    onChange={e => setFormData({...formData, tracking_number: e.target.value})} 
+                    required 
+                />
+            </div>
+            
+            <div>
+                <Label>Origin Country</Label>
+                <Select value={formData.origin_country} onValueChange={v => setFormData({...formData, origin_country: v})}>
+                    <SelectTrigger><SelectValue placeholder="Select origin country"/></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="China">China</SelectItem>
+                        <SelectItem value="India">India</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            
+            <div>
+                <Label htmlFor="eta_date">ETA Date</Label>
+                <Input 
+                    id="eta_date"
+                    type="date" 
+                    value={formData.eta_date} 
+                    onChange={e => setFormData({...formData, eta_date: e.target.value})} 
+                />
+            </div>
+            
+            <div>
+                <Label>Status</Label>
+                <Select value={formData.status} onValueChange={v => setFormData({...formData, status: v})}>
+                    <SelectTrigger><SelectValue placeholder="Select status"/></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Booked">Booked</SelectItem>
+                        <SelectItem value="In Transit">In Transit</SelectItem>
+                        <SelectItem value="At Port">At Port</SelectItem>
+                        <SelectItem value="Customs">Customs</SelectItem>
+                        <SelectItem value="In Warehouse">In Warehouse</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
             <div>
               <Label>Products</Label>
                <div className="h-40 overflow-y-auto border p-2 rounded-md">
@@ -82,7 +137,16 @@ function ShipmentForm({ shipment, products, onSubmitSuccess }: { shipment: any, 
                    ))}
                </div>
             </div>
-            <Button type="submit">Save Shipment</Button>
+            
+            {error && (
+                <div className="text-red-600 text-sm bg-red-50 p-2 rounded border">
+                    {error}
+                </div>
+            )}
+            
+            <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : 'Save Shipment'}
+            </Button>
         </form>
     );
 }
@@ -94,19 +158,36 @@ export default function AdminShipments() {
   const [editingShipment, setEditingShipment] = useState<any>(null);
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
-    const [shipmentData, productData] = await Promise.all([Shipment.list(), Product.list()]);
-    setShipments(shipmentData);
-    setProducts(productData);
+    try {
+      console.log('Fetching shipments and products...');
+      const [shipmentData, productData] = await Promise.all([
+        Shipment.list('-created_at'), 
+        Product.list()
+      ]);
+      console.log('Fetched shipments:', shipmentData);
+      console.log('Fetched products:', productData);
+      setShipments(shipmentData || []);
+      setProducts(productData || []);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      // Set empty arrays to prevent crashes
+      setShipments([]);
+      setProducts([]);
+    }
   };
   
   const handleFormSuccess = () => {
       setIsFormOpen(false);
+      setEditingShipment(null);
+      setSuccessMessage(editingShipment ? 'Shipment updated successfully!' : 'Shipment created successfully!');
+      setTimeout(() => setSuccessMessage(null), 3000);
       fetchData();
   }
 
@@ -117,6 +198,12 @@ export default function AdminShipments() {
             <h1 className="text-3xl font-bold text-gray-900">Manage Shipments</h1>
             <Button onClick={() => { setEditingShipment(null); setIsFormOpen(true); }}><PlusCircle className="mr-2 h-4 w-4" /> New Shipment</Button>
         </div>
+        
+        {successMessage && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
+            <div className="text-green-800">{successMessage}</div>
+          </div>
+        )}
         
          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogContent>

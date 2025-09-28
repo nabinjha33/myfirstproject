@@ -22,6 +22,10 @@ export async function uploadImageToStorage(
   onProgress?: (progress: UploadProgress) => void
 ): Promise<UploadResult> {
   try {
+    // Debug: Check authentication status
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('Auth status:', { user: user?.email || 'Not authenticated', authError });
+
     // Validate file type
     if (!file.type.startsWith('image/')) {
       return {

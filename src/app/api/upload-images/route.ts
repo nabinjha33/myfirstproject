@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         url: result.url,
         path: result.path
       })),
-      failed: failed.map(result => ({
+      failedUploads: failed.map(result => ({
         error: result.error
       })),
       validationErrors,
@@ -67,11 +67,15 @@ export async function POST(request: NextRequest) {
 // Handle single image upload
 export async function PUT(request: NextRequest) {
   try {
+    console.log('Upload API called');
     const formData = await request.formData();
     const file = formData.get('image') as File;
     const folder = formData.get('folder') as string || 'products';
 
+    console.log('File received:', { name: file?.name, size: file?.size, type: file?.type });
+
     if (!file) {
+      console.log('No file provided');
       return NextResponse.json(
         { error: 'No file provided' },
         { status: 400 }
