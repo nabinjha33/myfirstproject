@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Product, Brand, Shipment } from '@/lib/entities';
-import { Upload, FileText, CheckCircle, AlertCircle, Download, Eye, Loader2, Image } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Download, Eye, Loader2, Image, Copy } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ImageUploader from './ImageUploader';
 
 interface EntitySchema {
   [key: string]: {
@@ -101,6 +102,7 @@ export default function BulkUploader() {
   const [processedData, setProcessedData] = useState<ProcessedData>({ valid: [], invalid: [], errors: [] });
   const [uploadStep, setUploadStep] = useState<'upload' | 'preview' | 'results'>('upload');
   const [imageProcessingStatus, setImageProcessingStatus] = useState<string>('');
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
 
   const parseCSV = (csvText: string): any[] => {
     const lines = csvText.split('\n').filter(line => line.trim());
@@ -158,6 +160,7 @@ export default function BulkUploader() {
     }
 
     const processedImages: string[] = [];
+    let hasLocalPaths = false;
     
     for (let i = 0; i < imagesPaths.length; i++) {
       const imagePath = imagesPaths[i].trim();
@@ -171,10 +174,22 @@ export default function BulkUploader() {
         continue;
       }
 
-      // For local files, we'll need to handle them differently in the browser
-      // For now, we'll just keep the path and show a warning
-      setImageProcessingStatus(`⚠️ Local image paths detected. Please use web URLs or upload images separately.`);
-      processedImages.push(imagePath);
+      // For local files, check if we have uploaded images that match
+      const matchingUploadedImage = uploadedImages.find(url => 
+        url.includes(imagePath.split('/').pop() || '') || 
+        url.includes(imagePath.replace(/\\/g, '/').split('/').pop() || '')
+      );
+
+      if (matchingUploadedImage) {
+        processedImages.push(matchingUploadedImage);
+      } else {
+        hasLocalPaths = true;
+        // Don't add local paths to the final array
+      }
+    }
+
+    if (hasLocalPaths) {
+      setImageProcessingStatus(`⚠️ Local image paths detected. Use the Image Upload section below to upload images first, then reference the URLs in your Excel/CSV file.`);
     }
 
     return processedImages;
@@ -620,6 +635,57 @@ export default function BulkUploader() {
           </div>
         </div>
       )}
+
+      {/* Image Upload Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Image className="h-5 w-5" />
+            Upload Product Images
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Upload your product images here first, then use the returned URLs in your Excel/CSV file.
+              You can also reference these uploaded images in your bulk upload data by filename.
+            </AlertDescription>
+          </Alert>
+          
+          <ImageUploader
+            onImagesUploaded={setUploadedImages}
+            maxFiles={50}
+            folder="products"
+            existingImages={uploadedImages}
+            title="Product Images"
+          />
+          
+          {uploadedImages.length > 0 && (
+            <div className="mt-4">
+              <h4 className="font-medium mb-2">Uploaded Image URLs (Copy these for your Excel/CSV):</h4>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {uploadedImages.map((url, index) => (
+                  <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                    <code className="flex-1 text-sm font-mono">{url}</code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigator.clipboard.writeText(url)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 text-sm text-gray-600">
+                💡 Tip: You can reference these images in your Excel/CSV by filename (e.g., "product1.jpg") 
+                and the system will automatically match them to the uploaded URLs.
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

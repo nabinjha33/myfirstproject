@@ -33,6 +33,7 @@ export default function AdminBulkUpload() {
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Bulk Data Import</h1>
           <p className="text-gray-600">
             Import products, brands, and other data in bulk using CSV or Excel files.
+            Upload images directly to Supabase Storage and reference them in your data files.
           </p>
         </div>
 
