@@ -95,6 +95,7 @@ export async function PUT(request: NextRequest) {
     const uploadResult = await uploadImageToStorage(file, folder);
     
     if (uploadResult.success) {
+      console.log('Upload successful:', uploadResult.url);
       return NextResponse.json({
         success: true,
         url: uploadResult.url,
@@ -102,6 +103,7 @@ export async function PUT(request: NextRequest) {
         originalName: file.name
       });
     } else {
+      console.error('Upload failed:', uploadResult.error);
       return NextResponse.json(
         { error: uploadResult.error },
         { status: 500 }

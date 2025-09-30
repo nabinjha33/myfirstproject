@@ -160,7 +160,13 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
 
       <div className="space-y-2">
         <Label>Images</Label>
-        <ImageUploader files={formData.images} setFiles={(images) => setFormData(prev => ({ ...prev, images }))} />
+        <ImageUploader 
+          onImagesUploaded={(urls) => setFormData(prev => ({ ...prev, images: urls }))}
+          existingImages={formData.images || []}
+          maxFiles={10}
+          folder="products"
+          title="Product Images"
+        />
       </div>
 
        <div className="space-y-2">

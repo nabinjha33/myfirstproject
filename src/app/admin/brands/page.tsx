@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Edit, Trash2, Package, ArrowUp, ArrowDown } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Package } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -24,12 +24,12 @@ interface BrandData {
   name: string;
   slug: string;
   description: string;
-  logo: string;
+  logo: string; // Keep for backward compatibility
+  images: string[]; // New field for multiple images (UI only)
   origin_country: string;
   established_year: string;
   specialty: string;
   active: boolean;
-  sort_order: number;
 }
 
 export default function AdminBrands() {
@@ -41,12 +41,12 @@ export default function AdminBrands() {
     name: '',
     slug: '',
     description: '',
-    logo: '',
+    logo: '', // Keep for backward compatibility
+    images: [], // New field for multiple images (UI only)
     origin_country: '',
     established_year: '',
     specialty: '',
-    active: true,
-    sort_order: 0
+    active: true
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -69,7 +69,12 @@ export default function AdminBrands() {
   const handleOpenForm = (brand: BrandData | null = null) => {
     if (brand) {
       setEditingBrand(brand);
-      setFormData({ ...brand });
+      // Handle backward compatibility: if brand has logo but no images array, create images array
+      const brandData = {
+        ...brand,
+        images: brand.images || (brand.logo ? [brand.logo] : [])
+      };
+      setFormData(brandData);
     } else {
       setEditingBrand(null);
       setFormData({
@@ -77,11 +82,11 @@ export default function AdminBrands() {
         slug: '',
         description: '',
         logo: '',
+        images: [],
         origin_country: '',
         established_year: '',
         specialty: '',
-        active: true,
-        sort_order: brands.length
+        active: true
       });
     }
     setIsFormOpen(true);
@@ -95,11 +100,11 @@ export default function AdminBrands() {
       slug: '',
       description: '',
       logo: '',
+      images: [],
       origin_country: '',
       established_year: '',
       specialty: '',
-      active: true,
-      sort_order: 0
+      active: true
     });
   };
 
@@ -123,20 +128,58 @@ export default function AdminBrands() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!formData.name.trim()) {
+      alert('Brand name is required');
+      return;
+    }
+    
+    if (!formData.slug.trim()) {
+      alert('Brand slug is required');
+      return;
+    }
+    
     setIsSaving(true);
 
     try {
+      // Prepare data for database (only include fields that exist in schema)
+      const dbData = {
+        name: formData.name.trim(),
+        slug: formData.slug.trim(),
+        description: formData.description || null,
+        logo: formData.images.length > 0 ? formData.images[0] : (formData.logo || null), // Use first image as logo
+        origin_country: formData.origin_country || null,
+        established_year: formData.established_year || null,
+        specialty: formData.specialty || null,
+        active: formData.active
+        // Note: sort_order is not in the database schema, so we exclude it
+      };
+      
+      console.log('Saving brand data to database:', dbData);
+      
       if (editingBrand) {
-        await Brand.update(editingBrand.id!, formData);
+        await Brand.update(editingBrand.id!, dbData);
+        console.log('Brand updated successfully');
       } else {
-        await Brand.create(formData);
+        await Brand.create(dbData);
+        console.log('Brand created successfully');
       }
       
       await loadBrands();
       handleCloseForm();
     } catch (error) {
       console.error('Failed to save brand:', error);
-      alert('Failed to save brand. Please try again.');
+      
+      // Better error handling
+      let errorMessage = 'Unknown error occurred';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        errorMessage = JSON.stringify(error);
+      }
+      
+      alert(`Failed to save brand: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -154,25 +197,29 @@ export default function AdminBrands() {
     }
   };
 
-  const handleSortOrderChange = async (brandId: string, direction: 'up' | 'down') => {
-    const brand = brands.find(b => b.id === brandId);
-    if (!brand) return;
+  // Note: Sort order functionality removed as it's not in the database schema
+  // const handleSortOrderChange = async (brandId: string, direction: 'up' | 'down') => {
+  //   // This functionality is disabled until sort_order field is added to database
+  // };
 
-    const newSortOrder = direction === 'up' ? brand.sort_order - 1 : brand.sort_order + 1;
+  const handleImagesUpload = (imageUrls: string[]) => {
+    console.log('Handling brand images upload:', imageUrls);
+    console.log('Current form data before update:', formData);
     
-    try {
-      await Brand.update(brandId, { sort_order: newSortOrder });
-      await loadBrands();
-    } catch (error) {
-      console.error('Failed to update sort order:', error);
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        images: imageUrls,
+        logo: imageUrls[0] || '' // Keep first image as logo for backward compatibility
+      };
+      console.log('Updated form data:', updated);
+      return updated;
+    });
+    
+    // Show success feedback
+    if (imageUrls.length > 0) {
+      console.log(`Brand images successfully updated in form data: ${imageUrls.length} images`);
     }
-  };
-
-  const handleImageUpload = (imageUrl: string) => {
-    setFormData(prev => ({
-      ...prev,
-      logo: imageUrl
-    }));
   };
 
   if (isLoading) {
@@ -208,12 +255,11 @@ export default function AdminBrands() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Logo</TableHead>
+                  <TableHead>Images</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Origin</TableHead>
                   <TableHead>Specialty</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Sort Order</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -221,17 +267,33 @@ export default function AdminBrands() {
                 {brands.map((brand) => (
                   <TableRow key={brand.id}>
                     <TableCell>
-                      {brand.logo ? (
-                        <img 
-                          src={brand.logo} 
-                          alt={brand.name}
-                          className="w-10 h-10 object-contain rounded"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
-                          <Package className="h-5 w-5 text-gray-400" />
-                        </div>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {(() => {
+                          const images = brand.images || (brand.logo ? [brand.logo] : []);
+                          if (images.length === 0) {
+                            return (
+                              <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
+                                <Package className="h-5 w-5 text-gray-400" />
+                              </div>
+                            );
+                          }
+                          
+                          return (
+                            <>
+                              <img 
+                                src={images[0]} 
+                                alt={brand.name}
+                                className="w-10 h-10 object-cover rounded border"
+                              />
+                              {images.length > 1 && (
+                                <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center text-xs font-medium text-gray-600 border">
+                                  +{images.length - 1}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div>
@@ -245,28 +307,6 @@ export default function AdminBrands() {
                       <Badge variant={brand.active ? "default" : "secondary"}>
                         {brand.active ? 'Active' : 'Inactive'}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <span>{brand.sort_order}</span>
-                        <div className="flex flex-col">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSortOrderChange(brand.id!, 'up')}
-                            disabled={brand.sort_order === 0}
-                          >
-                            <ArrowUp className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSortOrderChange(brand.id!, 'down')}
-                          >
-                            <ArrowDown className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -302,112 +342,210 @@ export default function AdminBrands() {
       </Card>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="text-xl font-semibold">
               {editingBrand ? 'Edit Brand' : 'Add New Brand'}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Brand Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  required
-                />
+          <div className="flex-1 overflow-y-auto pr-2">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Basic Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Basic Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name" className="text-sm font-medium">Brand Name *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      placeholder="Enter brand name"
+                      required
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="slug" className="text-sm font-medium">URL Slug *</Label>
+                    <Input
+                      id="slug"
+                      value={formData.slug}
+                      onChange={(e) => handleInputChange('slug', e.target.value)}
+                      placeholder="auto-generated-from-name"
+                      required
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Used in URLs: /brands/{formData.slug}</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="origin_country" className="text-sm font-medium">Origin Country</Label>
+                    <Input
+                      id="origin_country"
+                      value={formData.origin_country}
+                      onChange={(e) => handleInputChange('origin_country', e.target.value)}
+                      placeholder="e.g., Germany, Japan, USA"
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="established_year" className="text-sm font-medium">Established Year</Label>
+                    <Input
+                      id="established_year"
+                      value={formData.established_year}
+                      onChange={(e) => handleInputChange('established_year', e.target.value)}
+                      placeholder="e.g., 1985"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="slug">Slug *</Label>
-                <Input
-                  id="slug"
-                  value={formData.slug}
-                  onChange={(e) => handleInputChange('slug', e.target.value)}
-                  required
-                />
+              {/* Description Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Brand Details</h3>
+                <div>
+                  <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    placeholder="Brief description of the brand and its products..."
+                    rows={3}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="specialty" className="text-sm font-medium">Specialty/Category</Label>
+                  <Input
+                    id="specialty"
+                    value={formData.specialty}
+                    onChange={(e) => handleInputChange('specialty', e.target.value)}
+                    placeholder="e.g., Power Tools, Hand Tools, Construction Equipment"
+                    className="mt-1"
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="origin_country">Origin Country</Label>
-                <Input
-                  id="origin_country"
-                  value={formData.origin_country}
-                  onChange={(e) => handleInputChange('origin_country', e.target.value)}
-                />
+              {/* Images Upload Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Brand Images</h3>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <ImageUploader
+                    onImagesUploaded={(urls) => {
+                      console.log('ImageUploader callback called with URLs:', urls);
+                      if (urls.length > 0) {
+                        handleImagesUpload(urls);
+                      } else {
+                        console.warn('No URLs received from image upload');
+                      }
+                    }}
+                    existingImages={formData.images || []}
+                    maxFiles={5}
+                    folder="brands"
+                    title="Upload Brand Images"
+                  />
+                  <p className="text-xs text-gray-600 mt-2">
+                    Upload up to 5 brand images. Recommended: Square images (200x200px or larger), PNG/JPG format, max 5MB each
+                  </p>
+                  
+                  {/* Manual URL Input as backup */}
+                  <div className="mt-4 space-y-2">
+                    <Label htmlFor="images_urls" className="text-sm font-medium">Or enter image URLs manually (one per line):</Label>
+                    <div className="space-y-2">
+                      <textarea
+                        id="images_urls"
+                        value={formData.images.join('\n')}
+                        onChange={(e) => {
+                          const urls = e.target.value.split('\n').filter(url => url.trim());
+                          handleImagesUpload(urls);
+                        }}
+                        placeholder="https://example.com/image1.png&#10;https://example.com/image2.png"
+                        className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                        rows={3}
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          if (formData.images.length > 0) {
+                            navigator.clipboard.writeText(formData.images.join('\n'));
+                            alert('Image URLs copied to clipboard!');
+                          }
+                        }}
+                        disabled={formData.images.length === 0}
+                        className="w-full"
+                      >
+                        Copy All URLs
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Debug: Show current image URLs */}
+                  {formData.images.length > 0 && (
+                    <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded">
+                      <p className="text-xs text-green-700 font-medium">Current Brand Images ({formData.images.length}):</p>
+                      <div className="space-y-1 mt-1">
+                        {formData.images.map((url, index) => (
+                          <p key={index} className="text-xs text-green-600 break-all">
+                            {index + 1}. {url}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="established_year">Established Year</Label>
-                <Input
-                  id="established_year"
-                  value={formData.established_year}
-                  onChange={(e) => handleInputChange('established_year', e.target.value)}
-                />
-              </div>
-            </div>
+              {/* Settings Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Settings</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <Checkbox
+                        id="active"
+                        checked={formData.active}
+                        onCheckedChange={(checked) => handleInputChange('active', checked)}
+                      />
+                      <div>
+                        <Label htmlFor="active" className="text-sm font-medium">Active Brand</Label>
+                        <p className="text-xs text-gray-500">Show this brand on the website</p>
+                      </div>
+                    </div>
+                  </div>
 
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="specialty">Specialty</Label>
-              <Input
-                id="specialty"
-                value={formData.specialty}
-                onChange={(e) => handleInputChange('specialty', e.target.value)}
-                placeholder="e.g., Power Tools, Hand Tools, etc."
-              />
-            </div>
-
-            <div>
-              <Label>Brand Logo</Label>
-              <ImageUploader
-                onImageUpload={handleImageUpload}
-                currentImage={formData.logo}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="active"
-                  checked={formData.active}
-                  onCheckedChange={(checked) => handleInputChange('active', checked)}
-                />
-                <Label htmlFor="active">Active Brand</Label>
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Brands are automatically sorted by creation date. Custom sorting will be available in a future update.
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="sort_order">Sort Order</Label>
-                <Input
-                  id="sort_order"
-                  type="number"
-                  value={formData.sort_order}
-                  onChange={(e) => handleInputChange('sort_order', parseInt(e.target.value) || 0)}
-                />
+              {/* Form Actions */}
+              <div className="flex justify-end gap-3 pt-6 border-t">
+                <Button type="button" variant="outline" onClick={handleCloseForm} disabled={isSaving}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSaving} className="min-w-[120px]">
+                  {isSaving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    editingBrand ? 'Update Brand' : 'Create Brand'
+                  )}
+                </Button>
               </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={handleCloseForm}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSaving}>
-                {isSaving ? 'Saving...' : (editingBrand ? 'Update Brand' : 'Create Brand')}
-              </Button>
-            </div>
-          </form>
+            </form>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

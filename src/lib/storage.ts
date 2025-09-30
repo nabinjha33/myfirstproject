@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { createClient } from '@supabase/supabase-js';
 
 export interface UploadResult {
   success: boolean;
@@ -13,6 +14,22 @@ export interface UploadProgress {
   percentage: number;
 }
 
+// Create service role client for server-side uploads (if service role key is available)
+function getServiceRoleClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (serviceRoleKey) {
+    return createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+  }
+  return null;
+}
+
 /**
  * Upload a single image file to Supabase Storage
  */
@@ -25,7 +42,7 @@ export async function uploadImageToStorage(
     // Debug: Check authentication status
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     console.log('Auth status:', { user: user?.email || 'Not authenticated', authError });
-
+    
     // Validate file type
     if (!file.type.startsWith('image/')) {
       return {
@@ -48,8 +65,14 @@ export async function uploadImageToStorage(
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${folder}/${fileName}`;
 
+    // Try service role client first (for server-side uploads), then regular client
+    const serviceClient = getServiceRoleClient();
+    const clientToUse = serviceClient || supabase;
+    
+    console.log('Using client:', serviceClient ? 'Service Role' : 'Regular');
+
     // Upload file to Supabase Storage
-    const { data, error } = await supabase.storage
+    const { data, error } = await clientToUse.storage
       .from('Jeenmata')
       .upload(filePath, file, {
         cacheControl: '3600',
@@ -58,6 +81,15 @@ export async function uploadImageToStorage(
 
     if (error) {
       console.error('Storage upload error:', error);
+      
+      // If using regular client and auth error, suggest solutions
+      if (!serviceClient && error.message?.includes('Auth')) {
+        return {
+          success: false,
+          error: `Authentication required. Please check UPLOAD_FIX.md for solutions. Error: ${error.message}`
+        };
+      }
+      
       return {
         success: false,
         error: error.message
@@ -65,9 +97,11 @@ export async function uploadImageToStorage(
     }
 
     // Get public URL
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = clientToUse.storage
       .from('Jeenmata')
       .getPublicUrl(filePath);
+
+    console.log('Upload successful, URL:', urlData.publicUrl);
 
     return {
       success: true,

@@ -109,7 +109,11 @@ export default function ImageUploader({
   const addUrlImage = () => {
     if (urlInput.trim()) {
       const allUrls = [...existingImages, urlInput.trim()];
-      onImagesUploaded(allUrls);
+      if (typeof onImagesUploaded === 'function') {
+        onImagesUploaded(allUrls);
+      } else {
+        console.error('onImagesUploaded is not a function:', onImagesUploaded);
+      }
       setUrlInput('');
     }
   };
@@ -164,7 +168,12 @@ export default function ImageUploader({
 
       // Call the callback with all uploaded URLs (including existing ones)
       const allUrls = [...existingImages, ...uploadedUrls];
-      onImagesUploaded(allUrls);
+      if (typeof onImagesUploaded === 'function') {
+        console.log('Updating form with uploaded images:', allUrls);
+        onImagesUploaded(allUrls);
+      } else {
+        console.error('onImagesUploaded is not a function:', onImagesUploaded);
+      }
 
     } finally {
       setIsUploading(false);
@@ -220,7 +229,7 @@ export default function ImageUploader({
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
           />
-          <Button onClick={addUrlImage} variant="outline">
+          <Button type="button" onClick={addUrlImage} variant="outline">
             Add URL
           </Button>
         </div>
@@ -275,6 +284,7 @@ export default function ImageUploader({
                   />
                   <code className="flex-1 text-sm truncate">{url}</code>
                   <Button
+                    type="button"
                     size="sm"
                     variant="outline"
                     onClick={() => copyToClipboard(url)}
@@ -293,6 +303,7 @@ export default function ImageUploader({
             <div className="flex items-center justify-between">
               <h4 className="font-medium">New Images to Upload</h4>
               <Button
+                type="button"
                 onClick={uploadImages}
                 disabled={isUploading || images.every(img => img.status !== 'pending')}
                 size="sm"
@@ -326,6 +337,7 @@ export default function ImageUploader({
                           {image.file.name}
                         </p>
                         <Button
+                          type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => removeImage(index)}
@@ -370,6 +382,7 @@ export default function ImageUploader({
                             {image.url}
                           </code>
                           <Button
+                            type="button"
                             size="sm"
                             variant="outline"
                             onClick={() => copyToClipboard(image.url!)}
