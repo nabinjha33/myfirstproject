@@ -244,10 +244,9 @@ export default function ProductDetail() {
 
         {/* Product Details Tabs */}
         <Tabs defaultValue="variants" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="variants">Product Variants</TabsTrigger>
             <TabsTrigger value="specifications">Specifications</TabsTrigger>
-            <TabsTrigger value="shipping">Shipping & Import</TabsTrigger>
           </TabsList>
           
           <TabsContent value="variants" className="space-y-4">
@@ -357,63 +356,6 @@ export default function ProductDetail() {
             </Card>
           </TabsContent>
           
-          <TabsContent value="shipping" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Import & Shipping Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h4 className="font-semibold mb-3">Import Process</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 border border-gray-200 rounded-lg">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <Package className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <h5 className="font-medium mb-2">Source</h5>
-                      <p className="text-sm text-gray-600">Direct from manufacturers in China & India</p>
-                    </div>
-                    <div className="text-center p-4 border border-gray-200 rounded-lg">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <Package className="w-6 h-6 text-green-600" />
-                      </div>
-                      <h5 className="font-medium mb-2">Quality Check</h5>
-                      <p className="text-sm text-gray-600">Rigorous quality assurance before shipping</p>
-                    </div>
-                    <div className="text-center p-4 border border-gray-200 rounded-lg">
-                      <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <Package className="w-6 h-6 text-red-600" />
-                      </div>
-                      <h5 className="font-medium mb-2">Delivery</h5>
-                      <p className="text-sm text-gray-600">Efficient logistics to Nepal</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-semibold mb-3">Dealer Benefits</h4>
-                  <ul className="space-y-2 text-gray-600">
-                    <li className="flex items-center">
-                      <div className="w-2 h-2 bg-red-600 rounded-full mr-3"></div>
-                      Competitive wholesale pricing
-                    </li>
-                    <li className="flex items-center">
-                      <div className="w-2 h-2 bg-red-600 rounded-full mr-3"></div>
-                      Real-time shipment tracking
-                    </li>
-                    <li className="flex items-center">
-                      <div className="w-2 h-2 bg-red-600 rounded-full mr-3"></div>
-                      Flexible ordering quantities
-                    </li>
-                    <li className="flex items-center">
-                      <div className="w-2 h-2 bg-red-600 rounded-full mr-3"></div>
-                      Dedicated support team
-                    </li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
 
         {/* CTA Section */}

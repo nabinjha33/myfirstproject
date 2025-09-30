@@ -122,6 +122,11 @@ export default function ImageUploader({
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const removeExistingImage = (index: number) => {
+    const updatedImages = existingImages.filter((_, i) => i !== index);
+    onImagesUploaded(updatedImages);
+  };
+
   const uploadImages = async () => {
     if (images.length === 0) return;
 
@@ -290,6 +295,15 @@ export default function ImageUploader({
                     onClick={() => copyToClipboard(url)}
                   >
                     <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => removeExistingImage(index)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
