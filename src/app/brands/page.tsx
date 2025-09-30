@@ -109,7 +109,7 @@ export default function Brands() {
             <img 
               src={brand.logo} 
               alt={brand.name}
-              className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300 p-4"
+              className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300 p-8"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-red-500 to-amber-500 opacity-80 flex items-center justify-center">

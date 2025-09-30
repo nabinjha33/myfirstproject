@@ -22,7 +22,7 @@ function ShipmentForm({ shipment, products, onSubmitSuccess }: { shipment: any, 
     const [formData, setFormData] = useState({
         tracking_number: '',
         origin_country: 'China',
-        status: 'Booked',
+        status: 'pending',
         eta_date: '',
         product_names: [] as string[]
     });
@@ -34,7 +34,7 @@ function ShipmentForm({ shipment, products, onSubmitSuccess }: { shipment: any, 
             setFormData({
                 tracking_number: shipment.tracking_number || '',
                 origin_country: shipment.origin_country || 'China',
-                status: shipment.status || 'Booked',
+                status: shipment.status || 'pending',
                 eta_date: shipment.eta_date || '',
                 product_names: shipment.product_names || []
             });
@@ -110,11 +110,10 @@ function ShipmentForm({ shipment, products, onSubmitSuccess }: { shipment: any, 
                 <Select value={formData.status} onValueChange={v => setFormData({...formData, status: v})}>
                     <SelectTrigger><SelectValue placeholder="Select status"/></SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="Booked">Booked</SelectItem>
-                        <SelectItem value="In Transit">In Transit</SelectItem>
-                        <SelectItem value="At Port">At Port</SelectItem>
-                        <SelectItem value="Customs">Customs</SelectItem>
-                        <SelectItem value="In Warehouse">In Warehouse</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="in_transit">In Transit</SelectItem>
+                        <SelectItem value="customs">Customs</SelectItem>
+                        <SelectItem value="delivered">Delivered</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -235,10 +234,10 @@ export default function AdminShipments() {
                                 <TableCell>
                                     <div className="space-y-2">
                                         <Badge className={
-                                            s.status === 'In Warehouse' ? 'bg-green-100 text-green-800' :
-                                            s.status === 'Customs' ? 'bg-orange-100 text-orange-800' :
-                                            s.status === 'At Port' ? 'bg-yellow-100 text-yellow-800' :
-                                            s.status === 'In Transit' ? 'bg-blue-100 text-blue-800' :
+                                            s.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                                            s.status === 'customs' ? 'bg-orange-100 text-orange-800' :
+                                            s.status === 'in_transit' ? 'bg-blue-100 text-blue-800' :
+                                            s.status === 'pending' ? 'bg-gray-100 text-gray-800' :
                                             'bg-gray-100 text-gray-800'
                                         }>
                                             {s.status}

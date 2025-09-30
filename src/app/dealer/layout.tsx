@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -53,6 +53,14 @@ export default function DealerLayout({
   const pathname = usePathname();
   const [isDark, setIsDark] = useState(false);
   const [language, setLanguage] = useState("en");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    // Check if dark mode is already enabled
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    setIsDark(isDarkMode);
+  }, []);
 
   const toggleTheme = () => {
     setIsDark(!isDark);
@@ -62,6 +70,11 @@ export default function DealerLayout({
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'en' ? 'ne' : 'en');
   };
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <SidebarProvider>
@@ -119,7 +132,7 @@ export default function DealerLayout({
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" suppressHydrationWarning>
                     <Settings className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>

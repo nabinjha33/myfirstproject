@@ -322,7 +322,7 @@ export class ProductService extends DatabaseService {
       .from('products')
       .select(`
         *,
-        brands!inner(id, name, slug),
+        brands!inner(id, name, slug, origin_country),
         categories!inner(id, name, slug)
       `)
       .eq('slug', slug)
@@ -337,6 +337,7 @@ export class ProductService extends DatabaseService {
     return {
       ...data,
       brand: data.brands?.name || 'Unknown',
+      brand_origin_country: data.brands?.origin_country || null,
       category: data.categories?.name || 'Uncategorized',
       created_date: data.created_at // Add compatibility field
     }

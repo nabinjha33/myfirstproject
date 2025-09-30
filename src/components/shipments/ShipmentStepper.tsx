@@ -17,30 +17,25 @@ interface StatusConfig {
 }
 
 const statusConfig: Record<string, StatusConfig> = {
-  "Booked": {
+  "pending": {
     icon: Package,
     color: "bg-gray-100 text-gray-800 border-gray-300",
     step: 1
   },
-  "In Transit": {
+  "in_transit": {
     icon: Truck,
     color: "bg-blue-100 text-blue-800 border-blue-300",
     step: 2
   },
-  "At Port": {
-    icon: Ship,
-    color: "bg-yellow-100 text-yellow-800 border-yellow-300",
-    step: 3
-  },
-  "Customs": {
+  "customs": {
     icon: Building,
     color: "bg-orange-100 text-orange-800 border-orange-300",
-    step: 4
+    step: 3
   },
-  "In Warehouse": {
+  "delivered": {
     icon: CheckCircle,
     color: "bg-green-100 text-green-800 border-green-300",
-    step: 5
+    step: 4
   }
 };
 
@@ -49,7 +44,8 @@ interface ShipmentStepperProps {
 }
 
 export default function ShipmentStepper({ currentStatus }: ShipmentStepperProps) {
-  const steps = ["Booked", "In Transit", "At Port", "Customs", "In Warehouse"];
+  const steps = ["pending", "in_transit", "customs", "delivered"];
+  const stepLabels = ["Pending", "In Transit", "Customs", "Delivered"];
   const currentStep = statusConfig[currentStatus]?.step || 1;
 
   return (
@@ -81,7 +77,7 @@ export default function ShipmentStepper({ currentStatus }: ShipmentStepperProps)
                 isActive ? 'text-blue-600' : 
                 isCompleted ? 'text-green-600' : 'text-gray-500'
               }`}>
-                {step}
+                {stepLabels[index]}
               </div>
             </div>
             {index < steps.length - 1 && (

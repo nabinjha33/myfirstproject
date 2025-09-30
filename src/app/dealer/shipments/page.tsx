@@ -22,23 +22,19 @@ import { format } from "date-fns";
 import ShipmentStepper from '@/components/shipments/ShipmentStepper';
 
 const statusConfig = {
-  "Booked": {
+  "pending": {
     icon: Package,
     color: "bg-gray-100 text-gray-800 border-gray-300",
   },
-  "In Transit": {
+  "in_transit": {
     icon: Truck,
     color: "bg-blue-100 text-blue-800 border-blue-300",
   },
-  "At Port": {
-    icon: Ship,
-    color: "bg-yellow-100 text-yellow-800 border-yellow-300",
-  },
-  "Customs": {
+  "customs": {
     icon: Building,
     color: "bg-orange-100 text-orange-800 border-orange-300",
   },
-  "In Warehouse": {
+  "delivered": {
     icon: CheckCircle,
     color: "bg-green-100 text-green-800 border-green-300",
   }
@@ -136,14 +132,20 @@ export default function Shipments() {
               />
             </div>
             <div className="flex gap-2 flex-wrap">
-              {["All", "Booked", "In Transit", "At Port", "Customs", "In Warehouse"].map((status) => (
+              {[
+                { key: "All", label: "All" },
+                { key: "pending", label: "Pending" },
+                { key: "in_transit", label: "In Transit" },
+                { key: "customs", label: "Customs" },
+                { key: "delivered", label: "Delivered" }
+              ].map((status) => (
                 <Button
-                  key={status}
-                  variant={selectedStatus === status ? "default" : "outline"}
-                  onClick={() => setSelectedStatus(status)}
+                  key={status.key}
+                  variant={selectedStatus === status.key ? "default" : "outline"}
+                  onClick={() => setSelectedStatus(status.key)}
                   className="whitespace-nowrap"
                 >
-                  {status}
+                  {status.label}
                 </Button>
               ))}
             </div>

@@ -184,11 +184,11 @@ export default function DealerCatalog() {
             )}
           </div>
 
-          <div className="mt-auto pt-2 flex gap-2">
+          <div className="mt-auto pt-2 flex flex-col gap-2">
              <Button
               variant="outline"
               size="sm"
-              className="w-full h-8"
+              className="w-full h-8 text-xs"
               onClick={() => {
                 setSelectedProduct(product);
                 setIsDetailsDialogOpen(true);
@@ -199,7 +199,7 @@ export default function DealerCatalog() {
             </Button>
             <Button
               size="sm"
-              className="w-full h-8 bg-red-600 hover:bg-red-700"
+              className="w-full h-8 bg-red-600 hover:bg-red-700 text-xs"
               onClick={() => {
                 setSelectedProduct(product);
                 setIsVariantDialogOpen(true);
@@ -599,13 +599,13 @@ export default function DealerCatalog() {
             </div>
             <div className="flex flex-col sm:flex-row gap-4">
               <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                <SelectTrigger className="w-full sm:w-40">
+                <SelectTrigger className="w-full sm:w-40" suppressHydrationWarning>
                   <SelectValue placeholder="Brand" />
                 </SelectTrigger>
                 <SelectContent>{brands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
               </Select>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full sm:w-40">
+                <SelectTrigger className="w-full sm:w-40" suppressHydrationWarning>
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>

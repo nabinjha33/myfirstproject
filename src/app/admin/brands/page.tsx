@@ -272,8 +272,8 @@ export default function AdminBrands() {
                           const images = brand.images || (brand.logo ? [brand.logo] : []);
                           if (images.length === 0) {
                             return (
-                              <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
-                                <Package className="h-5 w-5 text-gray-400" />
+                              <div className="w-20 h-20 flex items-center justify-center">
+                                <Package className="h-10 w-10 text-gray-400" />
                               </div>
                             );
                           }
@@ -283,7 +283,7 @@ export default function AdminBrands() {
                               <img 
                                 src={images[0]} 
                                 alt={brand.name}
-                                className="w-10 h-10 object-cover rounded border"
+                                className="w-20 h-20 object-contain"
                               />
                               {images.length > 1 && (
                                 <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center text-xs font-medium text-gray-600 border">

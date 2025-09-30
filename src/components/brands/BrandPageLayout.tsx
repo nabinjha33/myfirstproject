@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Product } from '@/lib/entities';
+import { Product, Brand } from '@/lib/entities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +31,11 @@ import {
   Shield,
   Zap,
   Calendar,
-  Flag 
+  Flag,
+  Filter,
+  Grid3X3,
+  List,
+  Eye
 } from 'lucide-react';
 
 // Brand-specific themes
@@ -80,14 +84,18 @@ interface ProductData {
   }>;
 }
 
-export default function BrandPageLayout({ brand }: { brand: any }) {
+export default function BrandPageLayout({ brand, brandSlug }: { brand: any, brandSlug: string }) {
   const [products, setProducts] = useState<ProductData[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<ProductData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [categories, setCategories] = useState(['All']);
   const [brandStats, setBrandStats] = useState<any>({});
+  const [sortBy, setSortBy] = useState('name');
+  const [viewMode, setViewMode] = useState('grid');
+  const [currentBrand, setCurrentBrand] = useState<any>(brand);
   
   // Cache busting - force fresh data load
   const [lastUpdated] = useState(() => Date.now());
@@ -101,6 +109,41 @@ export default function BrandPageLayout({ brand }: { brand: any }) {
 
   useEffect(() => {
     filterProducts();
+  }, [products, searchTerm, categoryFilter, sortBy]);
+
+  const filterProducts = useCallback(() => {
+    let filtered = [...products];
+    
+    // Search filter
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(product => 
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Category filter
+    if (categoryFilter !== 'All' && categoryFilter !== 'all') {
+      filtered = filtered.filter(product => product.category === categoryFilter);
+    }
+    
+    // Sort products
+    filtered.sort((a: ProductData, b: ProductData) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'price':
+          const aPrice = a.variants?.[0]?.price_npr || 0;
+          const bPrice = b.variants?.[0]?.price_npr || 0;
+          return aPrice - bPrice;
+        case 'featured':
+          return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+        default:
+          return 0;
+      }
+    });
+    
+    setFilteredProducts(filtered);
   }, [products, searchTerm, categoryFilter, sortBy]);
 
   const loadBrandData = async () => {
@@ -119,18 +162,16 @@ export default function BrandPageLayout({ brand }: { brand: any }) {
           logo: null,
           active: true
         };
-        setBrand(defaultBrand);
+        setCurrentBrand(defaultBrand);
         setProducts([]);
         setCategories(['All']);
         return;
       }
-      
-      setBrand(brandData);
+      setCurrentBrand(brandData);
 
       // Load products for this brand
       const productData = await Product.list('name', { brand: brandData.name });
       setProducts(productData || []);
-
       // Extract unique categories
       const uniqueCategories = ['All', ...new Set((productData || []).map(p => p.category).filter(Boolean))];
       setCategories(uniqueCategories);
@@ -145,7 +186,7 @@ export default function BrandPageLayout({ brand }: { brand: any }) {
         logo: null,
         active: true
       };
-      setBrand(fallbackBrand);
+      setCurrentBrand(fallbackBrand);
       setProducts([]);
       setCategories(['All']);
     } finally {
@@ -153,40 +194,6 @@ export default function BrandPageLayout({ brand }: { brand: any }) {
     }
   };
 
-  const filterProducts = () => {
-    let filtered = [...products];
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Category filter
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter(product => product.category === categoryFilter);
-    }
-
-    // Sort products
-    filtered.sort((a: ProductData, b: ProductData) => {
-      switch (sortBy) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'price':
-          const aPrice = a.variants?.[0]?.price_npr || 0;
-          const bPrice = b.variants?.[0]?.price_npr || 0;
-          return aPrice - bPrice;
-        case 'featured':
-          return (b as any).featured ? 1 : -1;
-        default:
-          return 0;
-      }
-    });
-
-    setFilteredProducts(filtered);
-  };
 
   const getProductPrice = (product: ProductData) => {
     if (product.variants && product.variants.length > 0) {
@@ -265,7 +272,7 @@ export default function BrandPageLayout({ brand }: { brand: any }) {
               <img 
                 src={brand.logo} 
                 alt={brand.name}
-                className="w-24 h-24 object-contain rounded-lg bg-white p-2 shadow-sm"
+                className="w-40 h-40 object-contain"
               />
             </div>
           )}

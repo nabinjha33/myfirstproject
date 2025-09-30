@@ -200,7 +200,7 @@ export default function Home() {
                       <img
                         src={brand.logo}
                         alt={brand.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" /> :
+                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300 p-8" /> :
                       <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-500 dark:from-teal-600 dark:to-cyan-600 flex items-center justify-center">
                         <Package className="w-16 h-16 text-white" />
                       </div>
@@ -376,7 +376,7 @@ export default function Home() {
               </Button>
             </Link>
             <Link href="/products">
-              <Button size="lg" variant="outline" className="h-12 px-8 border-white text-white hover:bg-white/10 dark:border-slate-300 dark:hover:bg-slate-700/50 dark:text-slate-200">
+              <Button size="lg" variant="outline" className="h-12 px-8 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500 dark:hover:text-white">
                 {getText("Browse Catalog", "सूची हेर्नुहोस्")}
               </Button>
             </Link>

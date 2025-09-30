@@ -157,21 +157,19 @@ export default function MyOrders() {
 
   if (isLoading) return <div className="p-6">Loading your orders...</div>;
   if (!currentUser) return <div className="p-6">You must be logged in to view this page.</div>
-
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-40" suppressHydrationWarning>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Status</SelectItem>
               <SelectItem value="Submitted">Submitted</SelectItem>
               <SelectItem value="Confirmed">Confirmed</SelectItem>
-              <SelectItem value="Processing">Processing</SelectItem>
               <SelectItem value="Shipped">Shipped</SelectItem>
               <SelectItem value="Delivered">Delivered</SelectItem>
               <SelectItem value="Cancelled">Cancelled</SelectItem>

@@ -234,7 +234,7 @@ export default function ProductDetail() {
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">Origin</h4>
-                    <p className="text-gray-600">China/India Import</p>
+                    <p className="text-gray-600">{(product as any).brand_origin_country || 'Import'}</p>
                   </div>
                 </div>
               </CardContent>
@@ -330,7 +330,7 @@ export default function ProductDetail() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Origin:</span>
-                        <span className="font-medium">China/India</span>
+                        <span className="font-medium">{(product as any).brand_origin_country || 'Import'}</span>
                       </div>
                     </div>
                   </div>
