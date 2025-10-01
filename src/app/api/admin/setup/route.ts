@@ -52,11 +52,28 @@ export async function POST(req: NextRequest) {
     const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
     
     try {
+      // Validate password requirements
+      if (password.length < 8) {
+        return NextResponse.json(
+          { error: 'Password must be at least 8 characters long' },
+          { status: 400 }
+        );
+      }
+
+      // Parse name properly
+      const nameParts = fullName.trim().split(' ');
+      const firstName = nameParts[0] || 'Admin';
+      const lastName = nameParts.slice(1).join(' ') || 'User';
+
+      console.log('Creating Clerk user with:', { email, firstName, lastName });
+
       const clerkUser = await clerk.users.createUser({
         emailAddress: [email],
-        firstName: fullName.split(' ')[0] || fullName,
-        lastName: fullName.split(' ').slice(1).join(' ') || '',
+        firstName: firstName,
+        lastName: lastName,
         password: password,
+        skipPasswordChecks: false,
+        skipPasswordRequirement: false,
       });
 
       // Create admin user in Supabase
@@ -93,11 +110,51 @@ export async function POST(req: NextRequest) {
 
     } catch (clerkError: any) {
       console.error('Clerk error:', clerkError);
+      console.error('Clerk error details:', JSON.stringify(clerkError, null, 2));
       
       // Handle specific Clerk errors
-      if (clerkError.errors && clerkError.errors[0]?.code === 'form_identifier_exists') {
+      if (clerkError.errors && clerkError.errors[0]) {
+        const errorCode = clerkError.errors[0].code;
+        const errorMessage = clerkError.errors[0].message;
+        
+        switch (errorCode) {
+          case 'form_identifier_exists':
+            return NextResponse.json(
+              { error: 'A user with this email already exists in Clerk' },
+              { status: 400 }
+            );
+          case 'form_password_pwned':
+            return NextResponse.json(
+              { error: 'This password has been found in a data breach. Please choose a different password.' },
+              { status: 400 }
+            );
+          case 'form_password_too_common':
+            return NextResponse.json(
+              { error: 'This password is too common. Please choose a more secure password.' },
+              { status: 400 }
+            );
+          case 'form_password_length_too_short':
+            return NextResponse.json(
+              { error: 'Password is too short. Must be at least 8 characters.' },
+              { status: 400 }
+            );
+          case 'form_param_format_invalid':
+            return NextResponse.json(
+              { error: 'Invalid email format or other parameter issue.' },
+              { status: 400 }
+            );
+          default:
+            return NextResponse.json(
+              { error: `Clerk validation error: ${errorMessage || errorCode}` },
+              { status: 400 }
+            );
+        }
+      }
+
+      // Check for status code
+      if (clerkError.status === 422) {
         return NextResponse.json(
-          { error: 'A user with this email already exists in Clerk' },
+          { error: 'Invalid data provided. Please check your email format and password requirements.' },
           { status: 400 }
         );
       }
