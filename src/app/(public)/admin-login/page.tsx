@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser, useSignIn } from '@clerk/nextjs';
@@ -20,7 +20,7 @@ import {
   EyeOff
 } from "lucide-react";
 
-export default function AdminLogin() {
+function AdminLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoaded } = useUser();
@@ -240,5 +240,20 @@ export default function AdminLogin() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function AdminLogin() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-white" />
+          <p className="text-gray-300">Loading...</p>
+        </div>
+      </div>
+    }>
+      <AdminLoginContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import {
   Mail
 } from "lucide-react";
 
-export default function AccessDenied() {
+function AccessDeniedContent() {
   const searchParams = useSearchParams();
   const reason = searchParams.get('reason') || 'access_denied';
 
@@ -100,5 +100,24 @@ export default function AccessDenied() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function AccessDenied() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="shadow-xl border-red-200">
+            <CardContent className="pt-6 text-center">
+              <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    }>
+      <AccessDeniedContent />
+    </Suspense>
   );
 }
