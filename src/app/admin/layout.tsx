@@ -99,20 +99,32 @@ export default function AdminLayout({
 
       try {
         const response = await fetch('/api/admin/check-status');
+        const data = await response.json();
+        
+        console.log('Admin status check response:', { status: response.status, data });
+        
         if (response.ok) {
-          const data = await response.json();
           if (data.isAdmin) {
             setAdminUser(data.user);
           } else {
+            console.log('User is not admin:', data);
             router.push('/access-denied?reason=admin_required');
             return;
           }
         } else {
+          console.error('Admin status check failed:', data);
+          
+          // Show specific error messages
+          if (response.status === 404) {
+            alert(`Admin user not found in database. Please run this SQL in Supabase:\n\nINSERT INTO users (id, email, full_name, role, dealer_status, created_at, updated_at) VALUES (gen_random_uuid(), '${data.debug?.includes('@') ? data.debug.split(': ')[1] : 'admin@jeenmataimpex.com'}', 'Admin User', 'admin', 'approved', NOW(), NOW());`);
+          }
+          
           router.push('/admin-login');
           return;
         }
       } catch (error) {
         console.error('Error checking admin status:', error);
+        alert('Network error checking admin status. Please check your connection.');
         router.push('/admin-login');
         return;
       }
