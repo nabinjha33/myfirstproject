@@ -157,6 +157,52 @@ export async function isDealerApproved(): Promise<boolean> {
 }
 
 /**
+ * Check if user is admin (server-side)
+ */
+export async function isAdmin(): Promise<boolean> {
+  try {
+    const user = await getCurrentUser();
+    return user?.supabaseUser?.role === 'admin';
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
+  }
+}
+
+/**
+ * Require admin access (throws error if not admin)
+ */
+export async function requireAdmin(): Promise<void> {
+  const adminStatus = await isAdmin();
+  if (!adminStatus) {
+    throw new Error('Admin access required');
+  }
+}
+
+/**
+ * Get admin user profile (server-side)
+ */
+export async function getAdminProfile() {
+  try {
+    const user = await getCurrentUser();
+    if (!user || user.supabaseUser?.role !== 'admin') {
+      return null;
+    }
+
+    return {
+      id: user.clerkUser.id,
+      email: user.clerkUser.emailAddresses?.[0]?.emailAddress,
+      name: user.supabaseUser?.full_name || `${user.clerkUser.firstName || ''} ${user.clerkUser.lastName || ''}`.trim(),
+      role: user.supabaseUser?.role,
+      avatar: user.clerkUser.imageUrl,
+    };
+  } catch (error) {
+    console.error('Error getting admin profile:', error);
+    return null;
+  }
+}
+
+/**
  * Get user profile for display (server-side)
  */
 export async function getUserProfile() {

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useUser, useClerk } from '@clerk/nextjs';
 import { 
   Package, 
   Users, 
@@ -60,8 +61,13 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
   const [isDark, setIsDark] = useState(false);
   const [language, setLanguage] = useState("en");
+  const [adminUser, setAdminUser] = useState<any>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   const toggleTheme = () => {
     setIsDark(!isDark);
@@ -71,6 +77,63 @@ export default function AdminLayout({
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'en' ? 'ne' : 'en');
   };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      router.push('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  // Check admin status on mount and user change
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!isLoaded) return;
+      
+      if (!user) {
+        router.push('/admin-login');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/admin/check-status');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.isAdmin) {
+            setAdminUser(data.user);
+          } else {
+            router.push('/access-denied?reason=admin_required');
+            return;
+          }
+        } else {
+          router.push('/admin-login');
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        router.push('/admin-login');
+        return;
+      }
+      
+      setIsCheckingAuth(false);
+    };
+
+    checkAdminStatus();
+  }, [user, isLoaded, router]);
+
+  // Show loading while checking authentication
+  if (!isLoaded || isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Verifying admin access...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -122,9 +185,9 @@ export default function AdminLayout({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-900 text-sm truncate">
-                  Admin User
+                  {adminUser?.name || 'Admin User'}
                 </p>
-                <p className="text-xs text-gray-500 truncate">admin@jeenmataimex.com</p>
+                <p className="text-xs text-gray-500 truncate">{adminUser?.email || 'admin@jeenmataimpex.com'}</p>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -141,7 +204,7 @@ export default function AdminLayout({
                     <Globe className="w-4 h-4 mr-2" />
                     {language === 'en' ? 'नेपाली' : 'English'}
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="w-4 h-4 mr-2" />
                     Logout
                   </DropdownMenuItem>

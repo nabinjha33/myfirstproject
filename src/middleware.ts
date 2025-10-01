@@ -24,8 +24,12 @@ const isPublicRoute = createRouteMatcher([
   '/about',
   '/contact',
   '/dealer-login',
+  '/admin-login',
+  '/admin-setup',
+  '/access-denied',
   '/api/webhooks(.*)',
   '/api/dealers(.*)',
+  '/api/admin(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
 ]);
@@ -55,12 +59,33 @@ export default clerkMiddleware(async (auth, req) => {
   // Protect admin routes
   if (isAdminRoute(req)) {
     if (!userId) {
-      const loginUrl = new URL('/dealer-login', req.url);
+      const loginUrl = new URL('/admin-login', req.url);
       loginUrl.searchParams.set('redirect_url', pathname);
       return NextResponse.redirect(loginUrl);
     }
     
-    // TODO: Add admin role check here when implementing admin features
+    // Check if user has admin role
+    try {
+      const { supabase } = await import('./lib/supabase');
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      
+      if (error || !user || user.role !== 'admin') {
+        // Redirect non-admin users to access denied page
+        const accessDeniedUrl = new URL('/access-denied', req.url);
+        accessDeniedUrl.searchParams.set('reason', 'admin_required');
+        return NextResponse.redirect(accessDeniedUrl);
+      }
+    } catch (error) {
+      console.error('Error checking admin role:', error);
+      const accessDeniedUrl = new URL('/access-denied', req.url);
+      accessDeniedUrl.searchParams.set('reason', 'auth_error');
+      return NextResponse.redirect(accessDeniedUrl);
+    }
+    
     return NextResponse.next();
   }
 
