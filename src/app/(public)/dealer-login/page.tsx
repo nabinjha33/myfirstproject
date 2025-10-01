@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useUser, useSignIn, useSignUp } from '@clerk/nextjs';
 import { User, DealerApplication } from "@/lib/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,10 @@ import {
 
 export default function DealerLogin() {
   const router = useRouter();
+  const { user, isLoaded } = useUser();
+  const { signIn, isLoaded: signInLoaded } = useSignIn();
+  const { signUp, isLoaded: signUpLoaded } = useSignUp();
+  
   const [isLoading, setIsLoading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<any>(null);
   const [ownerEmail, setOwnerEmail] = useState('jeenmataimpex8@gmail.com');
@@ -47,6 +52,13 @@ export default function DealerLogin() {
   });
 
   useEffect(() => {
+    // Redirect if user is already authenticated
+    if (isLoaded && user) {
+      router.push('/dealer/catalog');
+    }
+  }, [isLoaded, user, router]);
+
+  useEffect(() => {
     const fetchOwnerEmail = async () => {
       try {
         // In a real implementation, fetch from SiteSettings
@@ -63,45 +75,51 @@ export default function DealerLogin() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!signInLoaded) return;
+    
     setIsLoading(true);
     setSubmitStatus(null);
 
     try {
       console.log('Attempting login for:', loginForm.email);
       
-      // Check if user exists and has approved dealer status
+      // First check if user exists and has approved dealer status in your database
       const users = await User.list();
-      console.log('All users:', users);
-      
-      const user = users.find((u: any) =>
+      const dealerUser = users.find((u: any) =>
         u.email === loginForm.email &&
         u.role === 'dealer' &&
         u.dealer_status === 'approved'
       );
 
-      console.log('Found user:', user);
+      if (!dealerUser) {
+        setSubmitStatus({
+          type: 'error',
+          message: 'Your dealer account is not approved yet or does not exist. Please apply for dealer access first.'
+        });
+        setIsLoading(false);
+        return;
+      }
 
-      if (user) {
-        // In a real app, you'd validate the password here
-        // For now, we'll accept any password for approved dealers
-        localStorage.setItem('dealerLoggedIn', 'true');
-        localStorage.setItem('dealerEmail', loginForm.email);
-        localStorage.setItem('dealerName', user.full_name || user.business_name || 'Dealer');
-        
+      // Use Clerk to sign in
+      const result = await signIn.create({
+        identifier: loginForm.email,
+        password: loginForm.password,
+      });
+
+      if (result.status === 'complete') {
         console.log('Login successful, redirecting to catalog...');
         router.push('/dealer/catalog');
       } else {
-        console.log('Login failed - user not found or not approved');
         setSubmitStatus({
           type: 'error',
-          message: 'Invalid credentials or your dealer account is not approved yet. Please check your email and ensure your dealer application has been approved.'
+          message: 'Login incomplete. Please try again.'
         });
       }
     } catch (error: any) {
       console.error('Login error:', error);
       setSubmitStatus({
         type: 'error',
-        message: 'Login failed. Please try again. Error: ' + (error?.message || 'Unknown error')
+        message: 'Invalid credentials. Please check your email and password.'
       });
     }
 
@@ -110,6 +128,8 @@ export default function DealerLogin() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!signUpLoaded) return;
+    
     setIsLoading(true);
     setSubmitStatus(null);
 
@@ -137,7 +157,7 @@ export default function DealerLogin() {
         return;
       }
 
-      // Create new dealer application
+      // Create new dealer application first
       const applicationData = {
         business_name: signupForm.businessName,
         contact_person: signupForm.contactPerson,
@@ -156,16 +176,12 @@ export default function DealerLogin() {
       };
 
       console.log('Creating application with data:', applicationData);
-      
       await DealerApplication.create(applicationData);
-
       console.log('Application created successfully');
-      
-      let successMessage = 'Your dealer application has been submitted successfully! Our team will review your request and contact you within 24 hours.';
       
       setSubmitStatus({
         type: 'success',
-        message: successMessage
+        message: 'Your dealer application has been submitted successfully! Our team will review your request and contact you within 24 hours. You will receive an email with login credentials once approved.'
       });
 
       // Clear form
@@ -191,6 +207,18 @@ export default function DealerLogin() {
 
     setIsLoading(false);
   };
+
+  // Show loading while Clerk is initializing
+  if (!isLoaded || !signInLoaded || !signUpLoaded) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-red-600" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 flex items-center justify-center p-4">
@@ -326,7 +354,7 @@ export default function DealerLogin() {
                     </Button>
 
                     <p className="text-center text-sm text-gray-600">
-                      Note: Only approved dealers can login
+                      Note: Only approved dealers can login. Use the credentials provided in your approval email.
                     </p>
                   </form>
                 </TabsContent>

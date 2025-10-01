@@ -314,13 +314,13 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
           </div>
         )}
         
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 lg:py-32">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div className="space-y-8">
-              <div className="flex items-center gap-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                 {brand.logo && (
-                  <div className="relative">
-                    <div className={`${brand.name === 'Gorkha' ? 'w-28 h-28 rounded-full' : 'w-24 h-24 rounded-2xl'} bg-white/95 backdrop-blur-sm p-4 shadow-2xl border-4 border-white/30`}>
+                  <div className="relative flex-shrink-0">
+                    <div className={`${brand.name === 'Gorkha' ? 'w-20 h-20 sm:w-28 sm:h-28 rounded-full' : 'w-16 h-16 sm:w-24 sm:h-24 rounded-2xl'} bg-white/95 backdrop-blur-sm p-3 sm:p-4 shadow-2xl border-4 border-white/30`}>
                       <img src={brand.logo} alt={brand.name} className="w-full h-full object-contain" />
                     </div>
                     <div className={`absolute -inset-1 bg-gradient-to-r from-white/30 to-white/50 ${brand.name === 'Gorkha' ? 'rounded-full' : 'rounded-2xl'} blur-sm -z-10`}></div>
@@ -329,23 +329,23 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
                     )}
                   </div>
                 )}
-                <div>
-                  <h1 className="text-5xl md:text-7xl font-black mb-2 bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent leading-tight">
+                <div className="min-w-0">
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-black mb-2 bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent leading-tight">
                     {brand.name}
                   </h1>
-                  <p className="text-xl md:text-2xl font-medium text-white/90">{brand.tagline || brand.description}</p>
+                  <p className="text-base sm:text-lg md:text-xl lg:text-2xl font-medium text-white/90">{brand.tagline || brand.description}</p>
                 </div>
               </div>
               
               {/* Enhanced Brand Information Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 py-4 sm:py-6">
                 {brand.established_year && (
-                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20 hover:bg-white/15 transition-all">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Calendar className="w-5 h-5 text-yellow-300" />
-                      <span className="text-sm font-medium text-white/80">Established</span>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 sm:p-4 border border-white/20 hover:bg-white/15 transition-all">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                      <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300" />
+                      <span className="text-xs sm:text-sm font-medium text-white/80">Established</span>
                     </div>
-                    <span className="text-xl font-bold text-white">{brand.established_year}</span>
+                    <span className="text-lg sm:text-xl font-bold text-white">{brand.established_year}</span>
                   </div>
                 )}
                 

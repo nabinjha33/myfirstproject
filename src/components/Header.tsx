@@ -88,15 +88,15 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-red-700 rounded-xl flex items-center justify-center">
-              <Package className="w-6 h-6 text-white" />
+          <Link href="/" className="flex items-center space-x-2 min-w-0 flex-1 md:flex-none">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-red-600 to-red-700 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Package className="w-4 h-4 md:w-6 md:h-6 text-white" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white transition-colors">
+            <div className="min-w-0">
+              <h1 className="text-sm md:text-xl font-bold text-gray-900 dark:text-white transition-colors truncate">
                 {siteInfo.company_name}
               </h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors">
+              <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors hidden sm:block">
                 {getText(siteInfo.tagline, 'प्रिमियम आयात समाधान')}
               </p>
             </div>
@@ -125,8 +125,8 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* Right side actions */}
-          <div className="flex items-center space-x-4">
+          {/* Desktop Controls */}
+          <div className="hidden md:flex items-center space-x-4">
             {/* Theme Toggle */}
             <Button 
               variant="ghost" 
@@ -154,13 +154,23 @@ export default function Header() {
                 {getText('Dealer Login', 'डीलर लगइन')}
               </Button>
             </Link>
+          </div>
 
-            {/* Mobile menu button */}
+          {/* Mobile Controls */}
+          <div className="flex md:hidden items-center space-x-2">
             <Button 
               variant="ghost" 
               size="sm" 
-              className="md:hidden"
+              onClick={toggleTheme}
+              className="text-gray-600 dark:text-gray-100 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-gray-600 dark:text-gray-100 hover:text-red-600 dark:hover:text-red-400 transition-colors"
             >
               {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
@@ -169,19 +179,20 @@ export default function Header() {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-red-100 dark:border-gray-700 py-4">
-            <nav className="flex flex-col space-y-4">
+          <div className="md:hidden border-t border-red-100 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
+            <div className="px-2 pt-2 pb-3 space-y-1">
               {publicRoutes.map((route) => (
                 <Link
                   key={route.title}
                   href={route.url}
-                  className={`text-sm font-medium transition-colors hover:text-red-600 dark:hover:text-red-400 ${
+                  className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${
                     pathname === route.url ? 
-                      'text-red-600 dark:text-red-400' : 
-                      'text-gray-700 dark:text-gray-300'
+                      'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20' : 
+                      'text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
                   }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
+                  <Package className="w-5 h-5 mr-3" />
                   {getText(
                     route.title,
                     route.title === 'Home' ? 'घर' : 
@@ -191,10 +202,28 @@ export default function Header() {
                   )}
                 </Link>
               ))}
-            </nav>
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={toggleLanguage}
+                  className="w-full justify-start px-3 py-2 text-gray-600 dark:text-gray-100 hover:text-red-600 dark:hover:text-red-400"
+                >
+                  <Globe className="w-5 h-5 mr-3" />
+                  Language: {language.toUpperCase()}
+                </Button>
+                <Link href="/dealer/login" className="block mt-2">
+                  <Button 
+                    className="w-full bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-600"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {getText('Dealer Login', 'डीलर लगइन')}
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
         )}
       </div>
     </header>
   );
-}

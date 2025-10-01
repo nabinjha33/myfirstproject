@@ -30,6 +30,7 @@ A comprehensive B2B import/export platform built with Next.js, Base44 Entity SDK
 
 - **Framework**: [Next.js 14](https://nextjs.org/) with App Router
 - **Language**: TypeScript for type safety
+- **Authentication**: [Clerk](https://clerk.com/) for secure user management
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) + [Shadcn/ui](https://ui.shadcn.com/)
 - **Backend**: [Base44 Entity SDK](https://base44.com/) for data management
 - **Charts**: [Recharts](https://recharts.org/) for analytics visualization
@@ -101,10 +102,13 @@ src/
 ### Environment Variables
 See `env.example` for all required environment variables:
 
+- **Clerk Authentication**: Publishable key, secret key, and webhook secret
 - **Base44 SDK**: API credentials and project configuration
 - **WhatsApp**: Business API integration (optional)
 - **Analytics**: Google Analytics, Facebook Pixel (optional)
 - **Email**: SMTP configuration for notifications (optional)
+
+> **🔐 Authentication Setup**: See `CLERK_SETUP.md` for detailed Clerk configuration instructions.
 
 ### Base44 Entities
 The application uses the following Base44 entities:
@@ -122,12 +126,14 @@ The application uses the following Base44 entities:
 - `/products` - Product catalog
 - `/brands/[slug]` - Individual brand pages
 - `/products/[slug]` - Product detail pages
+- `/dealer-login` - Dealer login and application form
 
 ### Dealer Routes (Protected)
-- `/dealer/profile` - Dealer profile management
-- `/dealer/cart` - Inquiry cart
-- `/dealer/orders` - Order history
+- `/dealer/catalog` - Product catalog for dealers
+- `/dealer/order-cart` - Inquiry cart
+- `/dealer/my-orders` - Order history
 - `/dealer/shipments` - Shipment tracking
+- `/dealer/profile` - Dealer profile management
 
 ### Admin Routes (Protected)
 - `/admin/dashboard` - Analytics dashboard
@@ -217,7 +223,8 @@ npm start
 
 ## 📚 Documentation
 
-- **Environment Setup**: See `ENVIRONMENT_SETUP.md`
+- **Authentication Setup**: See `CLERK_SETUP.md` for Clerk configuration
+- **Environment Setup**: See `env.example` for environment variables
 - **API Documentation**: Base44 Entity SDK docs
 - **Component Library**: Shadcn/ui documentation
 - **Deployment Guide**: Vercel deployment docs
