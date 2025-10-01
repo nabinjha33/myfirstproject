@@ -117,15 +117,15 @@ export default function ProductDetail() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-8">
-          <Link href="/" className="hover:text-red-600">Home</Link>
+        <div className="flex items-center gap-2 text-sm text-gray-600 mb-6 md:mb-8 overflow-x-auto">
+          <Link href="/" className="hover:text-red-600 whitespace-nowrap">Home</Link>
           <span>/</span>
-          <Link href="/products" className="hover:text-red-600">Products</Link>
+          <Link href="/products" className="hover:text-red-600 whitespace-nowrap">Products</Link>
           <span>/</span>
-          <span className="text-gray-900">{product.name}</span>
+          <span className="text-gray-900 truncate">{product.name}</span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 mb-8 lg:mb-12">
           {/* Product Images */}
           <div className="space-y-4">
             <div className="relative bg-white rounded-xl overflow-hidden border border-gray-200">
@@ -185,12 +185,12 @@ export default function ProductDetail() {
                 <span className="text-sm text-gray-600">{product.category}</span>
               </div>
               
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
                 {product.name}
               </h1>
               
               {product.description && (
-                <p className="text-lg text-gray-600 leading-relaxed">
+                <p className="text-base md:text-lg text-gray-600 leading-relaxed">
                   {product.description}
                 </p>
               )}

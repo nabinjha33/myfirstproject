@@ -39,6 +39,7 @@ export default function AdminDealers() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('manage');
+  const [tempPassword, setTempPassword] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -93,25 +94,34 @@ export default function AdminDealers() {
       if (!app) return;
 
       if (action === 'approve') {
-        // Create user account from application
-        const userData = {
-          email: app.email,
-          full_name: app.contact_person,
-          business_name: app.business_name,
-          vat_pan: app.vat_pan,
-          address: app.address,
-          phone: app.phone,
-          whatsapp: app.whatsapp,
-          dealer_status: 'Approved',
-          role: 'user'
-        };
+        // Generate a temporary password if not provided
+        const password = tempPassword || `Dealer${Math.random().toString(36).slice(-8)}`;
         
-        await User.create(userData);
-        await DealerApplication.update(appId, { status: 'Approved' });
+        // Call our approval API
+        const response = await fetch('/api/dealers/approve', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            applicationId: appId,
+            tempPassword: password,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to approve dealer');
+        }
+
+        const result = await response.json();
+        setActionStatus(`✅ Dealer approved! Login credentials: Email: ${result.email}, Password: ${password}`);
         
-        setActionStatus('✅ Application approved and user account created');
+        // Clear temp password
+        setTempPassword('');
       } else {
-        await DealerApplication.update(appId, { status: 'Rejected' });
+        // Reject application
+        await DealerApplication.update(appId, { status: 'rejected' });
         setActionStatus('✅ Application rejected');
       }
       
@@ -287,6 +297,21 @@ export default function AdminDealers() {
             <Card>
               <CardHeader>
                 <CardTitle>Pending Applications</CardTitle>
+                <div className="flex gap-4 items-center">
+                  <div className="flex-1">
+                    <label htmlFor="tempPassword" className="text-sm font-medium text-gray-700">
+                      Temporary Password (optional - will auto-generate if empty)
+                    </label>
+                    <Input
+                      id="tempPassword"
+                      type="text"
+                      placeholder="e.g., DealerPass123"
+                      value={tempPassword}
+                      onChange={(e) => setTempPassword(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>

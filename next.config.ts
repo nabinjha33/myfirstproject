@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
     // type errors. We'll tighten this back up once errors are resolved.
     ignoreBuildErrors: true,
   },
+  // Allow cross-origin requests from local network
+  allowedDevOrigins: ['192.168.1.70'],
   // Force fresh builds and disable aggressive caching
   experimental: {
     staleTimes: {

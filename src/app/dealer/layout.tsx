@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { 
   Package, 
   ShoppingCart, 
@@ -51,6 +52,8 @@ export default function DealerLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
   const [isDark, setIsDark] = useState(false);
   const [language, setLanguage] = useState("en");
   const [mounted, setMounted] = useState(false);
@@ -71,8 +74,12 @@ export default function DealerLayout({
     setLanguage(prev => prev === 'en' ? 'ne' : 'en');
   };
 
+  const handleSignOut = () => {
+    signOut();
+  };
+
   // Prevent hydration mismatch by not rendering until mounted
-  if (!mounted) {
+  if (!mounted || !isLoaded) {
     return null;
   }
 
@@ -121,14 +128,26 @@ export default function DealerLayout({
 
           <SidebarFooter className="border-t border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-gray-600" />
+              <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                {user?.imageUrl ? (
+                  <img 
+                    src={user.imageUrl} 
+                    alt={user.fullName || 'User'} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                    <User className="w-4 h-4 text-gray-600" />
+                  </div>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-900 text-sm truncate">
-                  Dealer User
+                  {user?.fullName || 'Dealer User'}
                 </p>
-                <p className="text-xs text-gray-500 truncate">dealer@example.com</p>
+                <p className="text-xs text-gray-500 truncate">
+                  {user?.primaryEmailAddress?.emailAddress}
+                </p>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -145,7 +164,7 @@ export default function DealerLayout({
                     <Globe className="w-4 h-4 mr-2" />
                     {language === 'en' ? 'नेपाली' : 'English'}
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="w-4 h-4 mr-2" />
                     Logout
                   </DropdownMenuItem>

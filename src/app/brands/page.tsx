@@ -117,12 +117,12 @@ export default function Brands() {
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-          <div className="absolute top-6 left-6 text-white">
-            <h3 className="text-3xl font-bold mb-2">{brand.name}</h3>
-            <p className="text-lg text-white/90">{brand.description}</p>
+          <div className="absolute top-4 left-4 md:top-6 md:left-6 text-white">
+            <h3 className="text-xl md:text-3xl font-bold mb-1 md:mb-2">{brand.name}</h3>
+            <p className="text-sm md:text-lg text-white/90 line-clamp-2">{brand.description}</p>
           </div>
-          <div className="absolute top-6 right-6">
-            <Badge className="bg-white/20 text-white border-white/30">
+          <div className="absolute top-4 right-4 md:top-6 md:right-6">
+            <Badge className="bg-white/20 text-white border-white/30 text-xs md:text-sm">
               {brand.origin_country || 'Import'}
             </Badge>
           </div>
@@ -131,7 +131,7 @@ export default function Brands() {
         <CardContent className="p-6 flex flex-col flex-1">
           <div className="space-y-4 flex-1">
             {/* Brand Info */}
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <Award className="w-4 h-4 text-gray-500" />
                 <span className="text-gray-600">Est. {brand.established_year || 'N/A'}</span>
@@ -144,14 +144,14 @@ export default function Brands() {
 
             {/* Statistics */}
             {stats && (
-              <div className="grid grid-cols-3 gap-4 py-4 border-t border-gray-100">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 py-4 border-t border-gray-100">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">{stats.totalProducts}</div>
-                  <div className="text-xs text-gray-600">Products</div>
+                  <div className="text-lg sm:text-2xl font-bold text-gray-900">{stats.totalProducts}</div>
+                  <div className="text-xs text-gray-500">Total Products</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">{stats.inStockProducts}</div>
-                  <div className="text-xs text-gray-600">In Stock</div>
+                  <div className="text-xs text-gray-600">In Stock Products</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-yellow-600">{stats.featuredProducts}</div>
