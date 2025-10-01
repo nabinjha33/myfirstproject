@@ -27,6 +27,7 @@ const isPublicRoute = createRouteMatcher([
   '/admin-login',
   '/admin-setup',
   '/admin-setup-simple',
+  '/admin-setup-final',
   '/access-denied',
   '/api/webhooks(.*)',
   '/api/dealers(.*)',
@@ -71,7 +72,7 @@ export default clerkMiddleware(async (auth, req) => {
       const { data: user, error } = await supabase
         .from('users')
         .select('role')
-        .eq('id', userId)
+        .or(`id.eq.${userId},clerk_id.eq.${userId}`)
         .single();
       
       if (error || !user || user.role !== 'admin') {

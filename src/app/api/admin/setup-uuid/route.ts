@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,21 +48,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate Clerk User ID format
-    if (!clerkUserId.startsWith('user_')) {
-      return NextResponse.json(
-        { error: 'Invalid Clerk User ID format. It should start with "user_"' },
-        { status: 400 }
-      );
-    }
+    // Generate a UUID for the database while storing Clerk ID separately
+    const dbUserId = uuidv4();
 
-    console.log('Creating admin user with ID:', clerkUserId);
+    console.log('Creating admin user with UUID:', dbUserId, 'for Clerk ID:', clerkUserId);
 
-    // Create admin user in Supabase only
+    // Create admin user in Supabase with UUID and store Clerk ID in a separate field
     const { data: newUser, error: dbError } = await supabase
       .from('users')
       .insert({
-        id: clerkUserId,
+        id: dbUserId,
+        clerk_id: clerkUserId, // Store Clerk ID separately
         email: email,
         full_name: fullName,
         role: 'admin',
@@ -74,6 +71,18 @@ export async function POST(req: NextRequest) {
 
     if (dbError) {
       console.error('Database error:', dbError);
+      
+      // Check if it's a column doesn't exist error
+      if (dbError.message?.includes('clerk_id')) {
+        return NextResponse.json(
+          { 
+            error: 'Database schema needs updating. Please run the SQL script to add clerk_id column or use the schema fix.',
+            details: 'The users table needs a clerk_id column to store Clerk user IDs.'
+          },
+          { status: 500 }
+        );
+      }
+      
       return NextResponse.json(
         { error: 'Failed to create admin user in database: ' + dbError.message },
         { status: 500 }
@@ -82,13 +91,15 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Admin user created successfully in database! You can now login with your Clerk credentials.',
+      message: 'Admin user created successfully! You can now login with your Clerk credentials.',
       user: {
         id: newUser.id,
+        clerk_id: newUser.clerk_id,
         email: newUser.email,
         name: newUser.full_name,
         role: newUser.role,
-      }
+      },
+      instructions: 'Login at /admin-login with your Clerk email and password'
     });
 
   } catch (error: any) {

@@ -14,11 +14,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Check user role in Supabase
+    // Check user role in Supabase (check both id and clerk_id for compatibility)
     const { data: user, error } = await supabase
       .from('users')
       .select('role, dealer_status')
-      .eq('id', clerkUser.id)
+      .or(`id.eq.${clerkUser.id},clerk_id.eq.${clerkUser.id}`)
       .single();
 
     if (error) {
