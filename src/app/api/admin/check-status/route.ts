@@ -14,11 +14,20 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Check user role in Supabase (check both id and clerk_id for compatibility)
+    // Check user role in Supabase by email (most reliable method)
+    const userEmail = clerkUser.emailAddresses?.[0]?.emailAddress;
+    
+    if (!userEmail) {
+      return NextResponse.json(
+        { isAdmin: false, error: 'No email found' },
+        { status: 400 }
+      );
+    }
+
     const { data: user, error } = await supabase
       .from('users')
       .select('role, dealer_status')
-      .or(`id.eq.${clerkUser.id},clerk_id.eq.${clerkUser.id}`)
+      .eq('email', userEmail)
       .single();
 
     if (error) {

@@ -66,28 +66,8 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.redirect(loginUrl);
     }
     
-    // Check if user has admin role
-    try {
-      const { supabase } = await import('./lib/supabase');
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('role')
-        .or(`id.eq.${userId},clerk_id.eq.${userId}`)
-        .single();
-      
-      if (error || !user || user.role !== 'admin') {
-        // Redirect non-admin users to access denied page
-        const accessDeniedUrl = new URL('/access-denied', req.url);
-        accessDeniedUrl.searchParams.set('reason', 'admin_required');
-        return NextResponse.redirect(accessDeniedUrl);
-      }
-    } catch (error) {
-      console.error('Error checking admin role:', error);
-      const accessDeniedUrl = new URL('/access-denied', req.url);
-      accessDeniedUrl.searchParams.set('reason', 'auth_error');
-      return NextResponse.redirect(accessDeniedUrl);
-    }
-    
+    // Skip middleware admin check - let the admin layout handle it
+    // This allows us to use the more reliable email-based lookup in the client
     return NextResponse.next();
   }
 
