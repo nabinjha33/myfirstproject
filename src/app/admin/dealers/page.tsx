@@ -49,18 +49,23 @@ export default function AdminDealers() {
     setIsLoading(true);
     try {
       const [users, apps] = await Promise.all([
-        User.list('-created_date'),
-        DealerApplication.list('-created_date')
+        User.list('-created_at'),
+        DealerApplication.list('-created_at')
       ]);
       
-      // Filter users to show only those with dealer_status set and not 'Rejected'
-      setDealers(users.filter((u: any) => u.dealer_status && u.dealer_status !== 'Rejected')); 
+      // Filter users to show only those with dealer_status set and not 'rejected'
+      const dealerUsers = users.filter((u: any) => u.dealer_status && u.dealer_status !== 'rejected'); 
+      setDealers(dealerUsers);
       setApplications(apps);
       
-      console.log('Dealers found:', users.filter((u: any) => u.dealer_status && u.dealer_status !== 'Rejected').length);
+      console.log('Dealers found:', dealerUsers.length);
       console.log('Applications found:', apps.length);
+      console.log('Raw users data:', users.slice(0, 2)); // Log first 2 users for debugging
+      console.log('Raw applications data:', apps.slice(0, 2)); // Log first 2 applications for debugging
     } catch (error) {
       console.error('Failed to fetch data:', error);
+      setActionStatus(`❌ Failed to load data. Please check console for details.`);
+      setTimeout(() => setActionStatus(null), 5000);
     }
     setIsLoading(false);
   };
@@ -139,9 +144,9 @@ export default function AdminDealers() {
   };
 
   const statusConfig = {
-    Pending: { icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
-    Approved: { icon: CheckCircle, color: 'bg-green-100 text-green-800' },
-    Rejected: { icon: XCircle, color: 'bg-red-100 text-red-800' },
+    pending: { icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
+    approved: { icon: CheckCircle, color: 'bg-green-100 text-green-800' },
+    rejected: { icon: XCircle, color: 'bg-red-100 text-red-800' },
   };
 
   const filteredDealers = dealers.filter((dealer: any) => {
@@ -156,7 +161,7 @@ export default function AdminDealers() {
     const matchesSearch = app.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          app.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          app.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch && app.status === 'Pending';
+    return matchesSearch && app.status === 'pending';
   });
 
   if (isLoading) {
@@ -216,14 +221,14 @@ export default function AdminDealers() {
               <CardHeader>
                 <CardTitle>Active Dealers</CardTitle>
                 <div className="flex gap-2">
-                  {['All', 'Pending', 'Approved'].map(status => (
+                  {['All', 'pending', 'approved'].map(status => (
                     <Button
                       key={status}
                       variant={statusFilter === status ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setStatusFilter(status)}
                     >
-                      {status}
+                      {status === 'All' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
                     </Button>
                   ))}
                 </div>
@@ -241,7 +246,7 @@ export default function AdminDealers() {
                   </TableHeader>
                   <TableBody>
                     {filteredDealers.map((dealer: any) => {
-                      const statusInfo = statusConfig[dealer.dealer_status as keyof typeof statusConfig] || statusConfig.Pending;
+                      const statusInfo = statusConfig[dealer.dealer_status as keyof typeof statusConfig] || statusConfig.pending;
                       const StatusIcon = statusInfo.icon;
                       return (
                         <TableRow key={dealer.id}>
@@ -251,7 +256,7 @@ export default function AdminDealers() {
                           <TableCell>
                             <Badge className={statusInfo.color}>
                               <StatusIcon className="mr-1 h-3 w-3" />
-                              {dealer.dealer_status}
+                              {dealer.dealer_status?.charAt(0).toUpperCase() + dealer.dealer_status?.slice(1)}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -260,13 +265,13 @@ export default function AdminDealers() {
                                 <Eye className="h-4 w-4 mr-1" />
                                 View
                               </Button>
-                              {dealer.dealer_status === 'Pending' && (
+                              {dealer.dealer_status === 'pending' && (
                                 <>
                                   <Button 
                                     size="sm" 
                                     variant="outline" 
                                     className="text-green-600 border-green-600 hover:bg-green-50" 
-                                    onClick={() => handleStatusChange(dealer.id, 'Approved')}
+                                    onClick={() => handleStatusChange(dealer.id, 'approved')}
                                   >
                                     <CheckCircle className="h-4 w-4 mr-1" />
                                     Approve
@@ -275,7 +280,7 @@ export default function AdminDealers() {
                                     size="sm" 
                                     variant="outline" 
                                     className="text-red-600 border-red-600 hover:bg-red-50" 
-                                    onClick={() => handleStatusChange(dealer.id, 'Rejected')}
+                                    onClick={() => handleStatusChange(dealer.id, 'rejected')}
                                   >
                                     <XCircle className="h-4 w-4 mr-1" />
                                     Reject
@@ -331,7 +336,7 @@ export default function AdminDealers() {
                         <TableCell>{app.contact_person}</TableCell>
                         <TableCell>{app.email}</TableCell>
                         <TableCell>
-                          {app.created_date ? format(new Date(app.created_date), 'MMM d, yyyy') : 'N/A'}
+                          {app.created_at ? format(new Date(app.created_at), 'MMM d, yyyy') : 'N/A'}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
