@@ -40,6 +40,7 @@ export default function AdminDealers() {
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('manage');
   const [tempPassword, setTempPassword] = useState('');
+  const [approvedCredentials, setApprovedCredentials] = useState<{email: string, password: string, businessName: string} | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -120,7 +121,14 @@ export default function AdminDealers() {
         }
 
         const result = await response.json();
-        setActionStatus(`✅ Dealer approved! Login credentials: Email: ${result.email}, Password: ${password}`);
+        setActionStatus(`✅ Dealer approved! Check email template below.`);
+        
+        // Store credentials for email template
+        setApprovedCredentials({
+          email: result.email,
+          password: password,
+          businessName: app.business_name
+        });
         
         // Clear temp password
         setTempPassword('');
@@ -203,6 +211,126 @@ export default function AdminDealers() {
           <Alert className="mb-6">
             <AlertDescription>{actionStatus}</AlertDescription>
           </Alert>
+        )}
+
+        {/* Email Template Section */}
+        {approvedCredentials && (
+          <Card className="mb-6 border-green-200 bg-green-50">
+            <CardHeader>
+              <CardTitle className="text-green-800 flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Dealer Approval Email Template
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium text-green-800">Ready to Copy & Send:</h4>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const emailContent = `Subject: Welcome to Jeen Mata Impex - Your Dealer Account is Approved!
+
+Dear ${approvedCredentials.businessName} Team,
+
+Congratulations! Your dealer application has been approved. Welcome to the Jeen Mata Impex dealer network!
+
+Your login credentials are:
+• Email: ${approvedCredentials.email}
+• Password: ${approvedCredentials.password}
+
+You can now access your dealer portal at: ${window.location.origin}/dealer-login
+
+What you can do with your dealer account:
+✓ Browse our complete product catalog
+✓ Submit orders and inquiries
+✓ Track shipment status
+✓ Manage your business profile
+✓ Access exclusive dealer resources
+
+Important Notes:
+• Please change your password after first login for security
+• Keep your login credentials secure
+• Contact us if you need any assistance
+
+We look forward to a successful partnership!
+
+Best regards,
+Jeen Mata Impex Team
+Email: jeenmataimpex8@gmail.com
+Phone: +977-1-XXXXXXX`;
+                      navigator.clipboard.writeText(emailContent);
+                      setActionStatus('📧 Email template copied to clipboard!');
+                      setTimeout(() => setActionStatus(null), 3000);
+                    }}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    📧 Copy Email Template
+                  </Button>
+                </div>
+                
+                <div className="bg-white p-4 rounded-lg border border-green-200 text-sm">
+                  <div className="font-medium text-gray-700 mb-2">Email Preview:</div>
+                  <div className="whitespace-pre-line text-gray-600">
+                    <strong>Subject:</strong> Welcome to Jeen Mata Impex - Your Dealer Account is Approved!
+                    <br /><br />
+                    <strong>Dear {approvedCredentials.businessName} Team,</strong>
+                    <br /><br />
+                    Congratulations! Your dealer application has been approved. Welcome to the Jeen Mata Impex dealer network!
+                    <br /><br />
+                    <strong>Your login credentials are:</strong>
+                    <br />• Email: <span className="font-mono bg-gray-100 px-1 rounded">{approvedCredentials.email}</span>
+                    <br />• Password: <span className="font-mono bg-gray-100 px-1 rounded">{approvedCredentials.password}</span>
+                    <br /><br />
+                    You can now access your dealer portal at: <span className="text-blue-600">{typeof window !== 'undefined' ? window.location.origin : ''}/dealer-login</span>
+                    <br /><br />
+                    <strong>What you can do with your dealer account:</strong>
+                    <br />✓ Browse our complete product catalog
+                    <br />✓ Submit orders and inquiries
+                    <br />✓ Track shipment status
+                    <br />✓ Manage your business profile
+                    <br />✓ Access exclusive dealer resources
+                    <br /><br />
+                    <strong>Important Notes:</strong>
+                    <br />• Please change your password after first login for security
+                    <br />• Keep your login credentials secure
+                    <br />• Contact us if you need any assistance
+                    <br /><br />
+                    We look forward to a successful partnership!
+                    <br /><br />
+                    <strong>Best regards,</strong>
+                    <br />Jeen Mata Impex Team
+                    <br />Email: jeenmataimpex8@gmail.com
+                    <br />Phone: +977-1-XXXXXXX
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setApprovedCredentials(null)}
+                    className="text-gray-600"
+                  >
+                    ✕ Close Template
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const credentials = `Login Credentials:\nEmail: ${approvedCredentials.email}\nPassword: ${approvedCredentials.password}`;
+                      navigator.clipboard.writeText(credentials);
+                      setActionStatus('📋 Credentials copied to clipboard!');
+                      setTimeout(() => setActionStatus(null), 3000);
+                    }}
+                    className="text-blue-600 border-blue-200"
+                  >
+                    📋 Copy Credentials Only
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
