@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Building, Phone, Mail, User as UserIcon, Save } from "lucide-react";
 import DealerAuthWrapper from '@/components/dealer/DealerAuthWrapper';
 import { useDealerAuth } from '@/hooks/useDealerAuth';
+import PasswordChangeForm from '@/components/auth/PasswordChangeForm';
+import EmailVerificationForm from '@/components/auth/EmailVerificationForm';
 
 export default function DealerProfile() {
   const [profile, setProfile] = useState({
@@ -39,7 +41,8 @@ export default function DealerProfile() {
 
       // If user profile is missing business data, check for an approved application and sync it.
       if (!currentUser.business_name && currentUser.email) {
-        const apps = await DealerApplication.filter({ email: currentUser.email, status: 'Approved' });
+        const allApps = await DealerApplication.list();
+        const apps = allApps.filter((app: any) => app.email === currentUser.email && app.status === 'approved');
         if (apps.length > 0) {
           const app = apps[0];
           const profileData = {
@@ -122,8 +125,12 @@ export default function DealerProfile() {
   return (
     <DealerAuthWrapper>
       <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Dealer Profile</h1>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Profile Information */}
+          <div>
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Your Business Information</CardTitle>
@@ -186,6 +193,14 @@ export default function DealerProfile() {
             </Button>
           </CardFooter>
         </Card>
+          </div>
+          
+          {/* Security Settings */}
+          <div className="space-y-6">
+            <EmailVerificationForm />
+            <PasswordChangeForm userType="dealer" />
+          </div>
+        </div>
       </div>
       </div>
     </DealerAuthWrapper>

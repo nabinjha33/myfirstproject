@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useUser, useSignIn, useSignUp } from '@clerk/nextjs';
-import { User, DealerApplication } from "@/lib/entities";
+import { useUser, useSignIn, useSignUp } from "@clerk/nextjs";
+import { DealerApplication, User } from "@/lib/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,7 +33,8 @@ export default function DealerLogin() {
   const { signUp, isLoaded: signUpLoaded } = useSignUp();
   
   const [isLoading, setIsLoading] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<any>(null);
+  const [submissionStatus, setSubmissionStatus] = React.useState<any>(null);
+  const [showEmailVerification, setShowEmailVerification] = React.useState(false);
   const [ownerEmail, setOwnerEmail] = useState('jeenmataimpex8@gmail.com');
   const [loginForm, setLoginForm] = useState({
     email: "",
@@ -52,6 +53,18 @@ export default function DealerLogin() {
   });
 
   useEffect(() => {
+    // Check for email verification error in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    
+    if (error === 'email_not_verified') {
+      setSubmissionStatus({
+        type: 'error',
+        message: 'Please verify your email address before logging in. Check your inbox for a verification email.'
+      });
+      setShowEmailVerification(true);
+    }
+    
     // Redirect if user is already authenticated and is approved dealer
     if (isLoaded && user) {
       checkDealerStatus();
@@ -131,7 +144,7 @@ export default function DealerLogin() {
           console.log('Dealer login successful, redirecting...');
           router.push('/dealer/catalog');
         } else {
-          setSubmitStatus({
+          setSubmissionStatus({
             type: 'error',
             message: 'Your dealer account is not approved yet or does not exist. Please apply for dealer access first.'
           });
@@ -141,7 +154,7 @@ export default function DealerLogin() {
         await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 500));
         await verifyDealerStatusWithRetry(retryCount + 1, maxRetries);
       } else {
-        setSubmitStatus({
+        setSubmissionStatus({
           type: 'error',
           message: 'Unable to verify dealer status. Please try again.'
         });
@@ -152,7 +165,7 @@ export default function DealerLogin() {
         await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 500));
         await verifyDealerStatusWithRetry(retryCount + 1, maxRetries);
       } else {
-        setSubmitStatus({
+        setSubmissionStatus({
           type: 'error',
           message: 'Unable to verify dealer status. Please try again.'
         });
@@ -165,7 +178,7 @@ export default function DealerLogin() {
     if (!signInLoaded) return;
     
     setIsLoading(true);
-    setSubmitStatus(null);
+    setSubmissionStatus(null);
 
     try {
       console.log('Attempting login for:', loginForm.email);
@@ -179,7 +192,7 @@ export default function DealerLogin() {
       );
 
       if (!dealerUser) {
-        setSubmitStatus({
+        setSubmissionStatus({
           type: 'error',
           message: 'Your dealer account is not approved yet or does not exist. Please apply for dealer access first.'
         });
@@ -197,14 +210,14 @@ export default function DealerLogin() {
         // Verify dealer status after successful login with retry mechanism
         await verifyDealerStatusWithRetry();
       } else {
-        setSubmitStatus({
+        setSubmissionStatus({
           type: 'error',
           message: 'Login incomplete. Please try again.'
         });
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      setSubmitStatus({
+      setSubmissionStatus({
         type: 'error',
         message: 'Invalid credentials. Please check your email and password.'
       });
@@ -218,7 +231,7 @@ export default function DealerLogin() {
     if (!signUpLoaded) return;
     
     setIsLoading(true);
-    setSubmitStatus(null);
+    setSubmissionStatus(null);
 
     try {
       console.log('Submitting dealer application for:', signupForm.email);
@@ -236,7 +249,7 @@ export default function DealerLogin() {
                           existingApplications.some((app: any) => app.email === signupForm.email && app.status !== 'rejected');
 
       if (emailExists) {
-        setSubmitStatus({
+        setSubmissionStatus({
           type: 'error',
           message: 'An account or pending application with this email address already exists.'
         });
@@ -244,7 +257,16 @@ export default function DealerLogin() {
         return;
       }
 
-      // Create new dealer application first
+      // First, create Clerk account with email verification required
+      const clerkResult = await signUp.create({
+        emailAddress: signupForm.email,
+        password: 'TempPass123!', // Temporary password - will be changed after approval
+      });
+
+      // Send email verification
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+
+      // Create new dealer application
       const applicationData = {
         business_name: signupForm.businessName,
         contact_person: signupForm.contactPerson,
@@ -266,9 +288,9 @@ export default function DealerLogin() {
       await DealerApplication.create(applicationData);
       console.log('Application created successfully');
       
-      setSubmitStatus({
+      setSubmissionStatus({
         type: 'success',
-        message: 'Your dealer application has been submitted successfully! Our team will review your request and contact you within 24 hours. You will receive an email with login credentials once approved.'
+        message: 'Your dealer application has been submitted successfully! Please check your email to verify your email address. Our team will review your request and contact you within 24 hours.'
       });
 
       // Clear form
@@ -286,7 +308,7 @@ export default function DealerLogin() {
 
     } catch (error: any) {
       console.error('Signup error:', error);
-      setSubmitStatus({
+      setSubmissionStatus({
         type: 'error',
         message: 'There was an error submitting your application. Please try again. Error: ' + (error?.message || 'Unknown error')
       });
@@ -372,15 +394,15 @@ export default function DealerLogin() {
             </CardHeader>
             <CardContent>
               {/* Status Messages */}
-              {submitStatus && (
+              {submissionStatus && (
                 <Alert className={`mb-4 ${
-                  submitStatus.type === 'success'
+                  submissionStatus.type === 'success'
                     ? 'bg-green-50 border-green-200 text-green-800'
                     : 'bg-red-50 border-red-200 text-red-800'
                 }`}>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    {submitStatus.message}
+                    {submissionStatus.message}
                   </AlertDescription>
                 </Alert>
               )}

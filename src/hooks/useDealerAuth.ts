@@ -42,10 +42,19 @@ export function useDealerAuth(): UseDealerAuthReturn {
 
       try {
         const userEmail = clerkUser.primaryEmailAddress?.emailAddress;
+        const isEmailVerified = clerkUser.primaryEmailAddress?.verification?.status === 'verified';
+        
         if (!userEmail) {
           setError('No email found');
           setIsLoading(false);
           router.push('/dealer-login');
+          return;
+        }
+
+        if (!isEmailVerified) {
+          setError('Email not verified');
+          setIsLoading(false);
+          router.push('/dealer-login?error=email_not_verified');
           return;
         }
 

@@ -28,6 +28,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
+import DealerInvitationForm from '@/components/admin/DealerInvitationForm';
 
 export default function AdminDealers() {
   const [dealers, setDealers] = useState<any[]>([]);
@@ -342,6 +343,7 @@ Phone: +977-1-XXXXXXX`;
                 <Badge className="ml-2 bg-red-500 text-white">{filteredApplications.length}</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="invite">Invite New Dealer</TabsTrigger>
           </TabsList>
 
           <TabsContent value="manage">
@@ -498,6 +500,10 @@ Phone: +977-1-XXXXXXX`;
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="invite">
+            <DealerInvitationForm />
           </TabsContent>
         </Tabs>
 

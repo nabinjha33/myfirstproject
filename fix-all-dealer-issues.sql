@@ -70,16 +70,168 @@ FROM information_schema.columns
 WHERE table_name = 'dealer_applications'
 ORDER BY ordinal_position;
 
+-- 9. Add email verification and password management related columns
+-- Add clerk_user_id column to users table (for better Clerk integration)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'users' AND column_name = 'clerk_user_id') THEN
+        ALTER TABLE users ADD COLUMN clerk_user_id TEXT UNIQUE;
+        CREATE INDEX IF NOT EXISTS idx_users_clerk_user_id ON users(clerk_user_id);
+    END IF;
+END $$;
+
+-- Add email_verified column to users table
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'users' AND column_name = 'email_verified') THEN
+        ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT false;
+        CREATE INDEX IF NOT EXISTS idx_users_email_verified ON users(email_verified);
+    END IF;
+END $$;
+
+-- Add email_verified_at column to users table
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'users' AND column_name = 'email_verified_at') THEN
+        ALTER TABLE users ADD COLUMN email_verified_at TIMESTAMP WITH TIME ZONE;
+    END IF;
+END $$;
+
+-- Add password_changed_at column to users table (for tracking password changes)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'users' AND column_name = 'password_changed_at') THEN
+        ALTER TABLE users ADD COLUMN password_changed_at TIMESTAMP WITH TIME ZONE;
+    END IF;
+END $$;
+
+-- Add last_login_at column to users table
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'users' AND column_name = 'last_login_at') THEN
+        ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP WITH TIME ZONE;
+    END IF;
+END $$;
+
+-- Add invited_by column to users table (for tracking admin invitations)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'users' AND column_name = 'invited_by') THEN
+        ALTER TABLE users ADD COLUMN invited_by UUID REFERENCES users(id);
+    END IF;
+END $$;
+
+-- Add invited_at column to users table
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'users' AND column_name = 'invited_at') THEN
+        ALTER TABLE users ADD COLUMN invited_at TIMESTAMP WITH TIME ZONE;
+    END IF;
+END $$;
+
+-- Add account_status column to users table (active, suspended, pending_verification)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'users' AND column_name = 'account_status') THEN
+        ALTER TABLE users ADD COLUMN account_status TEXT DEFAULT 'active' 
+        CHECK (account_status IN ('active', 'suspended', 'pending_verification'));
+        CREATE INDEX IF NOT EXISTS idx_users_account_status ON users(account_status);
+    END IF;
+END $$;
+
+-- 10. Update RLS policies for email verification and security features
+-- Allow users to update their email verification status
+DROP POLICY IF EXISTS "Users can update email verification" ON public.users;
+CREATE POLICY "Users can update email verification" ON public.users 
+FOR UPDATE USING (auth.uid() = id) 
+WITH CHECK (auth.uid() = id);
+
+-- Allow admins to invite dealers (insert with invited_by)
+DROP POLICY IF EXISTS "Admins can invite dealers" ON public.users;
+CREATE POLICY "Admins can invite dealers" ON public.users 
+FOR INSERT WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM public.users 
+        WHERE id = auth.uid() AND role = 'admin'
+    )
+);
+
+-- 11. Create audit table for security events (optional but recommended)
+CREATE TABLE IF NOT EXISTS public.security_audit (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    event_type TEXT NOT NULL CHECK (event_type IN (
+        'login', 'logout', 'password_change', 'email_verification', 
+        'account_created', 'account_suspended', 'failed_login'
+    )),
+    ip_address INET,
+    user_agent TEXT,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for security audit
+CREATE INDEX IF NOT EXISTS idx_security_audit_user_id ON public.security_audit(user_id);
+CREATE INDEX IF NOT EXISTS idx_security_audit_event_type ON public.security_audit(event_type);
+CREATE INDEX IF NOT EXISTS idx_security_audit_created_at ON public.security_audit(created_at);
+
+-- Enable RLS on security audit table
+ALTER TABLE public.security_audit ENABLE ROW LEVEL SECURITY;
+
+-- Security audit policies
+CREATE POLICY "Users can view their own audit logs" ON public.security_audit 
+FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Admins can view all audit logs" ON public.security_audit 
+FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM public.users 
+        WHERE id = auth.uid() AND role = 'admin'
+    )
+);
+
+CREATE POLICY "System can insert audit logs" ON public.security_audit 
+FOR INSERT WITH CHECK (true);
+
+-- 12. Update verification status for existing users
+-- Set email_verified to true for existing admin users (assuming they're already verified)
+UPDATE users 
+SET email_verified = true, 
+    email_verified_at = NOW(),
+    account_status = 'active'
+WHERE role = 'admin' AND email_verified IS NULL;
+
+-- Set pending verification for existing dealers who haven't been verified
+UPDATE users 
+SET account_status = 'pending_verification'
+WHERE role = 'dealer' AND email_verified IS NULL;
+
 -- Success message
 DO $$
 BEGIN
-    RAISE NOTICE '✅ All dealer approval database issues fixed!';
+    RAISE NOTICE '✅ All dealer approval and security database issues fixed!';
     RAISE NOTICE '📋 Changes made:';
     RAISE NOTICE '   1. Added approved_at column to dealer_applications';
     RAISE NOTICE '   2. Added rejected_at column to dealer_applications';
     RAISE NOTICE '   3. Ensured clerk_id column exists in users';
     RAISE NOTICE '   4. Added missing dealer form fields to users table';
-    RAISE NOTICE '   5. Created performance indexes';
+    RAISE NOTICE '   5. Added email verification columns (email_verified, email_verified_at)';
+    RAISE NOTICE '   6. Added password management columns (password_changed_at, last_login_at)';
+    RAISE NOTICE '   7. Added invitation tracking columns (invited_by, invited_at)';
+    RAISE NOTICE '   8. Added account_status column for user management';
+    RAISE NOTICE '   9. Added clerk_user_id for better Clerk integration';
+    RAISE NOTICE '   10. Created security_audit table for tracking security events';
+    RAISE NOTICE '   11. Updated RLS policies for email verification features';
+    RAISE NOTICE '   12. Created performance indexes for new columns';
+    RAISE NOTICE '   13. Set verification status for existing users';
     RAISE NOTICE '';
-    RAISE NOTICE '🔄 Next: Update the API to handle existing Clerk users';
+    RAISE NOTICE '🔄 Next: Configure Clerk dashboard and test authentication flows';
 END $$;
