@@ -82,15 +82,25 @@ function AdminLoginContent() {
     }
   };
 
-  const verifyAdminStatusWithRetry = async (retryCount = 0, maxRetries = 4): Promise<void> => {
+  const verifyAdminStatusWithRetry = async (retryCount = 0, maxRetries = 5): Promise<void> => {
     try {
       console.log(`🔄 Admin verification attempt ${retryCount + 1}/${maxRetries + 1}`);
       
-      // Use detailed debug API for first few attempts
-      const apiEndpoint = retryCount < 2 ? '/api/debug/compare-calls' : '/api/admin/check-status';
-      console.log(`📡 Using API: ${apiEndpoint}`);
+      // Add progressive delay to allow Clerk session to sync
+      if (retryCount > 0) {
+        const delay = retryCount * 800; // 800ms, 1600ms, 2400ms, 3200ms, 4000ms
+        console.log(`⏳ Waiting ${delay}ms for session sync...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
       
-      const response = await fetch(apiEndpoint);
+      const response = await fetch('/api/admin/check-status', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
       console.log(`📡 API Response: Status ${response.status}`);
       
       if (response.ok) {
@@ -107,12 +117,8 @@ function AdminLoginContent() {
           setError('Access denied. You do not have admin privileges.');
         }
       } else if (response.status === 401 && retryCount < maxRetries) {
-        const errorData = await response.json().catch(() => ({}));
-        console.log(`🔄 Admin verification failed (401), retrying in ${(retryCount + 1) * 600}ms... (attempt ${retryCount + 1}/${maxRetries + 1})`);
-        console.log('🔍 Error details:', errorData);
-        
+        console.log(`🔄 Admin verification failed (401), retrying... (attempt ${retryCount + 1}/${maxRetries + 1})`);
         // Don't show error during retries, keep loading state
-        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 600));
         await verifyAdminStatusWithRetry(retryCount + 1, maxRetries);
       } else {
         console.log(`❌ Admin verification failed with status ${response.status}`);
@@ -124,9 +130,8 @@ function AdminLoginContent() {
     } catch (error) {
       console.error('❌ Error verifying admin status:', error);
       if (retryCount < maxRetries) {
-        console.log(`🔄 Retrying due to error in ${(retryCount + 1) * 600}ms...`);
+        console.log(`🔄 Retrying due to error... (attempt ${retryCount + 1}/${maxRetries + 1})`);
         // Don't show error during retries, keep loading state
-        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 600));
         await verifyAdminStatusWithRetry(retryCount + 1, maxRetries);
       } else {
         console.log('❌ All retry attempts exhausted');
@@ -153,6 +158,7 @@ function AdminLoginContent() {
       });
 
       if (result.status === 'complete') {
+        console.log('✅ Clerk login completed, verifying admin status...');
         // Verify admin status after successful login with retry mechanism
         await verifyAdminStatusWithRetry();
       } else {
