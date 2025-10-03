@@ -10,12 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, CheckCircle, Eye, Package, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import AdminAuthWrapper from '@/components/admin/AdminAuthWrapper';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const { user: adminUser } = useAdminAuth();
 
   useEffect(() => {
     fetchData();
@@ -24,14 +26,43 @@ export default function AdminOrders() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [orderData, user] = await Promise.all([
-        Order.list('-created_at'),
-        User.me()
-      ]);
-      setOrders(orderData.filter((o: any) => o.status !== 'Archived'));
-      setCurrentUser(user);
+      const orderData = await Order.list('-created_at');
+      
+      // Process orders to handle different data formats
+      const processedOrders = orderData.map((order: any) => {
+        let items = order.items || order.product_items;
+        
+        // Handle case where items is stored as JSON string
+        if (typeof items === 'string') {
+          try {
+            items = JSON.parse(items);
+          } catch (e) {
+            console.warn('Failed to parse items for order:', order.id);
+            items = [];
+          }
+        }
+        
+        // Handle case where items is stored in product_details
+        if (!items && order.product_details) {
+          try {
+            items = JSON.parse(order.product_details);
+          } catch (e) {
+            console.warn('Failed to parse product_details for order:', order.id);
+            items = [];
+          }
+        }
+        
+        return {
+          ...order,
+          items: Array.isArray(items) ? items : [],
+          estimated_total_value: order.estimated_total_value || order.total_amount_npr || 0
+        };
+      });
+      
+      setOrders(processedOrders.filter((o: any) => o.status !== 'Archived'));
     } catch (error) {
       console.error("Failed to fetch orders:", error);
+      setOrders([]);
     }
     setIsLoading(false);
   };
@@ -58,23 +89,25 @@ export default function AdminOrders() {
   
   const getStatusBadgeClass = (status: string) => {
     const statusClasses: { [key: string]: string } = {
+      'pending': 'bg-blue-100 text-blue-800 border-blue-200',
       'Submitted': 'bg-blue-100 text-blue-800 border-blue-200',
       'Confirmed': 'bg-green-100 text-green-800 border-green-200',
       'Processing': 'bg-yellow-100 text-yellow-800 border-yellow-200',
       'Shipped': 'bg-purple-100 text-purple-800 border-purple-200',
       'Delivered': 'bg-green-100 text-green-800 border-green-200',
+      'Cancelled': 'bg-red-100 text-red-800 border-red-200',
       'Archived': 'bg-gray-100 text-gray-800 border-gray-200'
     };
     return statusClasses[status] || 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
   if (isLoading) return <div className="p-6">Loading orders...</div>;
-  if (!currentUser) return <div className="p-6">You must be logged in to view this page.</div>
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Manage Orders</h1>
+    <AdminAuthWrapper>
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">Manage Orders</h1>
         <Card>
           <CardHeader>
             <CardTitle>All Dealer Orders ({orders.length})</CardTitle>
@@ -94,21 +127,28 @@ export default function AdminOrders() {
               <TableBody>
                 {orders.length > 0 ? orders.map((order: any) => (
                   <TableRow key={order.id}>
-                    <TableCell>{format(new Date(order.created_at), 'MMM d, yyyy')}</TableCell>
+                    <TableCell>
+                      {order.created_at || order.created_date 
+                        ? format(new Date(order.created_at || order.created_date), 'MMM d, yyyy')
+                        : 'N/A'
+                      }
+                    </TableCell>
                     <TableCell>{order.order_number}</TableCell>
                     <TableCell>{order.dealer_email}</TableCell>
-                    <TableCell>{order.estimated_total_value?.toLocaleString() || 'N/A'}</TableCell>
+                    <TableCell>NPR {(order.estimated_total_value || 0).toLocaleString()}</TableCell>
                     <TableCell>
                       <Select value={order.status} onValueChange={(newStatus) => handleStatusChange(order.id, newStatus)}>
                         <SelectTrigger className="w-36">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
                           <SelectItem value="Submitted">Submitted</SelectItem>
                           <SelectItem value="Confirmed">Confirmed</SelectItem>
                           <SelectItem value="Processing">Processing</SelectItem>
                           <SelectItem value="Shipped">Shipped</SelectItem>
                           <SelectItem value="Delivered">Delivered</SelectItem>
+                          <SelectItem value="Cancelled">Cancelled</SelectItem>
                         </SelectContent>
                       </Select>
                     </TableCell>
@@ -130,7 +170,12 @@ export default function AdminOrders() {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg border">
                                   <div>
                                     <h4 className="font-semibold text-gray-700 text-sm">Order Date</h4>
-                                    <p className="text-base">{format(new Date(selectedOrder.created_at), 'MMMM d, yyyy')}</p>
+                                    <p className="text-base">
+                                      {selectedOrder.created_at || selectedOrder.created_date 
+                                        ? format(new Date(selectedOrder.created_at || selectedOrder.created_date), 'MMMM d, yyyy')
+                                        : 'N/A'
+                                      }
+                                    </p>
                                   </div>
                                   <div>
                                     <h4 className="font-semibold text-gray-700 text-sm">Status</h4>
@@ -205,7 +250,8 @@ export default function AdminOrders() {
             </Table>
           </CardContent>
         </Card>
+        </div>
       </div>
-    </div>
+    </AdminAuthWrapper>
   );
 }

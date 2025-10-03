@@ -89,7 +89,7 @@ export default function MyOrders() {
     }
   };
 
-  const printOrderSlip = async (order: any) => {
+  const generatePrintableSlip = async (order: any) => {
     const allUsers = await User.list();
     const dealers = allUsers.filter((user: any) => user.email === order.dealer_email);
     const dealer = dealers.length > 0 ? dealers[0] : null;
@@ -121,7 +121,7 @@ export default function MyOrders() {
               <div>
                 <h1>Order Slip</h1>
                 <p><strong>Order #:</strong> ${order.order_number}</p>
-                <p><strong>Date:</strong> ${format(new Date(order.created_date), 'MMMM d, yyyy')}</p>
+                <p><strong>Date:</strong> ${order.created_at || order.created_date ? format(new Date(order.created_at || order.created_date), 'MMMM d, yyyy') : 'N/A'}</p>
               </div>
               <div>
                 <h2>Jeen Mata Impex</h2>
@@ -142,7 +142,7 @@ export default function MyOrders() {
                 <tr><th>Product</th><th>Variant</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr>
               </thead>
               <tbody>
-                ${order.product_items.map((item: any) => `
+                ${(order.product_items || []).map((item: any) => `
                   <tr>
                     <td>
                       ${item.product_name}
@@ -150,15 +150,15 @@ export default function MyOrders() {
                     </td>
                     <td>${item.variant_details}</td>
                     <td style="text-align: center;">${item.quantity}</td>
-                    <td style="text-align: right;">NPR ${item.unit_price_npr.toLocaleString('en-US')}</td>
-                    <td style="text-align: right;">NPR ${(item.unit_price_npr * item.quantity).toLocaleString('en-US')}</td>
+                    <td style="text-align: right;">NPR ${(item.unit_price_npr || 0).toLocaleString('en-US')}</td>
+                    <td style="text-align: right;">NPR ${((item.unit_price_npr || 0) * (item.quantity || 0)).toLocaleString('en-US')}</td>
                   </tr>
                 `).join('')}
               </tbody>
             </table>
             
             <div class="total">
-              Total Amount: NPR ${order.total_amount_npr.toLocaleString('en-US')}
+              Total Amount: NPR ${(order.total_amount_npr || 0).toLocaleString('en-US')}
             </div>
             <button class="no-print" onclick="window.print()">Print this slip</button>
           </div>
