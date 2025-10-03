@@ -119,11 +119,21 @@ BEGIN
 END $$;
 
 -- Add invited_by column to users table (for tracking admin invitations)
+-- Since this is a Clerk-integrated app, users.id is TEXT type
 DO $$
 BEGIN
+    -- Drop the column if it exists with wrong type
+    IF EXISTS (SELECT 1 FROM information_schema.columns 
+               WHERE table_name = 'users' AND column_name = 'invited_by' AND data_type = 'uuid') THEN
+        ALTER TABLE users DROP COLUMN invited_by;
+        RAISE NOTICE 'Dropped existing invited_by column with wrong type';
+    END IF;
+    
+    -- Add invited_by column with TEXT type (matching Clerk user IDs)
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                    WHERE table_name = 'users' AND column_name = 'invited_by') THEN
-        ALTER TABLE users ADD COLUMN invited_by UUID REFERENCES users(id);
+        ALTER TABLE users ADD COLUMN invited_by TEXT REFERENCES users(id);
+        RAISE NOTICE 'Added invited_by column with TEXT type for Clerk integration';
     END IF;
 END $$;
 
@@ -151,8 +161,8 @@ END $$;
 -- Allow users to update their email verification status
 DROP POLICY IF EXISTS "Users can update email verification" ON public.users;
 CREATE POLICY "Users can update email verification" ON public.users 
-FOR UPDATE USING (auth.uid() = id) 
-WITH CHECK (auth.uid() = id);
+FOR UPDATE USING (auth.uid()::text = id) 
+WITH CHECK (auth.uid()::text = id);
 
 -- Allow admins to invite dealers (insert with invited_by)
 DROP POLICY IF EXISTS "Admins can invite dealers" ON public.users;
@@ -160,23 +170,42 @@ CREATE POLICY "Admins can invite dealers" ON public.users
 FOR INSERT WITH CHECK (
     EXISTS (
         SELECT 1 FROM public.users 
-        WHERE id = auth.uid() AND role = 'admin'
+        WHERE id = auth.uid()::text AND role = 'admin'
     )
 );
 
 -- 11. Create audit table for security events (optional but recommended)
-CREATE TABLE IF NOT EXISTS public.security_audit (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
-    event_type TEXT NOT NULL CHECK (event_type IN (
-        'login', 'logout', 'password_change', 'email_verification', 
-        'account_created', 'account_suspended', 'failed_login'
-    )),
-    ip_address INET,
-    user_agent TEXT,
-    metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- Since this is a Clerk-integrated app, users.id is TEXT type
+DO $$
+BEGIN
+    -- Drop the table if it exists with wrong user_id type
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'security_audit') THEN
+        -- Check if user_id column has wrong type
+        IF EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'security_audit' AND column_name = 'user_id' AND data_type = 'uuid') THEN
+            DROP TABLE public.security_audit;
+            RAISE NOTICE 'Dropped existing security_audit table with wrong user_id type';
+        END IF;
+    END IF;
+    
+    -- Create the table with TEXT user_id (matching Clerk user IDs)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'security_audit') THEN
+        CREATE TABLE public.security_audit (
+            id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+            user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+            event_type TEXT NOT NULL CHECK (event_type IN (
+                'login', 'logout', 'password_change', 'email_verification', 
+                'account_created', 'account_suspended', 'failed_login'
+            )),
+            ip_address INET,
+            user_agent TEXT,
+            metadata JSONB DEFAULT '{}',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+        
+        RAISE NOTICE 'Created security_audit table with TEXT user_id for Clerk integration';
+    END IF;
+END $$;
 
 -- Create index for security audit
 CREATE INDEX IF NOT EXISTS idx_security_audit_user_id ON public.security_audit(user_id);
@@ -188,13 +217,13 @@ ALTER TABLE public.security_audit ENABLE ROW LEVEL SECURITY;
 
 -- Security audit policies
 CREATE POLICY "Users can view their own audit logs" ON public.security_audit 
-FOR SELECT USING (user_id = auth.uid());
+FOR SELECT USING (user_id = auth.uid()::text);
 
 CREATE POLICY "Admins can view all audit logs" ON public.security_audit 
 FOR SELECT USING (
     EXISTS (
         SELECT 1 FROM public.users 
-        WHERE id = auth.uid() AND role = 'admin'
+        WHERE id = auth.uid()::text AND role = 'admin'
     )
 );
 

@@ -74,30 +74,36 @@ function AdminLoginContent() {
     }
   };
 
-  const verifyAdminStatusWithRetry = async (retryCount = 0, maxRetries = 3): Promise<void> => {
+  const verifyAdminStatusWithRetry = async (retryCount = 0, maxRetries = 4): Promise<void> => {
     try {
       const response = await fetch('/api/admin/check-status');
       if (response.ok) {
         const data = await response.json();
         if (data.isAdmin) {
           console.log('Admin login successful, redirecting...');
+          setIsLoading(false);
           router.push(redirectUrl);
         } else {
+          setIsLoading(false);
           setError('Access denied. You do not have admin privileges.');
         }
       } else if (response.status === 401 && retryCount < maxRetries) {
-        console.log(`Admin verification failed (401), retrying in ${(retryCount + 1) * 500}ms... (attempt ${retryCount + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 500));
+        console.log(`Admin verification failed (401), retrying in ${(retryCount + 1) * 600}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+        // Don't show error during retries, keep loading state
+        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 600));
         await verifyAdminStatusWithRetry(retryCount + 1, maxRetries);
       } else {
+        setIsLoading(false);
         setError('Unable to verify admin status. Please try again.');
       }
     } catch (error) {
       console.error('Error verifying admin status:', error);
       if (retryCount < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 500));
+        // Don't show error during retries, keep loading state
+        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 600));
         await verifyAdminStatusWithRetry(retryCount + 1, maxRetries);
       } else {
+        setIsLoading(false);
         setError('Unable to verify admin status. Please try again.');
       }
     }
