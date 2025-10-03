@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Complete Admin Authentication Test Suite</title>
+    <title>Complete Dealer Authentication Test Suite</title>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             margin: 0; 
             padding: 20px; 
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
         }
         .container { 
@@ -21,7 +21,7 @@
             overflow: hidden;
         }
         .header {
-            background: linear-gradient(135deg, #2c3e50, #e74c3c);
+            background: linear-gradient(135deg, #2c3e50, #3498db);
             color: white;
             padding: 30px;
             text-align: center;
@@ -45,25 +45,25 @@
         
         button { 
             padding: 12px 20px; 
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white; 
             border: none; 
             border-radius: 8px; 
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
         button:hover { 
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
         button.danger { 
-            background: linear-gradient(135deg, #34495e, #2c3e50);
-            box-shadow: 0 4px 15px rgba(52, 73, 94, 0.3);
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
         }
         button.danger:hover { 
-            box-shadow: 0 6px 20px rgba(52, 73, 94, 0.4);
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
         }
         
         .results {
@@ -133,19 +133,33 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border-left: 4px solid #e74c3c;
+            border-left: 4px solid #667eea;
         }
         
         .status-card h4 { margin: 0 0 10px 0; color: #2c3e50; }
         .status-card .value { font-size: 1.2em; font-weight: 600; }
         .status-card .label { font-size: 0.9em; opacity: 0.7; }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🛡️ Complete Admin Authentication Test Suite</h1>
-            <p>Comprehensive testing for admin authentication, database, APIs, and session management</p>
+            <h1>🔧 Complete Dealer Authentication Test Suite</h1>
+            <p>Comprehensive testing for dealer authentication, database, APIs, and session management</p>
         </div>
 
         <div class="controls">
@@ -155,9 +169,10 @@
                 <button onclick="testEnvironment()">🌍 Environment Check</button>
                 <button onclick="testSessionInfo()">👤 Session Status</button>
                 <button onclick="testDatabase()">🗄️ Database Connection</button>
-                <button onclick="testAdminAPI()">🛡️ Admin API</button>
+                <button onclick="testDealerAPIGET()">📡 GET Dealer API</button>
+                <button onclick="testDealerAPIPOST()">📤 POST Dealer API</button>
                 <button onclick="testClerkServer()">🔐 Clerk Server Test</button>
-                <button onclick="testFullAdminFlow()">🔄 Full Admin Flow</button>
+                <button onclick="testFullDealerFlow()">🔄 Full Dealer Flow</button>
                 <button onclick="clearResults()" class="danger">🗑️ Clear Results</button>
             </div>
             
@@ -277,7 +292,7 @@
                 const response = await fetch('/api/debug/database', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: 'admin@jeenmataimpex.com' })
+                    body: JSON.stringify({ email: 'alinadutta@gmail.com' })
                 });
                 
                 const data = await response.json();
@@ -308,54 +323,89 @@
             }
         }
 
-        // Test 5: Admin API
-        async function testAdminAPI() {
+        // Test 5: GET Dealer API
+        async function testDealerAPIGET() {
             try {
-                const response = await fetch('/api/admin/check-status');
+                const response = await fetch('/api/dealers/check-status', {
+                    method: 'GET'
+                });
+                
                 const data = await response.json();
                 
-                if (response.ok && data.isAdmin) {
-                    addResult('Admin API - Success', { status: response.status, data }, 'success');
+                if (response.ok) {
+                    addResult('GET Dealer API', { status: response.status, data }, 'success');
                 } else {
-                    addResult('Admin API - Failed', { status: response.status, data }, 'error');
+                    addResult('GET Dealer API Failed', { status: response.status, data }, 'error');
                 }
             } catch (error) {
-                addResult('Admin API Error', { error: error.message }, 'error');
+                addResult('GET Dealer API Error', { error: error.message }, 'error');
             }
         }
 
-        // Test 6: Full Admin Flow Simulation
-        async function testFullAdminFlow() {
+        // Test 6: POST Dealer API
+        async function testDealerAPIPOST() {
             try {
-                addResult('Full Admin Flow Started', { message: 'Testing complete admin authentication flow...' }, 'info');
+                const response = await fetch('/api/dealers/check-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'alinadutta@gmail.com',
+                        clerkUserId: 'test-user-id'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult('POST Dealer API', { status: response.status, data }, 'success');
+                } else {
+                    addResult('POST Dealer API Failed', { status: response.status, data }, 'error');
+                }
+            } catch (error) {
+                addResult('POST Dealer API Error', { error: error.message }, 'error');
+            }
+        }
+
+        // Test 7: Full Dealer Flow Simulation
+        async function testFullDealerFlow() {
+            try {
+                addResult('Full Dealer Flow Started', { message: 'Testing complete dealer authentication flow...' }, 'info');
                 
                 // Step 1: Check session
                 const sessionResponse = await fetch('/api/debug/session-info');
                 const sessionData = await sessionResponse.json();
                 
                 if (!sessionData.auth?.success) {
-                    addResult('Full Admin Flow - No Session', { message: 'User not authenticated, flow cannot continue' }, 'warning');
+                    addResult('Full Dealer Flow - No Session', { message: 'User not authenticated, flow cannot continue' }, 'warning');
                     return;
                 }
                 
-                // Step 2: Test admin API with real session
-                const adminResponse = await fetch('/api/admin/check-status');
-                const adminData = await adminResponse.json();
+                // Step 2: Test dealer API with real session
+                const dealerResponse = await fetch('/api/dealers/check-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: sessionData.currentUser?.email || 'alinadutta@gmail.com',
+                        clerkUserId: sessionData.auth?.userId
+                    })
+                });
+                
+                const dealerData = await dealerResponse.json();
                 
                 const flowResult = {
                     session: sessionData,
-                    adminCheck: { status: adminResponse.status, data: adminData },
-                    flowComplete: adminResponse.ok && adminData.isAdmin
+                    dealerCheck: { status: dealerResponse.status, data: dealerData },
+                    flowComplete: dealerResponse.ok && dealerData.isApprovedDealer
                 };
                 
                 if (flowResult.flowComplete) {
-                    addResult('Full Admin Flow - Success', flowResult, 'success');
+                    addResult('Full Dealer Flow - Success', flowResult, 'success');
                 } else {
-                    addResult('Full Admin Flow - Failed', flowResult, 'error');
+                    addResult('Full Dealer Flow - Failed', flowResult, 'error');
                 }
                 
             } catch (error) {
-                addResult('Full Admin Flow Error', { error: error.message }, 'error');
+                addResult('Full Dealer Flow Error', { error: error.message }, 'error');
             }
         }
 
@@ -364,15 +414,16 @@
             clearResults();
             testStats = { total: 0, passed: 0 };
             
-            addResult('Test Suite Started', { message: 'Running comprehensive admin authentication tests...' }, 'info');
+            addResult('Test Suite Started', { message: 'Running comprehensive dealer authentication tests...' }, 'info');
             
             const tests = [
                 { name: 'Environment', func: testEnvironment },
                 { name: 'Session Info', func: testSessionInfo },
                 { name: 'Database', func: testDatabase },
                 { name: 'Clerk Server', func: testClerkServer },
-                { name: 'Admin API', func: testAdminAPI },
-                { name: 'Full Admin Flow', func: testFullAdminFlow }
+                { name: 'GET Dealer API', func: testDealerAPIGET },
+                { name: 'POST Dealer API', func: testDealerAPIPOST },
+                { name: 'Full Dealer Flow', func: testFullDealerFlow }
             ];
             
             for (let i = 0; i < tests.length; i++) {
@@ -406,7 +457,7 @@
         // Initialize page
         window.onload = function() {
             document.getElementById('currentDomain').textContent = window.location.origin;
-            console.log('🚀 Admin Authentication Test Suite loaded');
+            console.log('🚀 Dealer Authentication Test Suite loaded');
             
             // Auto-run basic tests after a short delay
             setTimeout(() => {

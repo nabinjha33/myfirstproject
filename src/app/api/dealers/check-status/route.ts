@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { supabaseAdmin } from '@/lib/supabase';
 
-export async function POST(req: NextRequest) {
+async function handleDealerStatusCheck(req: NextRequest, email?: string, clerkUserId?: string) {
   try {
     // Increased delay to ensure Clerk authentication state is ready
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -17,7 +17,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { email, clerkUserId } = await req.json();
+    // For GET requests, use Clerk user data directly
+    if (!email || !clerkUserId) {
+      email = clerkUser.emailAddresses?.[0]?.emailAddress;
+      clerkUserId = clerkUser.id;
+    }
+
+    if (!email) {
+      return NextResponse.json(
+        { isApprovedDealer: false, error: 'No email found', debug: 'No email in Clerk user' },
+        { status: 400 }
+      );
+    }
     
     console.log('Checking dealer status for:', {
       clerkUserId: clerkUser.id,
@@ -85,4 +96,13 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+export async function POST(req: NextRequest) {
+  const { email, clerkUserId } = await req.json();
+  return handleDealerStatusCheck(req, email, clerkUserId);
+}
+
+export async function GET(req: NextRequest) {
+  return handleDealerStatusCheck(req);
 }
