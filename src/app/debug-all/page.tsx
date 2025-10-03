@@ -48,20 +48,23 @@ export default function DebugAll() {
     addResult('env', 'Environment Check', 'running', 'Checking environment variables...');
     
     try {
-      const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-      const hasSecretKey = !!process.env.CLERK_SECRET_KEY;
+      const response = await fetch('/api/debug/environment');
+      const data = await response.json();
       
-      const envData = {
-        publishableKey: publishableKey ? `${publishableKey.substring(0, 20)}...` : 'Missing',
-        hasSecretKey,
-        domain: window.location.origin,
-        userAgent: navigator.userAgent.substring(0, 50) + '...'
-      };
-      
-      if (publishableKey && hasSecretKey) {
-        updateResult('env', 'success', 'Environment configured correctly', envData);
+      if (response.ok) {
+        const envData = {
+          ...data,
+          clientDomain: window.location.origin,
+          userAgent: navigator.userAgent.substring(0, 50) + '...'
+        };
+        
+        if (data.configured) {
+          updateResult('env', 'success', 'Environment configured correctly', envData);
+        } else {
+          updateResult('env', 'error', 'Missing environment variables', envData);
+        }
       } else {
-        updateResult('env', 'error', 'Missing environment variables', envData);
+        updateResult('env', 'error', `Environment check failed: ${data.error}`, data);
       }
     } catch (error: any) {
       updateResult('env', 'error', `Environment check failed: ${error.message}`);
@@ -159,7 +162,25 @@ export default function DebugAll() {
     }
   };
 
-  // Test 5: Admin API
+  // Test 5: Clerk Server Test
+  const testClerkServer = async () => {
+    addResult('clerk-server', 'Clerk Server', 'running', 'Testing Clerk server-side functions...');
+    
+    try {
+      const response = await fetch('/api/debug/clerk-test');
+      const data = await response.json();
+      
+      if (response.ok && data.clerkServerWorking) {
+        updateResult('clerk-server', 'success', 'Clerk server functions working', data);
+      } else {
+        updateResult('clerk-server', 'error', `Clerk server error: ${data.error || 'Unknown error'}`, data);
+      }
+    } catch (error: any) {
+      updateResult('clerk-server', 'error', `Clerk server test failed: ${error.message}`);
+    }
+  };
+
+  // Test 6: Admin API
   const testAdminAPI = async () => {
     addResult('api', 'Admin API', 'running', 'Testing admin status API...');
     
@@ -187,7 +208,7 @@ export default function DebugAll() {
     }
   };
 
-  // Test 6: Full Login Flow
+  // Test 7: Full Login Flow
   const testFullFlow = async () => {
     if (!password) {
       addResult('flow', 'Full Flow', 'error', 'Password required for full flow test');
@@ -262,6 +283,7 @@ export default function DebugAll() {
     await testDatabase();
     await testClerkLogin();
     await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for login to settle
+    await testClerkServer();
     await testAdminAPI();
     await testFullFlow();
     
@@ -347,6 +369,7 @@ export default function DebugAll() {
             <Button onClick={testClerkStatus} variant="outline">Clerk Status</Button>
             <Button onClick={testDatabase} variant="outline">Database</Button>
             <Button onClick={testClerkLogin} variant="outline">Login</Button>
+            <Button onClick={testClerkServer} variant="outline">Clerk Server</Button>
             <Button onClick={testAdminAPI} variant="outline">Admin API</Button>
             <Button onClick={testFullFlow} variant="outline">Full Flow</Button>
             
