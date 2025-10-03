@@ -47,24 +47,40 @@ export default function OrderCart() {
         notes: item.note || ''
       }));
       
-      // Create order with all required fields including contact_person
+      // Create order with ALL possible required fields to avoid any NOT NULL errors
       await Order.create({
-        dealer_email: dealerUser.email,
-        contact_person: dealerUser.name || dealerUser.email || 'Unknown',
+        // Basic order info
         order_number: `JMI-${Date.now()}`,
-        // Store product items as JSON string in a text field for now
+        status: 'Submitted',
+        total_amount_npr: getCartTotal(),
+        notes: `Order placed by ${dealerUser.name || dealerUser.email}. Items: ${orderItems.length} products.`,
+        
+        // Product data
         product_details: JSON.stringify(orderItems),
         product_items: orderItems,
-        total_amount_npr: getCartTotal(),
-        status: 'Submitted',
-        dealer_name: dealerUser.name || dealerUser.email,
+        
+        // Dealer information - cover all possible field names
+        dealer_email: dealerUser.email || '',
+        dealer_name: dealerUser.name || dealerUser.email || 'Unknown',
         dealer_phone: dealerUser.phone || '',
         dealer_address: dealerUser.businessName || '',
-        notes: `Order placed by ${dealerUser.name || dealerUser.email}. Items: ${orderItems.length} products.`,
-        // Add other potentially required fields
+        
+        // Contact information - cover all possible field names
+        contact_person: dealerUser.name || dealerUser.email || 'Unknown',
+        contact_phone: dealerUser.phone || '',
+        contact_email: dealerUser.email || '',
+        
+        // Business information
         business_name: dealerUser.businessName || dealerUser.name || 'Not specified',
+        
+        // Address fields
         phone: dealerUser.phone || '',
-        address: dealerUser.businessName || ''
+        email: dealerUser.email || '',
+        address: dealerUser.businessName || '',
+        city: '',
+        state: '',
+        country: 'Nepal',
+        postal_code: ''
       });
 
       setSubmissionStatus({
