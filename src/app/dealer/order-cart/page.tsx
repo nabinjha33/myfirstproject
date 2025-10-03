@@ -51,7 +51,7 @@ export default function OrderCart() {
       await Order.create({
         // Basic order info
         order_number: `JMI-${Date.now()}`,
-        status: 'Submitted',
+        status: 'pending',
         total_amount_npr: getCartTotal(),
         notes: `Order placed by ${dealerUser.name || dealerUser.email}. Items: ${orderItems.length} products.`,
         
