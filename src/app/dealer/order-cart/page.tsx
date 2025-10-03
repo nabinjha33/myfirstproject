@@ -47,12 +47,18 @@ export default function OrderCart() {
         notes: item.note || ''
       }));
       
+      // Create order with basic fields that exist in current schema
       await Order.create({
         dealer_email: dealerUser.email,
         order_number: `JMI-${Date.now()}`,
-        product_items: orderItems,
+        // Store product items as JSON string in a text field for now
+        product_details: JSON.stringify(orderItems),
         total_amount_npr: getCartTotal(),
-        status: 'Submitted'
+        status: 'Submitted',
+        dealer_name: dealerUser.name || dealerUser.email,
+        dealer_phone: dealerUser.phone || '',
+        dealer_address: dealerUser.businessName || '',
+        notes: `Order placed by ${dealerUser.name || dealerUser.email}. Items: ${orderItems.length} products.`
       });
 
       setSubmissionStatus({
