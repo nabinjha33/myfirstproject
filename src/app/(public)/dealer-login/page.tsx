@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useUser, useSignIn, useSignUp } from "@clerk/nextjs";
+import { useUser, useSignIn, useClerk } from '@clerk/nextjs';
 import { DealerApplication, User } from "@/lib/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,7 +67,24 @@ export default function DealerLogin() {
     
     // Redirect if user is already authenticated and is approved dealer
     if (isLoaded && user) {
-      checkDealerStatus();
+      // Check if we just reloaded after login
+      const shouldRedirect = sessionStorage.getItem('dealer_redirect_after_login');
+      const storedEmail = sessionStorage.getItem('dealer_email_after_login');
+      
+      if (shouldRedirect && storedEmail) {
+        console.log('Found stored redirect after dealer login for:', storedEmail);
+        sessionStorage.removeItem('dealer_redirect_after_login');
+        sessionStorage.removeItem('dealer_email_after_login');
+        
+        // Set the email in form for verification
+        setLoginForm(prev => ({ ...prev, email: storedEmail }));
+        
+        // Verify dealer status and redirect
+        verifyDealerStatusWithRetry();
+      } else {
+        // Normal check for already logged in user
+        checkDealerStatus();
+      }
     }
   }, [isLoaded, user, router]);
 
@@ -207,8 +224,14 @@ export default function DealerLogin() {
       });
 
       if (result.status === 'complete') {
-        // Verify dealer status after successful login with retry mechanism
-        await verifyDealerStatusWithRetry();
+        console.log('✅ Clerk login completed, reloading page to ensure session sync...');
+        
+        // Store redirect info in sessionStorage
+        sessionStorage.setItem('dealer_redirect_after_login', 'true');
+        sessionStorage.setItem('dealer_email_after_login', loginForm.email);
+        
+        // Force page reload to ensure session is fully established
+        window.location.reload();
       } else {
         setSubmissionStatus({
           type: 'error',
@@ -217,10 +240,47 @@ export default function DealerLogin() {
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      setSubmissionStatus({
-        type: 'error',
-        message: 'Invalid credentials. Please check your email and password.'
-      });
+      
+      if (error.errors && error.errors[0]) {
+        const errorCode = error.errors[0].code;
+        switch (errorCode) {
+          case 'session_exists':
+            // User is already logged in, reload page to ensure session sync
+            console.log('User already logged in, reloading page for session sync...');
+            sessionStorage.setItem('dealer_redirect_after_login', 'true');
+            sessionStorage.setItem('dealer_email_after_login', loginForm.email);
+            window.location.reload();
+            return;
+          case 'form_identifier_not_found':
+            setSubmissionStatus({
+              type: 'error',
+              message: 'No account found with this email address.'
+            });
+            break;
+          case 'form_password_incorrect':
+            setSubmissionStatus({
+              type: 'error',
+              message: 'Incorrect password. Please try again.'
+            });
+            break;
+          case 'form_identifier_exists':
+            setSubmissionStatus({
+              type: 'error',
+              message: 'Account verification required. Please check your email.'
+            });
+            break;
+          default:
+            setSubmissionStatus({
+              type: 'error',
+              message: 'Invalid credentials. Please check your email and password.'
+            });
+        }
+      } else {
+        setSubmissionStatus({
+          type: 'error',
+          message: 'Invalid credentials. Please check your email and password.'
+        });
+      }
     }
 
     setIsLoading(false);
