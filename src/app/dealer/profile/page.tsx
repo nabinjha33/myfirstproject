@@ -40,7 +40,7 @@ export default function DealerProfile() {
       const currentUser = await User.me();
 
       // If user profile is missing business data, check for an approved application and sync it.
-      if (!currentUser.business_name && currentUser.email) {
+      if (currentUser && !currentUser.business_name && currentUser.email) {
         const allApps = await DealerApplication.list();
         const apps = allApps.filter((app: any) => app.email === currentUser.email && app.status === 'approved');
         if (apps.length > 0) {
@@ -69,7 +69,7 @@ export default function DealerProfile() {
             whatsapp: "",
           });
         }
-      } else {
+      } else if (currentUser) {
          // If business data already exists, populate from current user's profile
          setProfile({
           business_name: currentUser.business_name || dealerUser?.businessName || "",
@@ -78,6 +78,16 @@ export default function DealerProfile() {
           address: currentUser.address || "",
           phone: currentUser.phone || dealerUser?.phone || "",
           whatsapp: currentUser.whatsapp || "",
+        });
+      } else {
+        // If currentUser is null, use dealerUser data as fallback
+        setProfile({
+          business_name: dealerUser?.businessName || "",
+          contact_person: dealerUser?.name || "",
+          vat_pan: "",
+          address: "",
+          phone: dealerUser?.phone || "",
+          whatsapp: "",
         });
       }
 

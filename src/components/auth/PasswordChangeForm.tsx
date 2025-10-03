@@ -21,6 +21,15 @@ export default function PasswordChangeForm({ userType }: PasswordChangeFormProps
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'warning' | null; message: string }>({ type: null, message: '' });
   const [needsVerification, setNeedsVerification] = useState(false);
+
+  // Check verification status on component mount
+  React.useEffect(() => {
+    if (user) {
+      const isEmailVerified = user.primaryEmailAddress?.verification?.status === 'verified' || 
+                             user.emailAddresses.some(email => email.verification?.status === 'verified');
+      setNeedsVerification(!isEmailVerified);
+    }
+  }, [user]);
   
   const [passwords, setPasswords] = useState({
     currentPassword: '',
@@ -104,7 +113,10 @@ export default function PasswordChangeForm({ userType }: PasswordChangeFormProps
       }
 
       // Check if user's email is verified first
-      if (user.primaryEmailAddress?.verification?.status !== 'verified') {
+      const isEmailVerified = user.primaryEmailAddress?.verification?.status === 'verified' || 
+                             user.emailAddresses.some(email => email.verification?.status === 'verified');
+      
+      if (!isEmailVerified) {
         setStatus({ 
           type: 'warning', 
           message: 'Please verify your email address before changing password. Check your email for verification link.' 
@@ -142,6 +154,9 @@ export default function PasswordChangeForm({ userType }: PasswordChangeFormProps
             break;
           case 'verification_required':
             errorMessage = 'Additional verification required. Please verify your email address before changing password.';
+            break;
+          case 'session_invalid':
+            errorMessage = 'Your session has expired. Please log out and log back in.';
             break;
           default:
             errorMessage = error.errors[0].message || errorMessage;
@@ -201,6 +216,26 @@ export default function PasswordChangeForm({ userType }: PasswordChangeFormProps
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {needsVerification && !status.type && (
+          <Alert className="mb-6 bg-yellow-50 border-yellow-200 text-yellow-800">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Email verification required before changing password.
+              <div className="mt-3">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleSendVerificationEmail}
+                  disabled={isLoading}
+                >
+                  Send Verification Email
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {status.type && (
           <Alert className={`mb-6 ${
             status.type === 'success' 
@@ -245,6 +280,7 @@ export default function PasswordChangeForm({ userType }: PasswordChangeFormProps
                 value={passwords.currentPassword}
                 onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
                 className="pl-10 pr-10"
+                disabled={needsVerification}
                 required
               />
               <button
@@ -268,6 +304,7 @@ export default function PasswordChangeForm({ userType }: PasswordChangeFormProps
                 value={passwords.newPassword}
                 onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
                 className="pl-10 pr-10"
+                disabled={needsVerification}
                 required
               />
               <button
@@ -316,6 +353,7 @@ export default function PasswordChangeForm({ userType }: PasswordChangeFormProps
                 value={passwords.confirmPassword}
                 onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
                 className="pl-10 pr-10"
+                disabled={needsVerification}
                 required
               />
               <button
@@ -333,7 +371,7 @@ export default function PasswordChangeForm({ userType }: PasswordChangeFormProps
 
           <Button 
             type="submit" 
-            disabled={isLoading || passwordStrength.score < 4 || passwords.newPassword !== passwords.confirmPassword}
+            disabled={isLoading || passwordStrength.score < 4 || passwords.newPassword !== passwords.confirmPassword || needsVerification}
             className="w-full"
           >
             {isLoading ? 'Updating Password...' : 'Update Password'}
