@@ -96,14 +96,11 @@ export default function DealerLogin() {
       if (!userEmail) return;
 
       const response = await fetch('/api/dealers/check-status', {
-        method: 'POST',
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: userEmail,
-          clerkUserId: user.id
-        })
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
 
       if (response.ok) {
@@ -144,15 +141,13 @@ export default function DealerLogin() {
 
   const verifyDealerStatusWithRetry = async (retryCount = 0, maxRetries = 3): Promise<void> => {
     try {
+      // Use GET method since it works perfectly (as shown in tests)
       const response = await fetch('/api/dealers/check-status', {
-        method: 'POST',
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: loginForm.email,
-          clerkUserId: user?.id
-        })
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
 
       if (response.ok) {
