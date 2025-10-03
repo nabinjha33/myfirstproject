@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .result { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffe6e6; border: 1px solid #ff9999; }
+        .success { background: #e6ffe6; border: 1px solid #99ff99; }
+        button { padding: 10px 20px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Session Debug Test</h1>
+        <p>This page tests the session information to debug authentication issues.</p>
+        
+        <div>
+            <button onclick="testSessionInfo()">Test Session Info</button>
+            <button onclick="testAdminAPI()">Test Admin API</button>
+            <button onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function addResult(title, data, isError = false) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${isError ? 'error' : 'success'}`;
+            div.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+                <small>Time: ${new Date().toLocaleTimeString()}</small>
+            `;
+            results.appendChild(div);
+        }
+
+        async function testSessionInfo() {
+            try {
+                console.log('🔍 Testing session info...');
+                const response = await fetch('/api/debug/session-info');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult('✅ Session Info Success', data, false);
+                } else {
+                    addResult('❌ Session Info Failed', data, true);
+                }
+            } catch (error) {
+                addResult('❌ Session Info Error', { error: error.message }, true);
+            }
+        }
+
+        async function testAdminAPI() {
+            try {
+                console.log('🔍 Testing admin API...');
+                const response = await fetch('/api/admin/check-status');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult('✅ Admin API Success', data, false);
+                } else {
+                    addResult('❌ Admin API Failed', data, true);
+                }
+            } catch (error) {
+                addResult('❌ Admin API Error', { error: error.message }, true);
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // Auto-test on page load
+        window.onload = function() {
+            console.log('🚀 Auto-testing session info...');
+            setTimeout(testSessionInfo, 1000);
+        };
+    </script>
+</body>
+</html>
