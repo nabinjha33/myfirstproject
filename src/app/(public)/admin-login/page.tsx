@@ -85,7 +85,12 @@ function AdminLoginContent() {
   const verifyAdminStatusWithRetry = async (retryCount = 0, maxRetries = 4): Promise<void> => {
     try {
       console.log(`🔄 Admin verification attempt ${retryCount + 1}/${maxRetries + 1}`);
-      const response = await fetch('/api/admin/check-status');
+      
+      // Use detailed debug API for first few attempts
+      const apiEndpoint = retryCount < 2 ? '/api/debug/compare-calls' : '/api/admin/check-status';
+      console.log(`📡 Using API: ${apiEndpoint}`);
+      
+      const response = await fetch(apiEndpoint);
       console.log(`📡 API Response: Status ${response.status}`);
       
       if (response.ok) {
@@ -102,14 +107,17 @@ function AdminLoginContent() {
           setError('Access denied. You do not have admin privileges.');
         }
       } else if (response.status === 401 && retryCount < maxRetries) {
+        const errorData = await response.json().catch(() => ({}));
         console.log(`🔄 Admin verification failed (401), retrying in ${(retryCount + 1) * 600}ms... (attempt ${retryCount + 1}/${maxRetries + 1})`);
+        console.log('🔍 Error details:', errorData);
+        
         // Don't show error during retries, keep loading state
         await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 600));
         await verifyAdminStatusWithRetry(retryCount + 1, maxRetries);
       } else {
         console.log(`❌ Admin verification failed with status ${response.status}`);
-        const errorData = await response.text();
-        console.log('Error response:', errorData);
+        const errorData = await response.json().catch(() => ({}));
+        console.log('🔍 Error response:', errorData);
         setIsLoading(false);
         setError(`Unable to verify admin status (${response.status}). Please try again.`);
       }
