@@ -61,22 +61,22 @@ export default function DealerProfile() {
         } else {
           // If no business_name and no approved application, populate with existing user data or empty strings
           setProfile({
-            business_name: dealerUser.businessName || "",
-            contact_person: dealerUser.name || "",
+            business_name: dealerUser?.businessName || "",
+            contact_person: dealerUser?.name || "",
             vat_pan: "",
             address: "",
-            phone: dealerUser.phone || "",
+            phone: dealerUser?.phone || "",
             whatsapp: "",
           });
         }
       } else {
          // If business data already exists, populate from current user's profile
          setProfile({
-          business_name: currentUser.business_name || dealerUser.businessName || "",
-          contact_person: currentUser.full_name || dealerUser.name || "",
+          business_name: currentUser.business_name || dealerUser?.businessName || "",
+          contact_person: currentUser.full_name || dealerUser?.name || "",
           vat_pan: currentUser.vat_pan || "",
           address: currentUser.address || "",
-          phone: currentUser.phone || dealerUser.phone || "",
+          phone: currentUser.phone || dealerUser?.phone || "",
           whatsapp: currentUser.whatsapp || "",
         });
       }
@@ -85,11 +85,11 @@ export default function DealerProfile() {
       console.error("Failed to fetch user data:", error);
       // Use dealerUser data as fallback
       setProfile({
-        business_name: dealerUser.businessName || "",
-        contact_person: dealerUser.name || "",
+        business_name: dealerUser?.businessName || "",
+        contact_person: dealerUser?.name || "",
         vat_pan: "",
         address: "",
-        phone: dealerUser.phone || "",
+        phone: dealerUser?.phone || "",
         whatsapp: "",
       });
     }

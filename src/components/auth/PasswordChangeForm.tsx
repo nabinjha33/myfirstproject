@@ -19,7 +19,8 @@ export default function PasswordChangeForm({ userType }: PasswordChangeFormProps
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [status, setStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
+  const [status, setStatus] = useState<{ type: 'success' | 'error' | 'warning' | null; message: string }>({ type: null, message: '' });
+  const [needsVerification, setNeedsVerification] = useState(false);
   
   const [passwords, setPasswords] = useState({
     currentPassword: '',
@@ -102,6 +103,16 @@ export default function PasswordChangeForm({ userType }: PasswordChangeFormProps
         return;
       }
 
+      // Check if user's email is verified first
+      if (user.primaryEmailAddress?.verification?.status !== 'verified') {
+        setStatus({ 
+          type: 'warning', 
+          message: 'Please verify your email address before changing password. Check your email for verification link.' 
+        });
+        setIsLoading(false);
+        return;
+      }
+
       // Use Clerk's updatePassword method
       await user.updatePassword({
         currentPassword: passwords.currentPassword,
@@ -129,15 +140,44 @@ export default function PasswordChangeForm({ userType }: PasswordChangeFormProps
           case 'form_password_validation_failed':
             errorMessage = 'Password does not meet security requirements.';
             break;
+          case 'verification_required':
+            errorMessage = 'Additional verification required. Please verify your email address before changing password.';
+            break;
           default:
             errorMessage = error.errors[0].message || errorMessage;
         }
+      } else if (error.message?.includes('additional verification')) {
+        errorMessage = 'Additional verification required. Please verify your email address in your account settings before changing password.';
       }
       
       setStatus({ type: 'error', message: errorMessage });
     }
 
     setIsLoading(false);
+  };
+
+  const handleSendVerificationEmail = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      await user.primaryEmailAddress?.prepareVerification({ 
+        strategy: 'email_link',
+        redirectUrl: `${window.location.origin}/${userType}/profile`
+      });
+      setStatus({ 
+        type: 'success', 
+        message: 'Verification email sent! Please check your email and click the verification link.' 
+      });
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+      setStatus({ 
+        type: 'error', 
+        message: 'Failed to send verification email. Please try again.' 
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getPasswordStrengthColor = () => {
@@ -165,6 +205,8 @@ export default function PasswordChangeForm({ userType }: PasswordChangeFormProps
           <Alert className={`mb-6 ${
             status.type === 'success' 
               ? 'bg-green-50 border-green-200 text-green-800' 
+              : status.type === 'warning'
+              ? 'bg-yellow-50 border-yellow-200 text-yellow-800'
               : 'bg-red-50 border-red-200 text-red-800'
           }`}>
             {status.type === 'success' ? (
@@ -172,7 +214,22 @@ export default function PasswordChangeForm({ userType }: PasswordChangeFormProps
             ) : (
               <AlertCircle className="h-4 w-4" />
             )}
-            <AlertDescription>{status.message}</AlertDescription>
+            <AlertDescription>
+              {status.message}
+              {status.type === 'warning' && status.message.includes('verify your email') && (
+                <div className="mt-3">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleSendVerificationEmail}
+                    disabled={isLoading}
+                  >
+                    Send Verification Email
+                  </Button>
+                </div>
+              )}
+            </AlertDescription>
           </Alert>
         )}
 
