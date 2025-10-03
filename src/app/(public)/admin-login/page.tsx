@@ -84,33 +84,44 @@ function AdminLoginContent() {
 
   const verifyAdminStatusWithRetry = async (retryCount = 0, maxRetries = 4): Promise<void> => {
     try {
+      console.log(`🔄 Admin verification attempt ${retryCount + 1}/${maxRetries + 1}`);
       const response = await fetch('/api/admin/check-status');
+      console.log(`📡 API Response: Status ${response.status}`);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📊 API Data:', data);
+        
         if (data.isAdmin) {
-          console.log('Admin login successful, redirecting...');
+          console.log('✅ Admin verification successful, redirecting...');
           setIsLoading(false);
           router.push(redirectUrl);
         } else {
+          console.log('❌ User is not admin:', data);
           setIsLoading(false);
           setError('Access denied. You do not have admin privileges.');
         }
       } else if (response.status === 401 && retryCount < maxRetries) {
-        console.log(`Admin verification failed (401), retrying in ${(retryCount + 1) * 600}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+        console.log(`🔄 Admin verification failed (401), retrying in ${(retryCount + 1) * 600}ms... (attempt ${retryCount + 1}/${maxRetries + 1})`);
         // Don't show error during retries, keep loading state
         await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 600));
         await verifyAdminStatusWithRetry(retryCount + 1, maxRetries);
       } else {
+        console.log(`❌ Admin verification failed with status ${response.status}`);
+        const errorData = await response.text();
+        console.log('Error response:', errorData);
         setIsLoading(false);
-        setError('Unable to verify admin status. Please try again.');
+        setError(`Unable to verify admin status (${response.status}). Please try again.`);
       }
     } catch (error) {
-      console.error('Error verifying admin status:', error);
+      console.error('❌ Error verifying admin status:', error);
       if (retryCount < maxRetries) {
+        console.log(`🔄 Retrying due to error in ${(retryCount + 1) * 600}ms...`);
         // Don't show error during retries, keep loading state
         await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 600));
         await verifyAdminStatusWithRetry(retryCount + 1, maxRetries);
       } else {
+        console.log('❌ All retry attempts exhausted');
         setIsLoading(false);
         setError('Unable to verify admin status. Please try again.');
       }
@@ -211,12 +222,24 @@ function AdminLoginContent() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
                   Already logged in as: {user.emailAddresses?.[0]?.emailAddress}
-                  <button
-                    onClick={() => signOut()}
-                    className="ml-2 text-blue-300 hover:text-blue-100 underline"
-                  >
-                    Logout
-                  </button>
+                  <div className="mt-2 space-x-2">
+                    <button
+                      onClick={() => {
+                        setIsLoading(true);
+                        setError(null);
+                        verifyAdminStatusWithRetry();
+                      }}
+                      className="text-green-300 hover:text-green-100 underline"
+                    >
+                      Test Admin Access
+                    </button>
+                    <button
+                      onClick={() => signOut()}
+                      className="text-blue-300 hover:text-blue-100 underline"
+                    >
+                      Logout
+                    </button>
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
