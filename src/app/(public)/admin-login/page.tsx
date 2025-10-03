@@ -42,7 +42,19 @@ function AdminLoginContent() {
     if (isLoaded && user) {
       console.log('User already logged in, checking admin status...');
       setIsLoading(true);
-      checkAdminStatus();
+      
+      // Check if we just reloaded after login
+      const storedRedirectUrl = sessionStorage.getItem('admin_redirect_after_login');
+      if (storedRedirectUrl) {
+        console.log('Found stored redirect URL after login:', storedRedirectUrl);
+        sessionStorage.removeItem('admin_redirect_after_login');
+        
+        // Verify admin status and redirect
+        verifyAdminStatusWithRetry();
+      } else {
+        // Normal check for already logged in user
+        checkAdminStatus();
+      }
     }
   }, [isLoaded, user, router]);
 
@@ -88,7 +100,7 @@ function AdminLoginContent() {
       
       // Add progressive delay to allow Clerk session to sync
       if (retryCount > 0) {
-        const delay = retryCount * 800; // 800ms, 1600ms, 2400ms, 3200ms, 4000ms
+        const delay = retryCount * 300; // 300ms, 600ms, 900ms, 1200ms, 1500ms
         console.log(`⏳ Waiting ${delay}ms for session sync...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -158,9 +170,13 @@ function AdminLoginContent() {
       });
 
       if (result.status === 'complete') {
-        console.log('✅ Clerk login completed, verifying admin status...');
-        // Verify admin status after successful login with retry mechanism
-        await verifyAdminStatusWithRetry();
+        console.log('✅ Clerk login completed, reloading page to ensure session sync...');
+        
+        // Store redirect URL in sessionStorage
+        sessionStorage.setItem('admin_redirect_after_login', redirectUrl);
+        
+        // Force page reload to ensure session is fully established
+        window.location.reload();
       } else {
         setError('Login incomplete. Please try again.');
       }
