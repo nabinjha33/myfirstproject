@@ -89,7 +89,7 @@ export default function AdminLayout({
 
   // Check admin status on mount and user change
   useEffect(() => {
-    const checkAdminStatus = async () => {
+    const checkAdminStatus = async (retryCount = 0, maxRetries = 3) => {
       if (!isLoaded) return;
       
       if (!user) {
@@ -101,16 +101,24 @@ export default function AdminLayout({
         const response = await fetch('/api/admin/check-status');
         const data = await response.json();
         
-        console.log('Admin status check response:', { status: response.status, data });
+        console.log('Admin status check response:', { status: response.status, data, attempt: retryCount + 1 });
         
         if (response.ok) {
           if (data.isAdmin) {
             setAdminUser(data.user);
+            setIsCheckingAuth(false);
           } else {
             console.log('User is not admin:', data);
             router.push('/access-denied?reason=admin_required');
             return;
           }
+        } else if (response.status === 401 && retryCount < maxRetries) {
+          // Retry after a short delay if authentication is not ready
+          console.log(`Admin status check failed (401), retrying in ${(retryCount + 1) * 500}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+          setTimeout(() => {
+            checkAdminStatus(retryCount + 1, maxRetries);
+          }, (retryCount + 1) * 500);
+          return;
         } else {
           console.error('Admin status check failed:', data);
           
@@ -124,12 +132,16 @@ export default function AdminLayout({
         }
       } catch (error) {
         console.error('Error checking admin status:', error);
+        if (retryCount < maxRetries) {
+          setTimeout(() => {
+            checkAdminStatus(retryCount + 1, maxRetries);
+          }, (retryCount + 1) * 500);
+          return;
+        }
         alert('Network error checking admin status. Please check your connection.');
         router.push('/admin-login');
         return;
       }
-      
-      setIsCheckingAuth(false);
     };
 
     checkAdminStatus();

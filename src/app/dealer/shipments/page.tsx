@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import ShipmentStepper from '@/components/shipments/ShipmentStepper';
+import DealerAuthWrapper from '@/components/dealer/DealerAuthWrapper';
 
 const statusConfig = {
   "pending": {
@@ -108,7 +109,8 @@ export default function Shipments() {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <DealerAuthWrapper>
+      <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -278,6 +280,7 @@ export default function Shipments() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </DealerAuthWrapper>
   );
 }

@@ -57,6 +57,8 @@ export default function DealerLayout({
   const [isDark, setIsDark] = useState(false);
   const [language, setLanguage] = useState("en");
   const [mounted, setMounted] = useState(false);
+  const [dealerUser, setDealerUser] = useState<any>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
     setMounted(true);
@@ -64,6 +66,83 @@ export default function DealerLayout({
     const isDarkMode = document.documentElement.classList.contains('dark');
     setIsDark(isDarkMode);
   }, []);
+
+  // Check dealer status on mount and user change
+  useEffect(() => {
+    const checkDealerStatus = async (retryCount = 0, maxRetries = 3) => {
+      if (!isLoaded || !mounted) return;
+      
+      if (!user) {
+        window.location.href = '/dealer-login';
+        return;
+      }
+
+      try {
+        const userEmail = user.primaryEmailAddress?.emailAddress;
+        if (!userEmail) {
+          console.error('No email found for user');
+          window.location.href = '/dealer-login';
+          return;
+        }
+
+        console.log('Checking dealer status for:', {
+          clerkUserId: user.id,
+          userEmail: userEmail,
+          attempt: retryCount + 1
+        });
+
+        // Check dealer status in database
+        const response = await fetch('/api/dealers/check-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: userEmail,
+            clerkUserId: user.id
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.isApprovedDealer) {
+            setDealerUser(data.user);
+            setIsCheckingAuth(false);
+          } else {
+            console.log('User is not an approved dealer:', data);
+            alert('Your dealer account is not approved yet. Please contact support.');
+            await signOut();
+            return;
+          }
+        } else if (response.status === 401 && retryCount < maxRetries) {
+          // Retry after a short delay if authentication is not ready
+          console.log(`Dealer status check failed (401), retrying in ${(retryCount + 1) * 500}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+          setTimeout(() => {
+            checkDealerStatus(retryCount + 1, maxRetries);
+          }, (retryCount + 1) * 500);
+          return;
+        } else {
+          console.error('Dealer status check failed:', response.status);
+          alert('Unable to verify dealer status. Please try logging in again.');
+          await signOut();
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking dealer status:', error);
+        if (retryCount < maxRetries) {
+          setTimeout(() => {
+            checkDealerStatus(retryCount + 1, maxRetries);
+          }, (retryCount + 1) * 500);
+          return;
+        }
+        alert('Network error checking dealer status. Please check your connection.');
+        await signOut();
+        return;
+      }
+    };
+
+    checkDealerStatus();
+  }, [user, isLoaded, mounted, signOut]);
 
   const toggleTheme = () => {
     setIsDark(!isDark);
@@ -78,9 +157,16 @@ export default function DealerLayout({
     signOut();
   };
 
-  // Prevent hydration mismatch by not rendering until mounted
-  if (!mounted || !isLoaded) {
-    return null;
+  // Show loading while checking authentication
+  if (!mounted || !isLoaded || isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Verifying dealer access...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

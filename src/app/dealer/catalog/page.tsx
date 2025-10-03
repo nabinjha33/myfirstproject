@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useCart from '@/components/useCart';
+import DealerAuthWrapper from '@/components/dealer/DealerAuthWrapper';
 
 const brands = ["All", "FastDrill", "Spider", "Gorkha", "General Imports"];
 
@@ -554,8 +555,9 @@ export default function DealerCatalog() {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
+    <DealerAuthWrapper>
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto">
         {/* Success Toast */}
         {addedToCart && (
           <div className="fixed top-4 right-4 z-50 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md shadow-lg animate-in slide-in-from-right">
@@ -643,7 +645,8 @@ export default function DealerCatalog() {
             setSelectedProduct(null);
           }}
         />
+        </div>
       </div>
-    </div>
+    </DealerAuthWrapper>
   );
 }

@@ -44,7 +44,7 @@ function AdminLoginContent() {
     }
   }, [isLoaded, user, router]);
 
-  const checkAdminStatus = async () => {
+  const checkAdminStatus = async (retryCount = 0, maxRetries = 3) => {
     try {
       // Make a request to check admin status
       const response = await fetch('/api/admin/check-status');
@@ -55,9 +55,51 @@ function AdminLoginContent() {
         } else {
           setError('You do not have admin privileges. Please contact an administrator.');
         }
+      } else if (response.status === 401 && retryCount < maxRetries) {
+        // Retry after a short delay if authentication is not ready
+        console.log(`Admin status check failed (401), retrying in ${(retryCount + 1) * 500}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+        setTimeout(() => {
+          checkAdminStatus(retryCount + 1, maxRetries);
+        }, (retryCount + 1) * 500); // Exponential backoff: 500ms, 1000ms, 1500ms
+      } else {
+        console.error('Admin status check failed:', response.status);
       }
     } catch (error) {
       console.error('Error checking admin status:', error);
+      if (retryCount < maxRetries) {
+        setTimeout(() => {
+          checkAdminStatus(retryCount + 1, maxRetries);
+        }, (retryCount + 1) * 500);
+      }
+    }
+  };
+
+  const verifyAdminStatusWithRetry = async (retryCount = 0, maxRetries = 3): Promise<void> => {
+    try {
+      const response = await fetch('/api/admin/check-status');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.isAdmin) {
+          console.log('Admin login successful, redirecting...');
+          router.push(redirectUrl);
+        } else {
+          setError('Access denied. You do not have admin privileges.');
+        }
+      } else if (response.status === 401 && retryCount < maxRetries) {
+        console.log(`Admin verification failed (401), retrying in ${(retryCount + 1) * 500}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 500));
+        await verifyAdminStatusWithRetry(retryCount + 1, maxRetries);
+      } else {
+        setError('Unable to verify admin status. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error verifying admin status:', error);
+      if (retryCount < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 500));
+        await verifyAdminStatusWithRetry(retryCount + 1, maxRetries);
+      } else {
+        setError('Unable to verify admin status. Please try again.');
+      }
     }
   };
 
@@ -78,24 +120,8 @@ function AdminLoginContent() {
       });
 
       if (result.status === 'complete') {
-        // Verify admin status after successful login
-        const response = await fetch('/api/admin/check-status');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.isAdmin) {
-            console.log('Admin login successful, redirecting...');
-            router.push(redirectUrl);
-          } else {
-            setError('Access denied. You do not have admin privileges.');
-            // Sign out the user since they're not admin
-            await signIn.create({
-              identifier: loginForm.email,
-              password: loginForm.password,
-            });
-          }
-        } else {
-          setError('Unable to verify admin status. Please try again.');
-        }
+        // Verify admin status after successful login with retry mechanism
+        await verifyAdminStatusWithRetry();
       } else {
         setError('Login incomplete. Please try again.');
       }

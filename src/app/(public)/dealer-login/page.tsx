@@ -52,11 +52,50 @@ export default function DealerLogin() {
   });
 
   useEffect(() => {
-    // Redirect if user is already authenticated
+    // Redirect if user is already authenticated and is approved dealer
     if (isLoaded && user) {
-      router.push('/dealer/catalog');
+      checkDealerStatus();
     }
   }, [isLoaded, user, router]);
+
+  const checkDealerStatus = async (retryCount = 0, maxRetries = 3) => {
+    if (!user) return;
+    
+    try {
+      const userEmail = user.primaryEmailAddress?.emailAddress;
+      if (!userEmail) return;
+
+      const response = await fetch('/api/dealers/check-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: userEmail,
+          clerkUserId: user.id
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.isApprovedDealer) {
+          router.push('/dealer/catalog');
+        }
+      } else if (response.status === 401 && retryCount < maxRetries) {
+        console.log(`Dealer status check failed (401), retrying in ${(retryCount + 1) * 500}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+        setTimeout(() => {
+          checkDealerStatus(retryCount + 1, maxRetries);
+        }, (retryCount + 1) * 500);
+      }
+    } catch (error) {
+      console.error('Error checking dealer status:', error);
+      if (retryCount < maxRetries) {
+        setTimeout(() => {
+          checkDealerStatus(retryCount + 1, maxRetries);
+        }, (retryCount + 1) * 500);
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchOwnerEmail = async () => {
@@ -72,6 +111,54 @@ export default function DealerLogin() {
     };
     fetchOwnerEmail();
   }, []);
+
+  const verifyDealerStatusWithRetry = async (retryCount = 0, maxRetries = 3): Promise<void> => {
+    try {
+      const response = await fetch('/api/dealers/check-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: loginForm.email,
+          clerkUserId: user?.id
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.isApprovedDealer) {
+          console.log('Dealer login successful, redirecting...');
+          router.push('/dealer/catalog');
+        } else {
+          setSubmitStatus({
+            type: 'error',
+            message: 'Your dealer account is not approved yet or does not exist. Please apply for dealer access first.'
+          });
+        }
+      } else if (response.status === 401 && retryCount < maxRetries) {
+        console.log(`Dealer verification failed (401), retrying in ${(retryCount + 1) * 500}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 500));
+        await verifyDealerStatusWithRetry(retryCount + 1, maxRetries);
+      } else {
+        setSubmitStatus({
+          type: 'error',
+          message: 'Unable to verify dealer status. Please try again.'
+        });
+      }
+    } catch (error) {
+      console.error('Error verifying dealer status:', error);
+      if (retryCount < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 500));
+        await verifyDealerStatusWithRetry(retryCount + 1, maxRetries);
+      } else {
+        setSubmitStatus({
+          type: 'error',
+          message: 'Unable to verify dealer status. Please try again.'
+        });
+      }
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,8 +194,8 @@ export default function DealerLogin() {
       });
 
       if (result.status === 'complete') {
-        console.log('Login successful, redirecting to catalog...');
-        router.push('/dealer/catalog');
+        // Verify dealer status after successful login with retry mechanism
+        await verifyDealerStatusWithRetry();
       } else {
         setSubmitStatus({
           type: 'error',

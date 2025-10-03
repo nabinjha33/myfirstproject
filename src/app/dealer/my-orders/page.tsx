@@ -10,14 +10,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, Package, FileText, Printer } from 'lucide-react';
 import { format } from 'date-fns';
+import DealerAuthWrapper from '@/components/dealer/DealerAuthWrapper';
+import { useDealerAuth } from '@/hooks/useDealerAuth';
 
 export default function MyOrders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const { user: dealerUser } = useDealerAuth();
 
   const applyFilters = useCallback(() => {
     let filtered = [...orders];
@@ -28,28 +30,26 @@ export default function MyOrders() {
   }, [orders, statusFilter]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (dealerUser) {
+      fetchData();
+    }
+  }, [dealerUser]);
 
   useEffect(() => {
     applyFilters();
   }, [applyFilters]);
 
   const fetchData = async () => {
+    if (!dealerUser?.email) return;
+    
     setIsLoading(true);
     try {
-      console.log('Loading dealer orders...');
-      const user = await User.me();
-      console.log('Current user:', user);
-      setCurrentUser(user);
-      
-      if (user?.email) {
-        const allOrders = await Order.list('-created_at');
-        console.log('All orders loaded:', allOrders.length);
-        const orderData = allOrders.filter((order: any) => order.dealer_email === user.email);
-        console.log('Dealer orders:', orderData.length);
-        setOrders(orderData);
-      }
+      console.log('Loading dealer orders for:', dealerUser.email);
+      const allOrders = await Order.list('-created_at');
+      console.log('All orders loaded:', allOrders.length);
+      const orderData = allOrders.filter((order: any) => order.dealer_email === dealerUser.email);
+      console.log('Dealer orders:', orderData.length);
+      setOrders(orderData);
     } catch (error: any) {
       console.error("Failed to fetch orders:", error);
       console.error('Error details:', error?.message || 'Unknown error');
@@ -156,8 +156,9 @@ export default function MyOrders() {
   };
 
   if (isLoading) return <div className="p-6">Loading your orders...</div>;
-  if (!currentUser) return <div className="p-6">You must be logged in to view this page.</div>
+  
   return (
+    <DealerAuthWrapper>
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
@@ -312,5 +313,6 @@ export default function MyOrders() {
         </Card>
       </div>
     </div>
+    </DealerAuthWrapper>
   );
 }

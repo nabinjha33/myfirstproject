@@ -11,21 +11,22 @@ import { Trash2, ShoppingCart, Plus, Minus, Info, Package, FileText } from "luci
 import Link from 'next/link';
 import { Order, User } from '@/lib/entities';
 import { Badge } from "@/components/ui/badge";
+import DealerAuthWrapper from '@/components/dealer/DealerAuthWrapper';
+import { useDealerAuth } from '@/hooks/useDealerAuth';
 
 export default function OrderCart() {
   const { cart, updateQuantity, updateNote, removeFromCart, clearCart, getCartTotal } = useCart('orderCart');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submissionStatus, setSubmissionStatus] = React.useState<any>(null);
+  const { user: dealerUser } = useDealerAuth();
 
   const handlePlaceOrder = async () => {
     setIsSubmitting(true);
     setSubmissionStatus(null);
     try {
       console.log('Placing order...');
-      const currentUser = await User.me();
-      console.log('Current user for order:', currentUser);
       
-      if (!currentUser || !currentUser.email) {
+      if (!dealerUser || !dealerUser.email) {
         console.log('User not logged in');
         setSubmissionStatus({
           type: 'error',
@@ -47,7 +48,7 @@ export default function OrderCart() {
       }));
       
       await Order.create({
-        dealer_email: currentUser.email,
+        dealer_email: dealerUser.email,
         order_number: `JMI-${Date.now()}`,
         product_items: orderItems,
         total_amount_npr: getCartTotal(),
@@ -73,7 +74,8 @@ export default function OrderCart() {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <DealerAuthWrapper>
+      <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-5xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -241,6 +243,7 @@ export default function OrderCart() {
           )}
         </Card>
       </div>
-    </div>
+      </div>
+    </DealerAuthWrapper>
   );
 }

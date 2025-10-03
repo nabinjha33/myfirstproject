@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Building, Phone, Mail, User as UserIcon, Save } from "lucide-react";
+import DealerAuthWrapper from '@/components/dealer/DealerAuthWrapper';
+import { useDealerAuth } from '@/hooks/useDealerAuth';
 
 export default function DealerProfile() {
   const [profile, setProfile] = useState({
@@ -17,20 +19,23 @@ export default function DealerProfile() {
     phone: "",
     whatsapp: "",
   });
-  const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const { user: dealerUser } = useDealerAuth();
 
   useEffect(() => {
-    fetchUserData();
-  }, []);
+    if (dealerUser) {
+      fetchUserData();
+    }
+  }, [dealerUser]);
 
   const fetchUserData = async () => {
+    if (!dealerUser?.email) return;
+    
     setIsLoading(true);
     try {
       const currentUser = await User.me();
-      setUser(currentUser);
 
       // If user profile is missing business data, check for an approved application and sync it.
       if (!currentUser.business_name && currentUser.email) {
@@ -39,51 +44,50 @@ export default function DealerProfile() {
           const app = apps[0];
           const profileData = {
             business_name: app.business_name || "",
-            full_name: app.contact_person || currentUser.full_name || "", // Update full_name as well
+            full_name: app.contact_person || currentUser.full_name || "",
             vat_pan: app.vat_pan || "",
             address: app.address || "",
             phone: app.phone || "",
             whatsapp: app.whatsapp || app.phone || "",
-            dealer_status: 'Approved' // Set status to approved
+            dealer_status: 'approved'
           };
           // Update user record in the backend with application data
           await User.updateMyUserData(profileData);
           // Set local state with the newly synced data
           setProfile({ ...profileData, contact_person: profileData.full_name });
-          setUser({ ...currentUser, ...profileData }); // Update local user object
         } else {
           // If no business_name and no approved application, populate with existing user data or empty strings
           setProfile({
-            business_name: "",
-            contact_person: currentUser.full_name || "",
+            business_name: dealerUser.businessName || "",
+            contact_person: dealerUser.name || "",
             vat_pan: "",
-            address: currentUser.address || "",
-            phone: currentUser.phone || "",
-            whatsapp: currentUser.whatsapp || "",
+            address: "",
+            phone: dealerUser.phone || "",
+            whatsapp: "",
           });
         }
       } else {
          // If business data already exists, populate from current user's profile
          setProfile({
-          business_name: currentUser.business_name || "",
-          contact_person: currentUser.full_name || "",
+          business_name: currentUser.business_name || dealerUser.businessName || "",
+          contact_person: currentUser.full_name || dealerUser.name || "",
           vat_pan: currentUser.vat_pan || "",
           address: currentUser.address || "",
-          phone: currentUser.phone || "",
+          phone: currentUser.phone || dealerUser.phone || "",
           whatsapp: currentUser.whatsapp || "",
         });
       }
 
     } catch (error) {
       console.error("Failed to fetch user data:", error);
-      // Mock data for display if not logged in or on error
-       setProfile({
-        business_name: "Jeen Mata Hardware",
-        contact_person: "Demo User",
-        vat_pan: "301234567",
-        address: "Kathmandu, Nepal",
-        phone: "+977-98XXXXXXXX",
-        whatsapp: "+977-98XXXXXXXX",
+      // Use dealerUser data as fallback
+      setProfile({
+        business_name: dealerUser.businessName || "",
+        contact_person: dealerUser.name || "",
+        vat_pan: "",
+        address: "",
+        phone: dealerUser.phone || "",
+        whatsapp: "",
       });
     }
     setIsLoading(false);
@@ -98,12 +102,10 @@ export default function DealerProfile() {
     setIsSaving(true);
     setSaveStatus(null);
     try {
-      if (user) {
+      if (dealerUser) {
         // When saving, send the contact_person value as full_name to the backend
         await User.updateMyUserData({ ...profile, full_name: profile.contact_person });
-        setUser((prevUser: any) => ({ ...prevUser, ...profile, full_name: profile.contact_person })); // Update local user state upon successful save
       }
-      // Mock success if no user object (though unlikely to happen with User.me())
       setSaveStatus("success");
     } catch (error) {
       console.error("Failed to save profile:", error);
@@ -118,7 +120,8 @@ export default function DealerProfile() {
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <DealerAuthWrapper>
+      <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Dealer Profile</h1>
         <Card className="shadow-lg">
@@ -170,7 +173,7 @@ export default function DealerProfile() {
                 <Label>Email Address (read-only)</Label>
                 <div className="relative">
                     <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                    <Input value={user?.email || 'dealer@example.com'} readOnly className="pl-9 bg-gray-100" />
+                    <Input value={dealerUser?.email || 'dealer@example.com'} readOnly className="pl-9 bg-gray-100" />
                 </div>
             </div>
           </CardContent>
@@ -184,6 +187,7 @@ export default function DealerProfile() {
           </CardFooter>
         </Card>
       </div>
-    </div>
+      </div>
+    </DealerAuthWrapper>
   );
 }
