@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useUser, useSignIn } from '@clerk/nextjs';
+import { useUser, useSignIn, useClerk } from '@clerk/nextjs';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ function AdminLoginContent() {
   const searchParams = useSearchParams();
   const { user, isLoaded } = useUser();
   const { signIn, isLoaded: signInLoaded } = useSignIn();
+  const { signOut } = useClerk();
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +40,8 @@ function AdminLoginContent() {
   useEffect(() => {
     // Redirect if user is already authenticated and is admin
     if (isLoaded && user) {
-      // Check if user is admin by making a request or checking stored data
+      console.log('User already logged in, checking admin status...');
+      setIsLoading(true);
       checkAdminStatus();
     }
   }, [isLoaded, user, router]);
@@ -51,8 +53,11 @@ function AdminLoginContent() {
       if (response.ok) {
         const data = await response.json();
         if (data.isAdmin) {
+          console.log('Admin status verified, redirecting...');
+          setIsLoading(false);
           router.push(redirectUrl);
         } else {
+          setIsLoading(false);
           setError('You do not have admin privileges. Please contact an administrator.');
         }
       } else if (response.status === 401 && retryCount < maxRetries) {
@@ -63,6 +68,7 @@ function AdminLoginContent() {
         }, (retryCount + 1) * 500); // Exponential backoff: 500ms, 1000ms, 1500ms
       } else {
         console.error('Admin status check failed:', response.status);
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Error checking admin status:', error);
@@ -70,6 +76,8 @@ function AdminLoginContent() {
         setTimeout(() => {
           checkAdminStatus(retryCount + 1, maxRetries);
         }, (retryCount + 1) * 500);
+      } else {
+        setIsLoading(false);
       }
     }
   };
@@ -136,6 +144,11 @@ function AdminLoginContent() {
       if (error.errors && error.errors[0]) {
         const errorCode = error.errors[0].code;
         switch (errorCode) {
+          case 'session_exists':
+            // User is already logged in, proceed to verify admin status
+            console.log('User already logged in, verifying admin status...');
+            await verifyAdminStatusWithRetry();
+            return;
           case 'form_identifier_not_found':
             setError('No account found with this email address.');
             break;
@@ -192,6 +205,22 @@ function AdminLoginContent() {
             </p>
           </CardHeader>
           <CardContent className="pt-6">
+            {/* Current User Status */}
+            {isLoaded && user && (
+              <Alert className="mb-6 bg-blue-900/50 border-blue-700 text-blue-200">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Already logged in as: {user.emailAddresses?.[0]?.emailAddress}
+                  <button
+                    onClick={() => signOut()}
+                    className="ml-2 text-blue-300 hover:text-blue-100 underline"
+                  >
+                    Logout
+                  </button>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Error Alert */}
             {error && (
               <Alert className="mb-6 bg-red-900/50 border-red-700 text-red-200">
