@@ -49,15 +49,47 @@ export default function MyOrders() {
       console.log('All orders loaded:', allOrders.length);
       const orderData = allOrders.filter((order: any) => order.dealer_email === dealerUser.email);
       console.log('Dealer orders:', orderData.length);
-      setOrders(orderData);
-    } catch (error: any) {
-      console.error("Failed to fetch orders:", error);
-      console.error('Error details:', error?.message || 'Unknown error');
+      
+      // Process orders to handle different data formats
+      const processedOrders = orderData.map((order: any) => {
+        let product_items = order.product_items;
+        
+        // Handle case where product_items is stored as JSON string
+        if (typeof product_items === 'string') {
+          try {
+            product_items = JSON.parse(product_items);
+          } catch (e) {
+            console.warn('Failed to parse product_items for order:', order.id);
+            product_items = [];
+          }
+        }
+        
+        // Handle case where product_items is stored in product_details
+        if (!product_items && order.product_details) {
+          try {
+            product_items = JSON.parse(order.product_details);
+          } catch (e) {
+            console.warn('Failed to parse product_details for order:', order.id);
+            product_items = [];
+          }
+        }
+        
+        return {
+          ...order,
+          product_items: Array.isArray(product_items) ? product_items : []
+        };
+      });
+      
+      setOrders(processedOrders);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      setOrders([]);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
-  const generatePrintableSlip = async (order: any) => {
+  const printOrderSlip = async (order: any) => {
     const allUsers = await User.list();
     const dealers = allUsers.filter((user: any) => user.email === order.dealer_email);
     const dealer = dealers.length > 0 ? dealers[0] : null;
@@ -197,10 +229,15 @@ export default function MyOrders() {
               <TableBody>
                 {filteredOrders.length > 0 ? filteredOrders.map((order: any) => (
                   <TableRow key={order.id}>
-                    <TableCell>{format(new Date(order.created_date), 'MMM d, yyyy')}</TableCell>
+                    <TableCell>
+                      {order.created_at || order.created_date 
+                        ? format(new Date(order.created_at || order.created_date), 'MMM d, yyyy')
+                        : 'N/A'
+                      }
+                    </TableCell>
                     <TableCell>{order.order_number}</TableCell>
-                    <TableCell>{order.product_items.length} items</TableCell>
-                    <TableCell>{order.total_amount_npr.toLocaleString('en-US')}</TableCell>
+                    <TableCell>{order.product_items?.length || 0} items</TableCell>
+                    <TableCell>NPR {(order.total_amount_npr || 0).toLocaleString('en-US')}</TableCell>
                     <TableCell>
                       <Badge className={getStatusBadgeClass(order.status)}>
                         {order.status}
@@ -224,7 +261,12 @@ export default function MyOrders() {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg border">
                                   <div>
                                     <h4 className="font-semibold text-gray-700 text-sm">Order Date</h4>
-                                    <p className="text-base">{format(new Date(selectedOrder.created_date), 'MMMM d, yyyy')}</p>
+                                    <p className="text-base">
+                                      {selectedOrder.created_at || selectedOrder.created_date 
+                                        ? format(new Date(selectedOrder.created_at || selectedOrder.created_date), 'MMMM d, yyyy')
+                                        : 'N/A'
+                                      }
+                                    </p>
                                   </div>
                                   <div>
                                     <h4 className="font-semibold text-gray-700 text-sm">Status</h4>
@@ -232,14 +274,14 @@ export default function MyOrders() {
                                   </div>
                                   <div>
                                     <h4 className="font-semibold text-gray-700 text-sm">Total Amount</h4>
-                                    <p className="text-base font-bold text-red-600">NPR {selectedOrder.total_amount_npr.toLocaleString('en-US')}</p>
+                                    <p className="text-base font-bold text-red-600">NPR {(selectedOrder.total_amount_npr || 0).toLocaleString('en-US')}</p>
                                   </div>
                                 </div>
 
                                 <div>
                                   <h4 className="font-semibold mb-4 text-lg">Order Items</h4>
                                   <div className="space-y-4">
-                                    {selectedOrder.product_items.map((item: any, index: number) => (
+                                    {(selectedOrder.product_items || []).map((item: any, index: number) => (
                                       <Card key={index} className="border border-gray-200 shadow-sm">
                                         <CardContent className="p-4">
                                           <div className="flex flex-col sm:flex-row gap-4">
