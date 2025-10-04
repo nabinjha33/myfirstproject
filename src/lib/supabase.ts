@@ -32,6 +32,7 @@ export interface Database {
       users: {
         Row: {
           id: string
+          clerk_user_id?: string
           email: string
           full_name: string
           business_name?: string
@@ -43,9 +44,12 @@ export interface Database {
           dealer_status?: 'pending' | 'approved' | 'rejected'
           created_at: string
           updated_at: string
+          created_date?: string
+          updated_date?: string
         }
         Insert: {
           id?: string
+          clerk_user_id?: string
           email: string
           full_name: string
           business_name?: string
@@ -57,9 +61,12 @@ export interface Database {
           dealer_status?: 'pending' | 'approved' | 'rejected'
           created_at?: string
           updated_at?: string
+          created_date?: string
+          updated_date?: string
         }
         Update: {
           id?: string
+          clerk_user_id?: string
           email?: string
           full_name?: string
           business_name?: string
@@ -71,6 +78,8 @@ export interface Database {
           dealer_status?: 'pending' | 'approved' | 'rejected'
           created_at?: string
           updated_at?: string
+          created_date?: string
+          updated_date?: string
         }
       }
       brands: {
@@ -207,8 +216,11 @@ export interface Database {
           experience_years?: number
           message?: string
           status: 'pending' | 'approved' | 'rejected'
+          rejection_reason?: string
           created_at: string
           updated_at: string
+          created_date?: string
+          updated_date?: string
         }
         Insert: {
           id?: string
@@ -226,8 +238,11 @@ export interface Database {
           experience_years?: number
           message?: string
           status?: 'pending' | 'approved' | 'rejected'
+          rejection_reason?: string
           created_at?: string
           updated_at?: string
+          created_date?: string
+          updated_date?: string
         }
         Update: {
           id?: string
@@ -245,8 +260,11 @@ export interface Database {
           experience_years?: number
           message?: string
           status?: 'pending' | 'approved' | 'rejected'
+          rejection_reason?: string
           created_at?: string
           updated_at?: string
+          created_date?: string
+          updated_date?: string
         }
       }
       orders: {

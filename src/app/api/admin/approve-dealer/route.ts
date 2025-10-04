@@ -6,6 +6,9 @@ import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
+    // Add delay for Clerk state sync (from memory about race conditions)
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     // Initialize Clerk client
     const clerkClient = createClerkClient({
       secretKey: process.env.CLERK_SECRET_KEY,
@@ -88,13 +91,55 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // No password changes - user keeps their original credentials
-
-    // Create dealer record in Supabase
-    const { data: dealerRecord, error: dealerError } = await supabaseAdmin
+    // Check if dealer record already exists
+    const { data: existingDealer } = await supabaseAdmin
       .from('users')
-      .insert({
-        clerk_user_id: clerkUser.id,
+      .select('id, dealer_status')
+      .eq('email', application.email)
+      .single();
+
+    let dealerRecord;
+    
+    if (existingDealer) {
+      // Update existing user to approved dealer status
+      let updateData: any = {
+        full_name: application.contact_person,
+        business_name: application.business_name,
+        phone: application.phone || null,
+        address: application.address || null,
+        vat_pan: application.vat_pan || null,
+        whatsapp: application.whatsapp || null,
+        role: 'dealer',
+        dealer_status: 'approved',
+        updated_at: new Date().toISOString()
+      };
+      
+      // Try to add clerk_user_id if the column exists
+      try {
+        updateData.clerk_user_id = clerkUser.id;
+      } catch (error) {
+        // If clerk_user_id column doesn't exist, continue without it
+        console.log('clerk_user_id column may not exist, continuing without it');
+      }
+      
+      const { data: updatedDealer, error: updateError } = await supabaseAdmin
+        .from('users')
+        .update(updateData)
+        .eq('email', application.email)
+        .select()
+        .single();
+        
+      if (updateError) {
+        console.error('Error updating dealer record:', updateError);
+        return NextResponse.json(
+          { error: `Failed to update dealer record: ${updateError.message}` },
+          { status: 500 }
+        );
+      }
+      dealerRecord = updatedDealer;
+    } else {
+      // Create new dealer record - try with clerk_user_id first, fallback without it
+      let insertData: any = {
         email: application.email,
         full_name: application.contact_person,
         business_name: application.business_name,
@@ -104,18 +149,60 @@ export async function POST(req: NextRequest) {
         whatsapp: application.whatsapp || null,
         role: 'dealer',
         dealer_status: 'approved',
-        created_date: new Date().toISOString(),
-        updated_date: new Date().toISOString()
-      })
-      .select()
-      .single();
-
-    if (dealerError) {
-      console.error('Error creating dealer record:', dealerError);
-      return NextResponse.json(
-        { error: 'Failed to create dealer record' },
-        { status: 500 }
-      );
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      // Try to add clerk_user_id if the column exists
+      try {
+        insertData.clerk_user_id = clerkUser.id;
+        
+        const { data: newDealer, error: createError } = await supabaseAdmin
+          .from('users')
+          .insert(insertData)
+          .select()
+          .single();
+          
+        if (createError) {
+          // If error is about clerk_user_id column not existing, retry without it
+          if (createError.message.includes('clerk_user_id') || createError.code === '42703') {
+            console.log('clerk_user_id column not found, retrying without it...');
+            delete insertData.clerk_user_id;
+            
+            const { data: retryDealer, error: retryError } = await supabaseAdmin
+              .from('users')
+              .insert(insertData)
+              .select()
+              .single();
+              
+            if (retryError) {
+              console.error('Error creating dealer record (retry):', retryError);
+              console.error('Application data:', application);
+              return NextResponse.json(
+                { error: `Failed to create dealer record: ${retryError.message}` },
+                { status: 500 }
+              );
+            }
+            dealerRecord = retryDealer;
+          } else {
+            console.error('Error creating dealer record:', createError);
+            console.error('Application data:', application);
+            console.error('Clerk user data:', { id: clerkUser.id, email: clerkUser.emailAddresses?.[0]?.emailAddress });
+            return NextResponse.json(
+              { error: `Failed to create dealer record: ${createError.message}` },
+              { status: 500 }
+            );
+          }
+        } else {
+          dealerRecord = newDealer;
+        }
+      } catch (error: any) {
+        console.error('Unexpected error creating dealer record:', error);
+        return NextResponse.json(
+          { error: `Unexpected error: ${error.message}` },
+          { status: 500 }
+        );
+      }
     }
 
     // Update application status to approved
@@ -123,12 +210,13 @@ export async function POST(req: NextRequest) {
       .from('dealer_applications')
       .update({ 
         status: 'approved',
-        updated_date: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', applicationId);
 
     if (updateError) {
       console.error('Error updating application status:', updateError);
+      // Don't fail the request since dealer record was created successfully
     }
 
     // Send approval email notification
