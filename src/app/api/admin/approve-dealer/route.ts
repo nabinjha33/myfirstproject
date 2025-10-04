@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { createClerkClient } from '@clerk/nextjs/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
@@ -124,7 +125,19 @@ export async function POST(req: NextRequest) {
         console.log('clerk_user_id column may not exist, continuing without it');
       }
       
-      const { data: updatedDealer, error: updateError } = await supabaseAdmin
+      // Use service role client to bypass RLS completely
+      const serviceClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      );
+      
+      const { data: updatedDealer, error: updateError } = await serviceClient
         .from('users')
         .update(updateData)
         .eq('email', application.email)
@@ -165,7 +178,19 @@ export async function POST(req: NextRequest) {
         console.log('clerk_user_id column may not exist');
       }
       
-      const { data: newDealer, error: createError } = await supabaseAdmin
+      // Use service role client to bypass RLS completely
+      const serviceClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      );
+      
+      const { data: newDealer, error: createError } = await serviceClient
         .from('users')
         .insert(insertData)
         .select()
@@ -187,7 +212,7 @@ export async function POST(req: NextRequest) {
             
           if (foundUser) {
             console.log('Found existing user, updating instead:', foundUser.id);
-            const { data: updatedUser, error: updateError } = await supabaseAdmin
+            const { data: updatedUser, error: updateError } = await serviceClient
               .from('users')
               .update({
                 full_name: application.contact_person,
