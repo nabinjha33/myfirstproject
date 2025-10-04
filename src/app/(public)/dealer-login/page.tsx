@@ -55,11 +55,11 @@ export default function DealerLogin() {
       setShowEmailVerification(true);
     }
     
-    // Redirect if user is already authenticated and is approved dealer
-    if (isLoaded && user) {
+    // Only check dealer status if user is loaded and not in the middle of signup/verification
+    if (isLoaded && user && !pendingVerification && !showEmailVerification) {
       checkDealerStatus();
     }
-  }, [isLoaded, user, router]);
+  }, [isLoaded, user, router, pendingVerification, showEmailVerification]);
 
   const checkDealerStatus = async (retryCount = 0, maxRetries = 3) => {
     if (!user) return;
@@ -80,7 +80,29 @@ export default function DealerLogin() {
         const data = await response.json();
         if (data.isApprovedDealer) {
           router.push('/dealer/catalog');
+        } else if (data.needsApplication) {
+          // User exists but hasn't filled out dealer application
+          setSubmissionStatus({
+            type: 'info',
+            message: 'Please complete your dealer application to continue.'
+          });
+          setTimeout(() => {
+            router.push('/dealer-application');
+          }, 2000);
+        } else if (data.hasApplication) {
+          // User has submitted application, show status
+          const statusMessage = data.applicationStatus === 'pending' 
+            ? 'Your dealer application is under review. Please wait for admin approval.'
+            : data.applicationStatus === 'rejected'
+            ? 'Your dealer application was rejected. Please contact support for more information.'
+            : `Application status: ${data.applicationStatus}`;
+            
+          setSubmissionStatus({
+            type: data.applicationStatus === 'pending' ? 'info' : 'error',
+            message: statusMessage
+          });
         }
+        // If user exists but application is pending/rejected, stay on login page
       } else if (response.status === 401 && retryCount < maxRetries) {
         console.log(`Dealer status check failed (401), retrying in ${(retryCount + 1) * 500}ms... (attempt ${retryCount + 1}/${maxRetries})`);
         setTimeout(() => {
@@ -419,6 +441,8 @@ export default function DealerLogin() {
                 <Alert className={`mb-4 ${
                   submissionStatus.type === 'success'
                     ? 'bg-green-50 border-green-200 text-green-800'
+                    : submissionStatus.type === 'info'
+                    ? 'bg-blue-50 border-blue-200 text-blue-800'
                     : 'bg-red-50 border-red-200 text-red-800'
                 }`}>
                   <AlertCircle className="h-4 w-4" />

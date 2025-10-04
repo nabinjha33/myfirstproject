@@ -56,16 +56,34 @@ async function handleDealerStatusCheck(req: NextRequest, email?: string, clerkUs
     if (error) {
       console.error('Error checking dealer status:', error);
       
-      // Check if user doesn't exist
+      // Check if user doesn't exist in database yet
       if (error.code === 'PGRST116') {
-        return NextResponse.json(
-          { 
-            isApprovedDealer: false, 
-            error: 'User not found in database',
-            debug: `No user found with email: ${email}. Please apply for dealer access first.`
-          },
-          { status: 404 }
-        );
+        // User authenticated with Clerk but not in our database yet
+        // Check if they have a pending dealer application
+        const { data: application, error: appError } = await supabaseAdmin
+          .from('dealer_applications')
+          .select('id, status')
+          .eq('email', email)
+          .single();
+
+        if (!appError && application) {
+          // User has an application
+          return NextResponse.json({
+            isApprovedDealer: false,
+            hasApplication: true,
+            applicationStatus: application.status,
+            needsApplication: false,
+            message: `Your dealer application is ${application.status}. Please wait for admin approval.`
+          });
+        } else {
+          // User needs to fill out application
+          return NextResponse.json({
+            isApprovedDealer: false,
+            hasApplication: false,
+            needsApplication: true,
+            message: 'Please complete your dealer application to continue.'
+          });
+        }
       }
       
       return NextResponse.json(
@@ -74,10 +92,38 @@ async function handleDealerStatusCheck(req: NextRequest, email?: string, clerkUs
       );
     }
 
+    // User exists in database
     const isApprovedDealer = user?.role === 'dealer' && user?.dealer_status === 'approved';
+    
+    // Check if user needs to submit application
+    let needsApplication = false;
+    let hasApplication = false;
+    let applicationStatus = null;
+    
+    if (!isApprovedDealer) {
+      // Check for existing dealer application
+      const { data: application, error: appError } = await supabaseAdmin
+        .from('dealer_applications')
+        .select('id, status')
+        .eq('email', email)
+        .single();
+
+      if (!appError && application) {
+        hasApplication = true;
+        applicationStatus = application.status;
+        needsApplication = false;
+      } else {
+        // No application found, user needs to apply
+        needsApplication = true;
+        hasApplication = false;
+      }
+    }
 
     return NextResponse.json({
       isApprovedDealer,
+      needsApplication,
+      hasApplication,
+      applicationStatus,
       user: {
         id: clerkUser.id,
         email: user.email,
