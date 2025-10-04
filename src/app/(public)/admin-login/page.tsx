@@ -17,8 +17,10 @@ import {
   AlertCircle,
   Loader2,
   Eye,
-  EyeOff
+  EyeOff,
+  RefreshCw
 } from "lucide-react";
+import { handleSessionConflict, isSessionConflictError } from '@/lib/auth-utils';
 
 function AdminLoginContent() {
   const router = useRouter();
@@ -30,6 +32,8 @@ function AdminLoginContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isReloginInProgress, setIsReloginInProgress] = useState(false);
+  const [reloginStatus, setReloginStatus] = useState<string | null>(null);
   const [loginForm, setLoginForm] = useState({
     email: "",
     password: ""
@@ -186,9 +190,41 @@ function AdminLoginContent() {
         const errorCode = error.errors[0].code;
         switch (errorCode) {
           case 'session_exists':
-            // User is already logged in, proceed to verify admin status
-            console.log('User already logged in, verifying admin status...');
-            await verifyAdminStatusWithRetry();
+            // Handle session conflict with automatic logout and re-login
+            console.log('Session conflict detected, attempting automatic logout and re-login...');
+            setIsReloginInProgress(true);
+            
+            const success = await handleSessionConflict(
+              signOut,
+              signIn,
+              { email: loginForm.email, password: loginForm.password },
+              {
+                onStatusUpdate: (message, type) => {
+                  setReloginStatus(message);
+                  if (type === 'error') {
+                    setError(message);
+                  }
+                },
+                onComplete: async () => {
+                  setReloginStatus('Authentication successful! Verifying admin access...');
+                  // Force page reload to ensure session is fully established
+                  sessionStorage.setItem('admin_redirect_after_login', redirectUrl);
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 1000);
+                },
+                onError: (errorMsg) => {
+                  setError(errorMsg);
+                  setIsReloginInProgress(false);
+                  setReloginStatus(null);
+                }
+              }
+            );
+            
+            if (!success) {
+              setIsReloginInProgress(false);
+              setReloginStatus(null);
+            }
             return;
           case 'form_identifier_not_found':
             setError('No account found with this email address.');
@@ -207,7 +243,9 @@ function AdminLoginContent() {
       }
     }
 
-    setIsLoading(false);
+    if (!isReloginInProgress) {
+      setIsLoading(false);
+    }
   };
 
   // Show loading while Clerk is initializing
@@ -247,7 +285,7 @@ function AdminLoginContent() {
           </CardHeader>
           <CardContent className="pt-6">
             {/* Current User Status */}
-            {isLoaded && user && (
+            {isLoaded && user && !isReloginInProgress && (
               <Alert className="mb-6 bg-blue-900/50 border-blue-700 text-blue-200">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
@@ -270,6 +308,16 @@ function AdminLoginContent() {
                       Logout
                     </button>
                   </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Re-login Progress Status */}
+            {isReloginInProgress && reloginStatus && (
+              <Alert className="mb-6 bg-yellow-900/50 border-yellow-700 text-yellow-200">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <AlertDescription>
+                  {reloginStatus}
                 </AlertDescription>
               </Alert>
             )}
@@ -325,12 +373,12 @@ function AdminLoginContent() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white h-12 font-medium"
-                disabled={isLoading}
+                disabled={isLoading || isReloginInProgress}
               >
-                {isLoading ? (
+                {isLoading || isReloginInProgress ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Verifying Access...
+                    {isReloginInProgress ? 'Refreshing Session...' : 'Verifying Access...'}
                   </>
                 ) : (
                   <>

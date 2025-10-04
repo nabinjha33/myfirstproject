@@ -19,17 +19,22 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
-  UserPlus
+  UserPlus,
+  RefreshCw
 } from "lucide-react";
+import { handleSessionConflict, isSessionConflictError } from '@/lib/auth-utils';
 
 export default function DealerLogin() {
   const router = useRouter();
   const { user, isLoaded } = useUser();
   const { signIn, isLoaded: signInLoaded } = useSignIn();
   const { signUp, isLoaded: signUpLoaded } = useSignUp();
+  const { signOut } = useClerk();
   
   const [isLoading, setIsLoading] = useState(false);
   const [submissionStatus, setSubmissionStatus] = React.useState<any>(null);
+  const [isReloginInProgress, setIsReloginInProgress] = useState(false);
+  const [reloginStatus, setReloginStatus] = useState<string | null>(null);
   const [showEmailVerification, setShowEmailVerification] = React.useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [pendingVerification, setPendingVerification] = useState(false);
@@ -229,6 +234,42 @@ export default function DealerLogin() {
       if (error.errors && error.errors[0]) {
         const errorCode = error.errors[0].code;
         switch (errorCode) {
+          case 'session_exists':
+            // Handle session conflict with automatic logout and re-login
+            console.log('Session conflict detected, attempting automatic logout and re-login...');
+            setIsReloginInProgress(true);
+            
+            const success = await handleSessionConflict(
+              signOut,
+              signIn,
+              { email: loginForm.email, password: loginForm.password },
+              {
+                onStatusUpdate: (message, type) => {
+                  setReloginStatus(message);
+                  if (type === 'error') {
+                    setSubmissionStatus({ type: 'error', message });
+                  }
+                },
+                onComplete: async () => {
+                  setReloginStatus('Authentication successful! Verifying dealer access...');
+                  // Verify dealer status after successful re-login
+                  await verifyDealerStatusWithRetry();
+                  setIsReloginInProgress(false);
+                  setReloginStatus(null);
+                },
+                onError: (errorMsg) => {
+                  setSubmissionStatus({ type: 'error', message: errorMsg });
+                  setIsReloginInProgress(false);
+                  setReloginStatus(null);
+                }
+              }
+            );
+            
+            if (!success) {
+              setIsReloginInProgress(false);
+              setReloginStatus(null);
+            }
+            return;
           case 'form_identifier_not_found':
             setSubmissionStatus({
               type: 'error',
@@ -261,7 +302,9 @@ export default function DealerLogin() {
       }
     }
 
-    setIsLoading(false);
+    if (!isReloginInProgress) {
+      setIsLoading(false);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -460,8 +503,18 @@ export default function DealerLogin() {
               <CardTitle className="text-2xl">Dealer Portal Access</CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Re-login Progress Status */}
+              {isReloginInProgress && reloginStatus && (
+                <Alert className="mb-4 bg-yellow-50 border-yellow-200 text-yellow-800">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <AlertDescription>
+                    {reloginStatus}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {/* Status Messages */}
-              {submissionStatus && (
+              {submissionStatus && !isReloginInProgress && (
                 <Alert className={`mb-4 ${
                   submissionStatus.type === 'success'
                     ? 'bg-green-50 border-green-200 text-green-800'
@@ -520,12 +573,12 @@ export default function DealerLogin() {
                       <Button
                         type="submit"
                         className="w-full bg-red-600 hover:bg-red-700 h-11"
-                        disabled={isLoading}
+                        disabled={isLoading || isReloginInProgress}
                       >
-                        {isLoading ? (
+                        {isLoading || isReloginInProgress ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Signing In...
+                            {isReloginInProgress ? 'Refreshing Session...' : 'Signing In...'}
                           </>
                         ) : (
                           "Sign In to Dealer Portal"
