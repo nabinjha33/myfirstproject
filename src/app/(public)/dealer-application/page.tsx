@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from '@clerk/nextjs';
-import { DealerApplication } from "@/lib/entities";
+import { DealerApplication as DealerApplicationEntity } from "@/lib/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,7 +64,7 @@ export default function DealerApplication() {
       console.log('Submitting dealer application for:', user.primaryEmailAddress.emailAddress);
       
       // Check if application already exists for this email
-      const existingApplications = await DealerApplication.list();
+      const existingApplications = await DealerApplicationEntity.list();
       const existingApp = existingApplications.find((app: any) => 
         app.email === user.primaryEmailAddress?.emailAddress && 
         app.status !== 'rejected'
@@ -98,7 +98,7 @@ export default function DealerApplication() {
       };
 
       console.log('Creating application with data:', applicationData);
-      await DealerApplication.create(applicationData);
+      await DealerApplicationEntity.create(applicationData);
       console.log('Application created successfully');
       
       setSubmissionStatus({
