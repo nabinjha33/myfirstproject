@@ -30,7 +30,8 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
-import DealerInvitationForm from '@/components/admin/DealerInvitationForm';
+import DealerRegistrationInfo from '@/components/admin/DealerInvitationForm';
+import EmailTemplates from '@/components/admin/EmailTemplates';
 
 export default function AdminDealers() {
   const [dealers, setDealers] = useState<any[]>([]);
@@ -140,13 +141,13 @@ export default function AdminDealers() {
         }
 
         const result = await response.json();
-        setActionStatus(`✅ Dealer approved! Credentials sent via email automatically.`);
+        setActionStatus(`✅ Dealer approved! Approval notification sent via email automatically.`);
         
-        // Store credentials for display
+        // Store dealer info for display
         setApprovedCredentials({
-          email: result.credentials.email,
-          password: result.credentials.password,
-          businessName: result.credentials.businessName
+          email: result.dealerInfo.email,
+          password: 'User keeps their own password',
+          businessName: result.dealerInfo.businessName
         });
       } else {
         // Call rejection API
@@ -292,10 +293,10 @@ export default function AdminDealers() {
                   <div className="text-sm text-gray-600 space-y-1">
                     <div><strong>Business:</strong> {approvedCredentials.businessName}</div>
                     <div><strong>Email:</strong> {approvedCredentials.email}</div>
-                    <div><strong>Temporary Password:</strong> <span className="font-mono bg-gray-100 px-2 py-1 rounded">{approvedCredentials.password}</span></div>
+                    <div><strong>Login:</strong> Dealer uses their own signup credentials</div>
                   </div>
                   <div className="mt-3 text-sm text-green-700">
-                    📧 Approval email with login credentials has been sent automatically.
+                    📧 Approval notification email has been sent automatically.
                   </div>
                 </div>
 
@@ -312,14 +313,14 @@ export default function AdminDealers() {
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      const credentials = `Login Credentials:\nEmail: ${approvedCredentials.email}\nPassword: ${approvedCredentials.password}`;
-                      navigator.clipboard.writeText(credentials);
-                      setActionStatus('📋 Credentials copied to clipboard!');
+                      const info = `Dealer Approved:\nBusiness: ${approvedCredentials.businessName}\nEmail: ${approvedCredentials.email}\nStatus: Approved - can now login with their signup credentials`;
+                      navigator.clipboard.writeText(info);
+                      setActionStatus('📋 Dealer info copied to clipboard!');
                       setTimeout(() => setActionStatus(null), 3000);
                     }}
                     className="text-blue-600 border-blue-200"
                   >
-                    📋 Copy Credentials
+                    📋 Copy Dealer Info
                   </Button>
                 </div>
               </div>
@@ -336,7 +337,8 @@ export default function AdminDealers() {
                 <Badge className="ml-2 bg-red-500 text-white">{filteredApplications.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="invite">Invite New Dealer</TabsTrigger>
+            <TabsTrigger value="info">Registration Info</TabsTrigger>
+            <TabsTrigger value="emails">Email Templates</TabsTrigger>
           </TabsList>
 
           <TabsContent value="manage">
@@ -515,16 +517,14 @@ export default function AdminDealers() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="invite">
-            <Card>
-              <CardHeader>
-                <CardTitle>Invite New Dealer</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DealerInvitationForm onSuccess={fetchData} />
-              </CardContent>
-            </Card>
+          <TabsContent value="info">
+            <DealerRegistrationInfo />
           </TabsContent>
+
+          <TabsContent value="emails">
+            <EmailTemplates />
+          </TabsContent>
+
         </Tabs>
 
         {/* Detail Dialog */}

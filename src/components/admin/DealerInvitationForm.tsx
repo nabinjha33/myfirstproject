@@ -1,283 +1,116 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import React from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Mail, Building, Phone, MapPin, CheckCircle, AlertCircle, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { UserPlus, Mail, CheckCircle, ArrowRight, Users, FileText } from "lucide-react";
 
-export default function DealerInvitationForm() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [status, setStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
-  
-  const [invitationData, setInvitationData] = useState({
-    email: '',
-    businessName: '',
-    contactPerson: '',
-    phone: '',
-    address: '',
-    businessType: '',
-    message: ''
-  });
-
-  const businessTypes = [
-    'Hardware Store',
-    'Construction Supplier',
-    'Tool Retailer',
-    'Industrial Supplier',
-    'Wholesale Distributor',
-    'Other'
-  ];
-
-  const handleInputChange = (field: string, value: string) => {
-    setInvitationData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setStatus({ type: null, message: '' });
-
-    try {
-      // Validation
-      if (!validateEmail(invitationData.email)) {
-        setStatus({ type: 'error', message: 'Please enter a valid email address' });
-        setIsLoading(false);
-        return;
-      }
-
-      if (!invitationData.businessName.trim()) {
-        setStatus({ type: 'error', message: 'Business name is required' });
-        setIsLoading(false);
-        return;
-      }
-
-      if (!invitationData.contactPerson.trim()) {
-        setStatus({ type: 'error', message: 'Contact person name is required' });
-        setIsLoading(false);
-        return;
-      }
-
-      // Send invitation
-      const response = await fetch('/api/admin/invite-dealer', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(invitationData)
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setStatus({ 
-          type: 'success', 
-          message: `Invitation sent successfully to ${invitationData.email}. The dealer will receive login credentials via email.` 
-        });
-        
-        // Reset form
-        setInvitationData({
-          email: '',
-          businessName: '',
-          contactPerson: '',
-          phone: '',
-          address: '',
-          businessType: '',
-          message: ''
-        });
-      } else {
-        const error = await response.json();
-        setStatus({ 
-          type: 'error', 
-          message: error.message || 'Failed to send invitation. Please try again.' 
-        });
-      }
-
-    } catch (error: any) {
-      console.error('Invitation error:', error);
-      setStatus({ 
-        type: 'error', 
-        message: 'Network error. Please check your connection and try again.' 
-      });
-    }
-
-    setIsLoading(false);
-  };
-
+// This component has been updated to reflect the new self-registration process
+// Dealers now sign up with their own credentials instead of admin-generated ones
+export default function DealerRegistrationInfo() {
   return (
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <UserPlus className="w-5 h-5" />
-          Invite New Dealer
+          <Users className="w-5 h-5" />
+          Dealer Registration Process
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        {status.type && (
-          <Alert className={`mb-6 ${
-            status.type === 'success' 
-              ? 'bg-green-50 border-green-200 text-green-800' 
-              : 'bg-red-50 border-red-200 text-red-800'
-          }`}>
-            {status.type === 'success' ? (
-              <CheckCircle className="h-4 w-4" />
-            ) : (
-              <AlertCircle className="h-4 w-4" />
-            )}
-            <AlertDescription>{status.message}</AlertDescription>
-          </Alert>
-        )}
+      <CardContent className="space-y-6">
+        <Alert className="bg-blue-50 border-blue-200 text-blue-800">
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>New Process:</strong> Dealers now register themselves with their own email and password. 
+            No admin-generated credentials needed!
+          </AlertDescription>
+        </Alert>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Email */}
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address *</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-              <Input
-                id="email"
-                type="email"
-                value={invitationData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                className="pl-10"
-                placeholder="dealer@example.com"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Business Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="businessName">Business Name *</Label>
-              <div className="relative">
-                <Building className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                <Input
-                  id="businessName"
-                  value={invitationData.businessName}
-                  onChange={(e) => handleInputChange('businessName', e.target.value)}
-                  className="pl-10"
-                  placeholder="ABC Hardware Store"
-                  required
-                />
+        <div className="space-y-4">
+          <h3 className="font-semibold text-gray-900 mb-3">How New Dealers Join:</h3>
+          
+          <div className="space-y-3">
+            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-medium text-blue-600">
+                1
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900">Dealer Signs Up</h4>
+                <p className="text-sm text-gray-600">Potential dealers visit the dealer login page and create their own account with email and password</p>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="contactPerson">Contact Person *</Label>
-              <Input
-                id="contactPerson"
-                value={invitationData.contactPerson}
-                onChange={(e) => handleInputChange('contactPerson', e.target.value)}
-                placeholder="John Doe"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Contact Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={invitationData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  className="pl-10"
-                  placeholder="+977-98XXXXXXXX"
-                />
+            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-medium text-blue-600">
+                2
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900">Email Verification</h4>
+                <p className="text-sm text-gray-600">They verify their email address using the code sent to their inbox</p>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="businessType">Business Type</Label>
-              <Select value={invitationData.businessType} onValueChange={(value) => handleInputChange('businessType', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select business type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {businessTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-medium text-blue-600">
+                3
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900">Application Form</h4>
+                <p className="text-sm text-gray-600">After verification, they're redirected to fill out the dealer application form</p>
+              </div>
             </div>
-          </div>
 
-          {/* Address */}
-          <div className="space-y-2">
-            <Label htmlFor="address">Business Address</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-              <Input
-                id="address"
-                value={invitationData.address}
-                onChange={(e) => handleInputChange('address', e.target.value)}
-                className="pl-10"
-                placeholder="Street, City, District"
-              />
-            </div>
-          </div>
-
-          {/* Welcome Message */}
-          <div className="space-y-2">
-            <Label htmlFor="message">Welcome Message (Optional)</Label>
-            <Textarea
-              id="message"
-              value={invitationData.message}
-              onChange={(e) => handleInputChange('message', e.target.value)}
-              placeholder="Welcome to our dealer network! We're excited to work with you..."
-              className="min-h-[80px]"
-            />
-          </div>
-
-          {/* Information Box */}
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Mail className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div className="text-sm">
-                <h4 className="font-medium text-blue-800 mb-1">What happens next?</h4>
-                <ul className="text-blue-700 space-y-1">
-                  <li>• An account will be created with a secure temporary password</li>
-                  <li>• Login credentials will be sent to the dealer's email</li>
-                  <li>• The dealer must verify their email before accessing the portal</li>
-                  <li>• They'll be prompted to change their password on first login</li>
-                </ul>
+            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+              <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-medium text-green-600">
+                4
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900">Admin Review</h4>
+                <p className="text-sm text-gray-600">Applications appear in the "Pending Applications" tab for admin review and approval</p>
               </div>
             </div>
           </div>
+        </div>
 
-          <Button 
-            type="submit" 
-            disabled={isLoading}
-            className="w-full"
-          >
-            {isLoading ? (
-              <>
-                <Send className="w-4 h-4 mr-2 animate-pulse" />
-                Sending Invitation...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4 mr-2" />
-                Send Invitation
-              </>
-            )}
-          </Button>
-        </form>
+        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+            <div className="text-sm">
+              <h4 className="font-medium text-green-800 mb-1">Benefits of Self-Registration:</h4>
+              <ul className="text-green-700 space-y-1">
+                <li>• Dealers choose their own secure passwords</li>
+                <li>• No need to generate and distribute temporary credentials</li>
+                <li>• Faster onboarding process</li>
+                <li>• Better security with user-controlled authentication</li>
+                <li>• Automatic email verification ensures valid contact information</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <Link href="/dealer-login" target="_blank">
+            <Button className="flex items-center gap-2">
+              <UserPlus className="w-4 h-4" />
+              View Dealer Signup Page
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+          
+          <Link href="/dealer-application" target="_blank">
+            <Button variant="outline" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              View Application Form
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+        </div>
+
+        <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+          <strong>Note:</strong> Share the dealer login page link (/dealer-login) with potential dealers. 
+          They can sign up and apply directly without any admin intervention.
+        </div>
       </CardContent>
     </Card>
   );

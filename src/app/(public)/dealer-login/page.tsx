@@ -516,7 +516,7 @@ export default function DealerLogin() {
                       </Button>
 
                       <p className="text-center text-sm text-gray-600">
-                        Note: Only approved dealers can login. Use the credentials provided in your approval email.
+                        Note: Only approved dealers can login. If you don't have an account, sign up using the tab above.
                       </p>
                     </form>
                   </TabsContent>

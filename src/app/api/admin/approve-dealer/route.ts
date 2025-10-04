@@ -88,21 +88,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate secure temporary password
-    const tempPassword = crypto.randomBytes(12).toString('base64').slice(0, 16);
-
-    // Update the user's password in Clerk
-    try {
-      await clerkClient.users.updateUser(clerkUser.id, {
-        password: tempPassword,
-      });
-    } catch (error) {
-      console.error('Error updating user password:', error);
-      return NextResponse.json(
-        { error: 'Error updating user credentials' },
-        { status: 500 }
-      );
-    }
+    // No password changes - user keeps their original credentials
 
     // Create dealer record in Supabase
     const { data: dealerRecord, error: dealerError } = await supabaseAdmin
@@ -145,13 +131,12 @@ export async function POST(req: NextRequest) {
       console.error('Error updating application status:', updateError);
     }
 
-    // Send approval email with credentials
+    // Send approval email notification
     try {
       await sendApprovalEmail({
         email: application.email,
         contactPerson: application.contact_person,
         businessName: application.business_name,
-        tempPassword,
       });
     } catch (emailError) {
       console.error('Error sending approval email:', emailError);
@@ -162,10 +147,10 @@ export async function POST(req: NextRequest) {
       success: true,
       message: 'Dealer application approved successfully',
       dealerId: dealerRecord.id,
-      credentials: {
+      dealerInfo: {
         email: application.email,
-        password: tempPassword,
-        businessName: application.business_name
+        businessName: application.business_name,
+        contactPerson: application.contact_person
       }
     });
 
@@ -182,12 +167,10 @@ async function sendApprovalEmail({
   email,
   contactPerson,
   businessName,
-  tempPassword,
 }: {
   email: string;
   contactPerson: string;
   businessName: string;
-  tempPassword: string;
 }) {
   // In a real application, you would use a proper email service like:
   // - SendGrid
@@ -203,23 +186,21 @@ async function sendApprovalEmail({
 
     Congratulations! We're excited to inform you that your dealer application for ${businessName} has been approved.
 
-    Your dealer portal credentials are:
+    You can now access the dealer portal using the credentials you created during signup:
 
-    Email: ${email}
-    Password: ${tempPassword}
-
-    IMPORTANT NEXT STEPS:
+    NEXT STEPS:
     1. Visit: ${process.env.NEXT_PUBLIC_APP_URL}/dealer-login
-    2. Log in with the credentials above
-    3. IMMEDIATELY change your password after first login for security
-    4. Complete your profile information
-    5. Start browsing our wholesale catalog
+    2. Log in with your email and password
+    3. Complete your profile information if needed
+    4. Start browsing our wholesale catalog
 
     Welcome to the Jeen Mata Impex dealer network! You now have access to:
     - Wholesale pricing on all products
     - Exclusive dealer-only products
     - Priority customer support
     - Bulk order capabilities
+    - Order tracking and management
+    - Shipment notifications
 
     If you have any questions or need assistance, please don't hesitate to contact our support team.
 
@@ -244,7 +225,6 @@ async function sendApprovalEmail({
       contactPerson,
       businessName,
       email,
-      tempPassword,
       loginUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dealer-login`
     })
   });
