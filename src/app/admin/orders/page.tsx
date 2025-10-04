@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Order, User } from '@/lib/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,20 +8,35 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, CheckCircle, Eye, Package, FileText } from 'lucide-react';
+import { Trash2, CheckCircle, Eye, Package, FileText, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import AdminAuthWrapper from '@/components/admin/AdminAuthWrapper';
+import DealerInfoSection from '@/components/admin/DealerInfoSection';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState<any[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('All');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const { user: adminUser } = useAdminAuth();
+
+  const applyFilters = useCallback(() => {
+    let filtered = [...orders];
+    if (statusFilter !== 'All') {
+      filtered = filtered.filter((order: any) => order.status === statusFilter);
+    }
+    setFilteredOrders(filtered);
+  }, [orders, statusFilter]);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -30,36 +45,37 @@ export default function AdminOrders() {
       
       // Process orders to handle different data formats
       const processedOrders = orderData.map((order: any) => {
-        let items = order.items || order.product_items;
+        let product_items = order.product_items || order.items;
         
-        // Handle case where items is stored as JSON string
-        if (typeof items === 'string') {
+        // Handle case where product_items is stored as JSON string
+        if (typeof product_items === 'string') {
           try {
-            items = JSON.parse(items);
+            product_items = JSON.parse(product_items);
           } catch (e) {
-            console.warn('Failed to parse items for order:', order.id);
-            items = [];
+            console.warn('Failed to parse product_items for order:', order.id);
+            product_items = [];
           }
         }
         
-        // Handle case where items is stored in product_details
-        if (!items && order.product_details) {
+        // Handle case where product_items is stored in product_details
+        if (!product_items && order.product_details) {
           try {
-            items = JSON.parse(order.product_details);
+            product_items = JSON.parse(order.product_details);
           } catch (e) {
             console.warn('Failed to parse product_details for order:', order.id);
-            items = [];
+            product_items = [];
           }
         }
         
         return {
           ...order,
-          items: Array.isArray(items) ? items : [],
-          estimated_total_value: order.estimated_total_value || order.total_amount_npr || 0
+          product_items: Array.isArray(product_items) ? product_items : [],
+          total_amount_npr: order.total_amount_npr || order.estimated_total_value || 0
         };
       });
       
-      setOrders(processedOrders.filter((o: any) => o.status !== 'Archived'));
+      const activeOrders = processedOrders.filter((o: any) => o.status !== 'Archived');
+      setOrders(activeOrders);
     } catch (error) {
       console.error("Failed to fetch orders:", error);
       setOrders([]);
@@ -101,16 +117,118 @@ export default function AdminOrders() {
     return statusClasses[status] || 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
+  const generatePrintableSlip = async (order: any) => {
+    const allUsers = await User.list();
+    const dealers = allUsers.filter((user: any) => user.email === order.dealer_email);
+    const dealer = dealers.length > 0 ? dealers[0] : null;
+
+    const slipHTML = `
+      <html>
+        <head>
+          <title>Order Slip - ${order.order_number}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; color: #1f2937; }
+            .slip-container { max-width: 800px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; }
+            h1, h2, h3 { color: #dc2626; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+            th { background-color: #f3f4f6; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 2px solid #dc2626; }
+            .total { text-align: right; margin-top: 20px; font-size: 1.5em; font-weight: bold; }
+            .item-notes { font-size: 0.8em; color: #555; }
+            @media print {
+              body { padding: 0; }
+              .slip-container { border: none; box-shadow: none; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="slip-container">
+            <div class="header">
+              <div>
+                <h1>Order Slip</h1>
+                <p><strong>Order #:</strong> ${order.order_number}</p>
+                <p><strong>Date:</strong> ${order.created_at || order.created_date ? format(new Date(order.created_at || order.created_date), 'MMMM d, yyyy') : 'N/A'}</p>
+              </div>
+              <div>
+                <h2>Jeen Mata Impex</h2>
+              </div>
+            </div>
+            
+            <h3 style="margin-top: 30px;">Dealer Information</h3>
+            ${dealer ? `
+              <p><strong>Business:</strong> ${dealer.business_name || 'N/A'}</p>
+              <p><strong>Contact:</strong> ${dealer.full_name || 'N/A'}</p>
+              <p><strong>Email:</strong> ${dealer.email}</p>
+              <p><strong>Address:</strong> ${dealer.address || 'N/A'}</p>
+            ` : `<p><strong>Email:</strong> ${order.dealer_email}</p>`}
+
+            <h3 style="margin-top: 30px;">Order Items</h3>
+            <table>
+              <thead>
+                <tr><th>Product</th><th>Variant</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr>
+              </thead>
+              <tbody>
+                ${(order.product_items || []).map((item: any) => `
+                  <tr>
+                    <td>
+                      ${item.product_name}
+                      ${item.notes ? `<p class="item-notes"><em>Note: ${item.notes}</em></p>` : ''}
+                    </td>
+                    <td>${item.variant_details || 'Standard'}</td>
+                    <td style="text-align: center;">${item.quantity || 1}</td>
+                    <td style="text-align: right;">NPR ${(item.unit_price_npr || item.price || 0).toLocaleString('en-US')}</td>
+                    <td style="text-align: right;">NPR ${((item.unit_price_npr || item.price || 0) * (item.quantity || 1)).toLocaleString('en-US')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            
+            <div class="total">
+              Total Amount: NPR ${(order.total_amount_npr || 0).toLocaleString('en-US')}
+            </div>
+            <button class="no-print" onclick="window.print()">Print this slip</button>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(slipHTML);
+      printWindow.document.close();
+      printWindow.focus();
+    }
+  };
+
   if (isLoading) return <div className="p-6">Loading orders...</div>;
 
   return (
     <AdminAuthWrapper>
       <div className="p-6 bg-gray-50 min-h-screen">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Manage Orders</h1>
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">Manage Orders</h1>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40" suppressHydrationWarning>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="Submitted">Submitted</SelectItem>
+                <SelectItem value="Confirmed">Confirmed</SelectItem>
+                <SelectItem value="Processing">Processing</SelectItem>
+                <SelectItem value="Shipped">Shipped</SelectItem>
+                <SelectItem value="Delivered">Delivered</SelectItem>
+                <SelectItem value="Cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         <Card>
           <CardHeader>
-            <CardTitle>All Dealer Orders ({orders.length})</CardTitle>
+            <CardTitle>All Dealer Orders ({filteredOrders.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -119,13 +237,14 @@ export default function AdminOrders() {
                   <TableHead>Date</TableHead>
                   <TableHead>Order #</TableHead>
                   <TableHead>Dealer Email</TableHead>
+                  <TableHead>Items</TableHead>
                   <TableHead>Total (NPR)</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {orders.length > 0 ? orders.map((order: any) => (
+                {filteredOrders.length > 0 ? filteredOrders.map((order: any) => (
                   <TableRow key={order.id}>
                     <TableCell>
                       {order.created_at || order.created_date 
@@ -135,7 +254,8 @@ export default function AdminOrders() {
                     </TableCell>
                     <TableCell>{order.order_number}</TableCell>
                     <TableCell>{order.dealer_email}</TableCell>
-                    <TableCell>NPR {(order.estimated_total_value || 0).toLocaleString()}</TableCell>
+                    <TableCell>{order.product_items?.length || 0} items</TableCell>
+                    <TableCell>NPR {(order.total_amount_npr || 0).toLocaleString('en-US')}</TableCell>
                     <TableCell>
                       <Select value={order.status} onValueChange={(newStatus) => handleStatusChange(order.id, newStatus)}>
                         <SelectTrigger className="w-36">
@@ -183,28 +303,41 @@ export default function AdminOrders() {
                                   </div>
                                   <div>
                                     <h4 className="font-semibold text-gray-700 text-sm">Total Amount</h4>
-                                    <p className="text-base font-bold text-red-600">NPR {selectedOrder.estimated_total_value?.toLocaleString('en-US') || 'N/A'}</p>
+                                    <p className="text-base font-bold text-red-600">NPR {(selectedOrder.total_amount_npr || 0).toLocaleString('en-US')}</p>
                                   </div>
                                 </div>
+
+                                <DealerInfoSection dealerEmail={selectedOrder.dealer_email} />
+
                                 <div>
                                   <h4 className="font-semibold mb-4 text-lg">Order Items</h4>
                                   <div className="space-y-4">
-                                    {(selectedOrder.items || []).map((item: any, index: number) => (
+                                    {(selectedOrder.product_items || []).map((item: any, index: number) => (
                                       <Card key={index} className="border border-gray-200 shadow-sm">
                                         <CardContent className="p-4">
                                           <div className="flex flex-col sm:flex-row gap-4">
                                             {item.product_image ? (
-                                              <img src={item.product_image} alt={item.product_name} className="w-24 h-24 object-cover rounded-lg border flex-shrink-0" />
+                                              <img 
+                                                src={item.product_image} 
+                                                alt={item.product_name}
+                                                className="w-24 h-24 object-cover rounded-lg border flex-shrink-0"
+                                              />
                                             ) : (
                                               <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center border flex-shrink-0">
                                                 <Package className="w-8 h-8 text-gray-400" />
                                               </div>
                                             )}
                                             <div className="flex-1">
-                                              <h5 className="font-semibold text-lg">{item.product_name}</h5>
-                                              <p className="text-sm text-gray-600 mb-1"><span className="font-medium">Variant:</span> {item.variant_details || 'Standard'}</p>
-                                              <p className="text-sm text-gray-600 mb-2"><span className="font-medium">Unit Price:</span> NPR {(item.unit_price_npr || item.price || 0).toLocaleString('en-US')}</p>
-                                              <p className="text-sm text-gray-600 mb-1"><span className="font-medium">Quantity:</span> {item.quantity || 1}</p>
+                                              <h5 className="font-semibold text-lg">{item.product_name || `Product ID: ${item.product_id}`}</h5>
+                                              <p className="text-sm text-gray-600 mb-1">
+                                                <span className="font-medium">Variant:</span> {item.variant_details || 'Standard'}
+                                              </p>
+                                              <p className="text-sm text-gray-600 mb-2">
+                                                <span className="font-medium">Unit Price:</span> NPR {(item.unit_price_npr || item.price || 0).toLocaleString('en-US')}
+                                              </p>
+                                              <p className="text-sm text-gray-600 mb-1">
+                                                <span className="font-medium">Quantity:</span> {item.quantity || 1}
+                                              </p>
                                             </div>
                                             <div className="text-right mt-4 sm:mt-0">
                                               <p className="font-bold text-lg">NPR {((item.unit_price_npr || item.price || 0) * (item.quantity || 1)).toLocaleString('en-US')}</p>
@@ -230,10 +363,21 @@ export default function AdminOrders() {
                             </DialogContent>
                           )}
                         </Dialog>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => generatePrintableSlip(order)}
+                        >
+                          <Printer className="w-4 h-4 mr-2" />
+                          Print Slip
+                        </Button>
+                        
                         <Button variant="outline" size="sm" onClick={() => handleAction(order.id, 'Delivered')}>
                           <CheckCircle className="w-4 h-4 mr-2" />
                           Complete
                         </Button>
+                        
                         <Button variant="destructive" size="sm" onClick={() => handleAction(order.id, 'Archived')}>
                           <Trash2 className="w-4 h-4 mr-2" />
                           Archive
@@ -243,7 +387,7 @@ export default function AdminOrders() {
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">No active orders found.</TableCell>
+                    <TableCell colSpan={7} className="text-center">No orders found with the selected filters.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
