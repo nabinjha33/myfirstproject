@@ -199,7 +199,24 @@ export default function DealerLogin() {
 
       if (result.status === 'complete') {
         console.log('✅ Clerk login completed, redirecting to dealer portal...');
-        router.push('/dealer/catalog');
+        
+        // Set success message
+        setSubmissionStatus({
+          type: 'success',
+          message: 'Login successful! Redirecting to dealer portal...'
+        });
+        
+        // Keep loading state active during redirect
+        // Wait a moment for the success message to show, then redirect with full reload
+        setTimeout(() => {
+          setSubmissionStatus({
+            type: 'info',
+            message: 'Loading dealer portal...'
+          });
+          
+          // Use window.location.href for full page reload and clean state
+          window.location.href = '/dealer/catalog';
+        }, 1500);
       } else {
         setSubmissionStatus({
           type: 'error',

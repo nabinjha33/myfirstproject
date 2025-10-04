@@ -35,12 +35,16 @@ export default function DealerAuthWrapper({ children, fallback }: DealerAuthWrap
               : 'You need to be logged in as an approved dealer to access this page.'
             }
           </p>
-          <a 
-            href="/dealer-login" 
+          <button 
+            onClick={() => {
+              // Force a full page reload when redirecting to login
+              // This ensures clean state and proper authentication flow
+              window.location.href = '/dealer-login';
+            }}
             className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
             Go to Dealer Login
-          </a>
+          </button>
         </div>
       </div>
     );
