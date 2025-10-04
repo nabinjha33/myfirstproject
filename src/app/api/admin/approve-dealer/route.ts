@@ -168,8 +168,14 @@ export async function POST(req: NextRequest) {
         vat_pan: application.vat_pan || null,
         whatsapp: application.whatsapp || null,
         role: 'dealer',
-        dealer_status: 'approved'
+        dealer_status: 'approved',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
+      
+      // Don't set ID explicitly - let the database generate it
+      // The error suggests the ID column has a NOT NULL constraint but no default value
+      // This is unusual for Supabase which typically auto-generates UUIDs
       
       // Try to add clerk_user_id if the column exists
       try {
@@ -190,11 +196,38 @@ export async function POST(req: NextRequest) {
         }
       );
       
-      const { data: newDealer, error: createError } = await serviceClient
+      // First attempt: Let database auto-generate ID
+      let { data: newDealer, error: createError } = await serviceClient
         .from('users')
         .insert(insertData)
         .select()
         .single();
+        
+      // If that fails with ID constraint, try with explicit UUID generation
+      if (createError && createError.message.includes('null value in column "id"')) {
+        console.log('Database requires explicit ID, generating UUID...');
+        
+        // Generate a UUID for the ID
+        const { data: uuidResult } = await serviceClient
+          .rpc('gen_random_uuid');
+          
+        if (uuidResult) {
+          insertData.id = uuidResult;
+        } else {
+          // Fallback: generate UUID in JavaScript
+          insertData.id = crypto.randomUUID();
+        }
+        
+        // Retry with explicit ID
+        const result = await serviceClient
+          .from('users')
+          .insert(insertData)
+          .select()
+          .single();
+          
+        newDealer = result.data;
+        createError = result.error;
+      }
         
       if (createError) {
         console.error('Error creating dealer record:', createError);
