@@ -339,15 +339,22 @@ export default function DealerLogin() {
       });
 
       if (completeSignUp.status === 'complete') {
+        console.log('Email verification complete, user created:', completeSignUp.createdUserId);
+        
         setSubmissionStatus({
           type: 'success',
           message: 'Email verified successfully! Redirecting to dealer application form...'
         });
         
-        // Redirect to dealer application form
+        // Set flags to prevent interference from useEffect
+        setPendingVerification(false);
+        
+        // Redirect to dealer application form with a slight delay to ensure Clerk state is updated
         setTimeout(() => {
-          router.push('/dealer-application');
-        }, 2000);
+          console.log('Redirecting to dealer application form...');
+          // Force a page reload to ensure fresh Clerk state
+          window.location.href = '/dealer-application';
+        }, 2500);
       }
     } catch (error: any) {
       console.error('Verification error:', error);

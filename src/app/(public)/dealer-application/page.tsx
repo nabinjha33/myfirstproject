@@ -42,10 +42,31 @@ export default function DealerApplication() {
   });
 
   useEffect(() => {
-    // Redirect if user is not authenticated or email not verified
-    if (isLoaded && (!user || !user.primaryEmailAddress?.verification?.status === 'verified')) {
+    // Only check after Clerk is fully loaded
+    if (!isLoaded) return;
+    
+    // Check if user is authenticated
+    if (!user) {
+      console.log('No user found, redirecting to dealer login');
       router.push('/dealer-login');
+      return;
     }
+    
+    // Check if email is verified
+    const emailVerified = user.primaryEmailAddress?.verification?.status === 'verified';
+    console.log('User email verification status:', {
+      email: user.primaryEmailAddress?.emailAddress,
+      verificationStatus: user.primaryEmailAddress?.verification?.status,
+      isVerified: emailVerified
+    });
+    
+    if (!emailVerified) {
+      console.log('Email not verified, redirecting to dealer login');
+      router.push('/dealer-login?error=email_not_verified');
+      return;
+    }
+    
+    console.log('User authenticated and email verified, staying on application page');
   }, [isLoaded, user, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
