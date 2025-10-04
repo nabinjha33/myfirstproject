@@ -17,7 +17,9 @@ import {
   Phone,
   Building,
   User as UserIcon,
-  MapPin
+  MapPin,
+  FileText,
+  RefreshCw
 } from 'lucide-react';
 import {
   Dialog,
@@ -49,22 +51,44 @@ export default function AdminDealers() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      // Fetch users and applications separately with better error handling
       const [users, apps] = await Promise.all([
-        User.list('-created_at'),
-        DealerApplication.list('-created_at')
+        User.list('-created_date').catch(err => {
+          console.error('Error fetching users:', err);
+          return [];
+        }),
+        DealerApplication.list('-created_date').catch(err => {
+          console.error('Error fetching applications:', err);
+          return [];
+        })
       ]);
       
-      // Filter users to show only those with dealer_status set and not 'rejected'
-      const dealerUsers = users.filter((u: any) => u.dealer_status && u.dealer_status !== 'rejected'); 
+      // Filter users to show only dealers (those with dealer_status and role = 'dealer')
+      const dealerUsers = users.filter((u: any) => 
+        u.role === 'dealer' && 
+        u.dealer_status && 
+        u.dealer_status !== 'rejected'
+      ); 
+      
+      // Filter applications to show only pending ones
+      const pendingApps = apps.filter((app: any) => app.status === 'pending');
+      
       setDealers(dealerUsers);
-      setApplications(apps);
+      setApplications(pendingApps);
       
       console.log('Dealers found:', dealerUsers.length);
-      console.log('Applications found:', apps.length);
+      console.log('Pending applications found:', pendingApps.length);
+      console.log('Total applications found:', apps.length);
+      
+      if (dealerUsers.length === 0 && apps.length === 0) {
+        setActionStatus('ℹ️ No dealer data found. This might be expected if no dealers have been created yet.');
+        setTimeout(() => setActionStatus(null), 5000);
+      }
+      
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      setActionStatus(`❌ Failed to load data. Please check console for details.`);
-      setTimeout(() => setActionStatus(null), 5000);
+      setActionStatus(`❌ Failed to load data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setActionStatus(null), 8000);
     }
     setIsLoading(false);
   };
@@ -72,14 +96,22 @@ export default function AdminDealers() {
   const handleStatusChange = async (dealerId: string, newStatus: string) => {
     try {
       setActionStatus(`Updating status to ${newStatus}...`);
-      await User.update(dealerId, { dealer_status: newStatus });
       
-      setActionStatus(`✅ Status updated to ${newStatus}`);
+      const result = await User.update(dealerId, { dealer_status: newStatus });
+      
+      if (result) {
+        setActionStatus(`✅ Status updated to ${newStatus}`);
+        // Refresh data to show updated status
+        await fetchData();
+      } else {
+        throw new Error('Update returned no result');
+      }
+      
       setTimeout(() => setActionStatus(null), 3000);
-      fetchData();
-    } catch (error) {
-      setActionStatus('❌ Failed to update status');
-      setTimeout(() => setActionStatus(null), 3000);
+    } catch (error: any) {
+      console.error('Error updating dealer status:', error);
+      setActionStatus(`❌ Failed to update status: ${error.message || 'Unknown error'}`);
+      setTimeout(() => setActionStatus(null), 5000);
     }
   };
 
@@ -160,17 +192,28 @@ export default function AdminDealers() {
   };
 
   const filteredDealers = dealers.filter((dealer: any) => {
-    const matchesSearch = dealer.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         dealer.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         dealer.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!dealer) return false;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = !searchTerm || 
+      dealer.business_name?.toLowerCase().includes(searchLower) ||
+      dealer.full_name?.toLowerCase().includes(searchLower) ||
+      dealer.email?.toLowerCase().includes(searchLower);
+    
     const matchesStatus = statusFilter === 'All' || dealer.dealer_status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const filteredApplications = applications.filter((app: any) => {
-    const matchesSearch = app.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         app.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         app.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!app) return false;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = !searchTerm ||
+      app.business_name?.toLowerCase().includes(searchLower) ||
+      app.contact_person?.toLowerCase().includes(searchLower) ||
+      app.email?.toLowerCase().includes(searchLower);
+    
+    // Only show pending applications in the applications tab
     return matchesSearch && app.status === 'pending';
   });
 
@@ -195,8 +238,26 @@ export default function AdminDealers() {
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Dealer Management</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Dealer Management</h1>
+            <p className="text-gray-600 mt-2">
+              Manage dealer applications and existing dealer accounts
+            </p>
+          </div>
           <div className="flex gap-4">
+            <Button
+              variant="outline"
+              onClick={fetchData}
+              disabled={isLoading}
+              className="flex items-center gap-2"
+            >
+              {isLoading ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Refresh
+            </Button>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -307,45 +368,64 @@ export default function AdminDealers() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredDealers.map((dealer: any) => {
-                      const StatusIcon = statusConfig[dealer.dealer_status as keyof typeof statusConfig]?.icon || Clock;
-                      return (
-                        <TableRow key={dealer.id}>
-                          <TableCell className="font-medium">{dealer.business_name || 'N/A'}</TableCell>
-                          <TableCell>{dealer.full_name}</TableCell>
-                          <TableCell>{dealer.email}</TableCell>
-                          <TableCell>
-                            <Badge className={statusConfig[dealer.dealer_status as keyof typeof statusConfig]?.color || 'bg-gray-100 text-gray-800'}>
-                              <StatusIcon className="h-3 w-3 mr-1" />
-                              {dealer.dealer_status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => showDetails(dealer)}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View
-                              </Button>
-                              {dealer.dealer_status === 'pending' && (
+                    {filteredDealers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                          {dealers.length === 0 ? (
+                            <div className="flex flex-col items-center gap-2">
+                              <UserIcon className="h-12 w-12 text-gray-300" />
+                              <p>No dealers found</p>
+                              <p className="text-sm">Dealers will appear here once applications are approved</p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-2">
+                              <Search className="h-8 w-8 text-gray-300" />
+                              <p>No dealers match your search</p>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredDealers.map((dealer: any) => {
+                        const StatusIcon = statusConfig[dealer.dealer_status as keyof typeof statusConfig]?.icon || Clock;
+                        return (
+                          <TableRow key={dealer.id}>
+                            <TableCell className="font-medium">{dealer.business_name || 'N/A'}</TableCell>
+                            <TableCell>{dealer.full_name}</TableCell>
+                            <TableCell>{dealer.email}</TableCell>
+                            <TableCell>
+                              <Badge className={statusConfig[dealer.dealer_status as keyof typeof statusConfig]?.color || 'bg-gray-100 text-gray-800'}>
+                                <StatusIcon className="h-3 w-3 mr-1" />
+                                {dealer.dealer_status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
                                 <Button 
                                   size="sm" 
                                   variant="outline" 
-                                  className="text-green-600 border-green-600 hover:bg-green-50" 
-                                  onClick={() => handleStatusChange(dealer.id, 'approved')}
+                                  onClick={() => showDetails(dealer)}
                                 >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Approve
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View
                                 </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                                {dealer.dealer_status === 'pending' && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="text-green-600 border-green-600 hover:bg-green-50" 
+                                    onClick={() => handleStatusChange(dealer.id, 'approved')}
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Approve
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -369,44 +449,66 @@ export default function AdminDealers() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredApplications.map((app: any) => (
-                      <TableRow key={app.id}>
-                        <TableCell className="font-medium">{app.business_name}</TableCell>
-                        <TableCell>{app.contact_person}</TableCell>
-                        <TableCell>{app.email}</TableCell>
-                        <TableCell>{format(new Date(app.created_date), 'MMM dd, yyyy')}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => showDetails(app)}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="text-green-600 border-green-600 hover:bg-green-50" 
-                              onClick={() => handleApplicationAction(app.id, 'approve')}
-                            >
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Approve
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="text-red-600 border-red-600 hover:bg-red-50" 
-                              onClick={() => handleApplicationAction(app.id, 'reject')}
-                            >
-                              <XCircle className="h-4 w-4 mr-1" />
-                              Reject
-                            </Button>
-                          </div>
+                    {filteredApplications.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                          {applications.length === 0 ? (
+                            <div className="flex flex-col items-center gap-2">
+                              <FileText className="h-12 w-12 text-gray-300" />
+                              <p>No pending applications</p>
+                              <p className="text-sm">New dealer applications will appear here for review</p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-2">
+                              <Search className="h-8 w-8 text-gray-300" />
+                              <p>No applications match your search</p>
+                            </div>
+                          )}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      filteredApplications.map((app: any) => (
+                        <TableRow key={app.id}>
+                          <TableCell className="font-medium">{app.business_name}</TableCell>
+                          <TableCell>{app.contact_person}</TableCell>
+                          <TableCell>{app.email}</TableCell>
+                          <TableCell>
+                            {app.created_date ? format(new Date(app.created_date), 'MMM dd, yyyy') : 
+                             app.created_at ? format(new Date(app.created_at), 'MMM dd, yyyy') : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => showDetails(app)}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="text-green-600 border-green-600 hover:bg-green-50" 
+                                onClick={() => handleApplicationAction(app.id, 'approve')}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="text-red-600 border-red-600 hover:bg-red-50" 
+                                onClick={() => handleApplicationAction(app.id, 'reject')}
+                              >
+                                <XCircle className="h-4 w-4 mr-1" />
+                                Reject
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>

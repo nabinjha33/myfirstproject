@@ -24,6 +24,7 @@ const isPublicRoute = createRouteMatcher([
   '/about',
   '/contact',
   '/dealer-login',
+  '/dealer-application',
   '/admin-login',
   '/admin-setup',
   '/admin-setup-simple',
