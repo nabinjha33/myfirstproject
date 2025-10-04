@@ -4,26 +4,22 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser, useSignIn, useSignUp, useClerk } from '@clerk/nextjs';
-import { DealerApplication, User } from "@/lib/entities";
+import { User } from "@/lib/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Mail,
   Lock,
-  User as UserIcon,
-  Phone,
-  MapPin,
-  Building,
   ArrowLeft,
   Shield,
   CheckCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  UserPlus
 } from "lucide-react";
 
 export default function DealerLogin() {
@@ -35,21 +31,15 @@ export default function DealerLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [submissionStatus, setSubmissionStatus] = React.useState<any>(null);
   const [showEmailVerification, setShowEmailVerification] = React.useState(false);
-  const [ownerEmail, setOwnerEmail] = useState('jeenmataimpex8@gmail.com');
+  const [verificationCode, setVerificationCode] = useState("");
+  const [pendingVerification, setPendingVerification] = useState(false);
   const [loginForm, setLoginForm] = useState({
     email: "",
     password: ""
   });
   const [signupForm, setSignupForm] = useState({
-    businessName: "",
-    contactPerson: "",
     email: "",
-    phone: "",
-    address: "",
-    businessType: "",
-    vatPan: "",
-    whatsapp: "",
-    message: ""
+    password: ""
   });
 
   useEffect(() => {
@@ -67,24 +57,7 @@ export default function DealerLogin() {
     
     // Redirect if user is already authenticated and is approved dealer
     if (isLoaded && user) {
-      // Check if we just reloaded after login
-      const shouldRedirect = sessionStorage.getItem('dealer_redirect_after_login');
-      const storedEmail = sessionStorage.getItem('dealer_email_after_login');
-      
-      if (shouldRedirect && storedEmail) {
-        console.log('Found stored redirect after dealer login for:', storedEmail);
-        sessionStorage.removeItem('dealer_redirect_after_login');
-        sessionStorage.removeItem('dealer_email_after_login');
-        
-        // Set the email in form for verification
-        setLoginForm(prev => ({ ...prev, email: storedEmail }));
-        
-        // Verify dealer status and redirect
-        verifyDealerStatusWithRetry();
-      } else {
-        // Normal check for already logged in user
-        checkDealerStatus();
-      }
+      checkDealerStatus();
     }
   }, [isLoaded, user, router]);
 
@@ -219,14 +192,8 @@ export default function DealerLogin() {
       });
 
       if (result.status === 'complete') {
-        console.log('✅ Clerk login completed, reloading page to ensure session sync...');
-        
-        // Store redirect info in sessionStorage
-        sessionStorage.setItem('dealer_redirect_after_login', 'true');
-        sessionStorage.setItem('dealer_email_after_login', loginForm.email);
-        
-        // Force page reload to ensure session is fully established
-        window.location.reload();
+        console.log('✅ Clerk login completed, redirecting to dealer portal...');
+        router.push('/dealer/catalog');
       } else {
         setSubmissionStatus({
           type: 'error',
@@ -239,13 +206,6 @@ export default function DealerLogin() {
       if (error.errors && error.errors[0]) {
         const errorCode = error.errors[0].code;
         switch (errorCode) {
-          case 'session_exists':
-            // User is already logged in, reload page to ensure session sync
-            console.log('User already logged in, reloading page for session sync...');
-            sessionStorage.setItem('dealer_redirect_after_login', 'true');
-            sessionStorage.setItem('dealer_email_after_login', loginForm.email);
-            window.location.reload();
-            return;
           case 'form_identifier_not_found':
             setSubmissionStatus({
               type: 'error',
@@ -289,83 +249,105 @@ export default function DealerLogin() {
     setSubmissionStatus(null);
 
     try {
-      console.log('Submitting dealer application for:', signupForm.email);
+      console.log('Creating account for:', signupForm.email);
       
-      // Check if email already exists in Users or Applications
-      const [existingUsers, existingApplications] = await Promise.all([
-        User.list(),
-        DealerApplication.list()
-      ]);
-
-      console.log('Existing users:', existingUsers.length);
-      console.log('Existing applications:', existingApplications.length);
-
-      const emailExists = existingUsers.some((user: any) => user.email === signupForm.email) ||
-                          existingApplications.some((app: any) => app.email === signupForm.email && app.status !== 'rejected');
+      // Check if email already exists
+      const existingUsers = await User.list();
+      const emailExists = existingUsers.some((user: any) => user.email === signupForm.email);
 
       if (emailExists) {
         setSubmissionStatus({
           type: 'error',
-          message: 'An account or pending application with this email address already exists.'
+          message: 'An account with this email address already exists. Please try logging in instead.'
         });
         setIsLoading(false);
         return;
       }
 
-      // First, create Clerk account with email verification required
+      // Create Clerk account with email verification required
       const clerkResult = await signUp.create({
         emailAddress: signupForm.email,
-        password: 'TempPass123!', // Temporary password - will be changed after approval
+        password: signupForm.password,
       });
 
       // Send email verification
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-
-      // Create new dealer application
-      const applicationData = {
-        business_name: signupForm.businessName,
-        contact_person: signupForm.contactPerson,
-        email: signupForm.email,
-        phone: signupForm.phone,
-        whatsapp: signupForm.whatsapp || signupForm.phone,
-        address: signupForm.address,
-        vat_pan: signupForm.vatPan,
-        business_type: signupForm.businessType,
-        years_in_business: '1-5', // Default value
-        interested_brands: ['FastDrill', 'Spider', 'Gorkha'], // Default brands
-        annual_turnover: 'NPR 10,00,000 - NPR 25,00,000', // Default range
-        experience_years: 1,
-        message: signupForm.message,
-        status: 'pending'
-      };
-
-      console.log('Creating application with data:', applicationData);
-      await DealerApplication.create(applicationData);
-      console.log('Application created successfully');
       
+      setPendingVerification(true);
       setSubmissionStatus({
         type: 'success',
-        message: 'Your dealer application has been submitted successfully! Please check your email to verify your email address. Our team will review your request and contact you within 24 hours.'
-      });
-
-      // Clear form
-      setSignupForm({
-        businessName: "",
-        contactPerson: "",
-        email: "",
-        phone: "",
-        address: "",
-        businessType: "",
-        vatPan: "",
-        whatsapp: "",
-        message: ""
+        message: 'Account created! Please check your email and enter the verification code below to continue.'
       });
 
     } catch (error: any) {
       console.error('Signup error:', error);
+      
+      if (error.errors && error.errors[0]) {
+        const errorCode = error.errors[0].code;
+        switch (errorCode) {
+          case 'form_identifier_exists':
+            setSubmissionStatus({
+              type: 'error',
+              message: 'An account with this email already exists. Please try logging in instead.'
+            });
+            break;
+          case 'form_password_pwned':
+            setSubmissionStatus({
+              type: 'error',
+              message: 'This password has been found in a data breach. Please choose a different password.'
+            });
+            break;
+          case 'form_password_length_too_short':
+            setSubmissionStatus({
+              type: 'error',
+              message: 'Password must be at least 8 characters long.'
+            });
+            break;
+          default:
+            setSubmissionStatus({
+              type: 'error',
+              message: error.errors[0].message || 'Failed to create account. Please try again.'
+            });
+        }
+      } else {
+        setSubmissionStatus({
+          type: 'error',
+          message: 'Failed to create account. Please try again.'
+        });
+      }
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleVerifyEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signUp) return;
+    
+    setIsLoading(true);
+    setSubmissionStatus(null);
+
+    try {
+      const completeSignUp = await signUp.attemptEmailAddressVerification({
+        code: verificationCode,
+      });
+
+      if (completeSignUp.status === 'complete') {
+        setSubmissionStatus({
+          type: 'success',
+          message: 'Email verified successfully! Redirecting to dealer application form...'
+        });
+        
+        // Redirect to dealer application form
+        setTimeout(() => {
+          router.push('/dealer-application');
+        }, 2000);
+      }
+    } catch (error: any) {
+      console.error('Verification error:', error);
       setSubmissionStatus({
         type: 'error',
-        message: 'There was an error submitting your application. Please try again. Error: ' + (error?.message || 'Unknown error')
+        message: 'Invalid verification code. Please try again.'
       });
     }
 

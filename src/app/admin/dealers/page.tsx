@@ -40,7 +40,6 @@ export default function AdminDealers() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('manage');
-  const [tempPassword, setTempPassword] = useState('');
   const [approvedCredentials, setApprovedCredentials] = useState<{email: string, password: string, businessName: string} | null>(null);
 
   useEffect(() => {
@@ -62,8 +61,6 @@ export default function AdminDealers() {
       
       console.log('Dealers found:', dealerUsers.length);
       console.log('Applications found:', apps.length);
-      console.log('Raw users data:', users.slice(0, 2)); // Log first 2 users for debugging
-      console.log('Raw applications data:', apps.slice(0, 2)); // Log first 2 applications for debugging
     } catch (error) {
       console.error('Failed to fetch data:', error);
       setActionStatus(`❌ Failed to load data. Please check console for details.`);
@@ -77,13 +74,6 @@ export default function AdminDealers() {
       setActionStatus(`Updating status to ${newStatus}...`);
       await User.update(dealerId, { dealer_status: newStatus });
       
-      // Send notification if approved
-      if (newStatus === 'Approved') {
-        setActionStatus('Sending welcome notification...');
-        // Here you would integrate with NotificationService
-        // await notificationService.sendDealerWelcome(dealer);
-      }
-      
       setActionStatus(`✅ Status updated to ${newStatus}`);
       setTimeout(() => setActionStatus(null), 3000);
       fetchData();
@@ -93,7 +83,7 @@ export default function AdminDealers() {
     }
   };
 
-  const handleApplicationAction = async (appId: string, action: 'approve' | 'reject') => {
+  const handleApplicationAction = async (appId: string, action: 'approve' | 'reject', reason?: string) => {
     try {
       setActionStatus(`${action === 'approve' ? 'Approving' : 'Rejecting'} application...`);
       
@@ -101,19 +91,15 @@ export default function AdminDealers() {
       if (!app) return;
 
       if (action === 'approve') {
-        // Generate a temporary password if not provided
-        const password = tempPassword || `Dealer${Math.random().toString(36).slice(-8)}`;
-        
-        // Call our approval API
-        const response = await fetch('/api/dealers/approve', {
+        // Call our new approval API
+        const response = await fetch('/api/admin/approve-dealer', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            applicationId: appId,
-            tempPassword: password,
-          }),
+            applicationId: appId
+          })
         });
 
         if (!response.ok) {
@@ -122,32 +108,47 @@ export default function AdminDealers() {
         }
 
         const result = await response.json();
-        setActionStatus(`✅ Dealer approved! Check email template below.`);
+        setActionStatus(`✅ Dealer approved! Credentials sent via email automatically.`);
         
-        // Store credentials for email template
+        // Store credentials for display
         setApprovedCredentials({
-          email: result.email,
-          password: password,
-          businessName: app.business_name
+          email: result.credentials.email,
+          password: result.credentials.password,
+          businessName: result.credentials.businessName
         });
-        
-        // Clear temp password
-        setTempPassword('');
       } else {
-        // Reject application
-        await DealerApplication.update(appId, { status: 'rejected' });
-        setActionStatus('✅ Application rejected');
+        // Call rejection API
+        const response = await fetch('/api/admin/reject-dealer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            applicationId: appId,
+            reason: reason || 'Application did not meet our requirements'
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to reject application');
+        }
+
+        setActionStatus('❌ Application rejected. Rejection email sent automatically.');
       }
       
-      setTimeout(() => setActionStatus(null), 3000);
-      fetchData();
-    } catch (error) {
-      setActionStatus('❌ Failed to process application');
-      setTimeout(() => setActionStatus(null), 3000);
+      // Refresh data
+      await fetchData();
+      setTimeout(() => setActionStatus(null), 5000);
+      
+    } catch (error: any) {
+      console.error('Error processing application:', error);
+      setActionStatus(`❌ Error: ${error.message}`);
+      setTimeout(() => setActionStatus(null), 5000);
     }
   };
 
-  const openDetailDialog = (item: any) => {
+  const showDetails = (item: any) => {
     setSelectedItem(item);
     setIsDetailDialogOpen(true);
   };
@@ -220,89 +221,20 @@ export default function AdminDealers() {
             <CardHeader>
               <CardTitle className="text-green-800 flex items-center gap-2">
                 <Mail className="h-5 w-5" />
-                Dealer Approval Email Template
+                Dealer Approval Confirmation
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-medium text-green-800">Ready to Copy & Send:</h4>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      const emailContent = `Subject: Welcome to Jeen Mata Impex - Your Dealer Account is Approved!
-
-Dear ${approvedCredentials.businessName} Team,
-
-Congratulations! Your dealer application has been approved. Welcome to the Jeen Mata Impex dealer network!
-
-Your login credentials are:
-• Email: ${approvedCredentials.email}
-• Password: ${approvedCredentials.password}
-
-You can now access your dealer portal at: ${window.location.origin}/dealer-login
-
-What you can do with your dealer account:
-✓ Browse our complete product catalog
-✓ Submit orders and inquiries
-✓ Track shipment status
-✓ Manage your business profile
-✓ Access exclusive dealer resources
-
-Important Notes:
-• Please change your password after first login for security
-• Keep your login credentials secure
-• Contact us if you need any assistance
-
-We look forward to a successful partnership!
-
-Best regards,
-Jeen Mata Impex Team
-Email: jeenmataimpex8@gmail.com
-Phone: +977-1-XXXXXXX`;
-                      navigator.clipboard.writeText(emailContent);
-                      setActionStatus('📧 Email template copied to clipboard!');
-                      setTimeout(() => setActionStatus(null), 3000);
-                    }}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    📧 Copy Email Template
-                  </Button>
-                </div>
-                
-                <div className="bg-white p-4 rounded-lg border border-green-200 text-sm">
-                  <div className="font-medium text-gray-700 mb-2">Email Preview:</div>
-                  <div className="whitespace-pre-line text-gray-600">
-                    <strong>Subject:</strong> Welcome to Jeen Mata Impex - Your Dealer Account is Approved!
-                    <br /><br />
-                    <strong>Dear {approvedCredentials.businessName} Team,</strong>
-                    <br /><br />
-                    Congratulations! Your dealer application has been approved. Welcome to the Jeen Mata Impex dealer network!
-                    <br /><br />
-                    <strong>Your login credentials are:</strong>
-                    <br />• Email: <span className="font-mono bg-gray-100 px-1 rounded">{approvedCredentials.email}</span>
-                    <br />• Password: <span className="font-mono bg-gray-100 px-1 rounded">{approvedCredentials.password}</span>
-                    <br /><br />
-                    You can now access your dealer portal at: <span className="text-blue-600">{typeof window !== 'undefined' ? window.location.origin : ''}/dealer-login</span>
-                    <br /><br />
-                    <strong>What you can do with your dealer account:</strong>
-                    <br />✓ Browse our complete product catalog
-                    <br />✓ Submit orders and inquiries
-                    <br />✓ Track shipment status
-                    <br />✓ Manage your business profile
-                    <br />✓ Access exclusive dealer resources
-                    <br /><br />
-                    <strong>Important Notes:</strong>
-                    <br />• Please change your password after first login for security
-                    <br />• Keep your login credentials secure
-                    <br />• Contact us if you need any assistance
-                    <br /><br />
-                    We look forward to a successful partnership!
-                    <br /><br />
-                    <strong>Best regards,</strong>
-                    <br />Jeen Mata Impex Team
-                    <br />Email: jeenmataimpex8@gmail.com
-                    <br />Phone: +977-1-XXXXXXX
+                <div className="bg-white p-4 rounded-lg border border-green-200">
+                  <div className="font-medium text-gray-700 mb-2">✅ Dealer Approved Successfully!</div>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <div><strong>Business:</strong> {approvedCredentials.businessName}</div>
+                    <div><strong>Email:</strong> {approvedCredentials.email}</div>
+                    <div><strong>Temporary Password:</strong> <span className="font-mono bg-gray-100 px-2 py-1 rounded">{approvedCredentials.password}</span></div>
+                  </div>
+                  <div className="mt-3 text-sm text-green-700">
+                    📧 Approval email with login credentials has been sent automatically.
                   </div>
                 </div>
 
@@ -313,7 +245,7 @@ Phone: +977-1-XXXXXXX`;
                     onClick={() => setApprovedCredentials(null)}
                     className="text-gray-600"
                   >
-                    ✕ Close Template
+                    ✕ Close
                   </Button>
                   <Button
                     size="sm"
@@ -326,7 +258,7 @@ Phone: +977-1-XXXXXXX`;
                     }}
                     className="text-blue-600 border-blue-200"
                   >
-                    📋 Copy Credentials Only
+                    📋 Copy Credentials
                   </Button>
                 </div>
               </div>
@@ -376,46 +308,38 @@ Phone: +977-1-XXXXXXX`;
                   </TableHeader>
                   <TableBody>
                     {filteredDealers.map((dealer: any) => {
-                      const statusInfo = statusConfig[dealer.dealer_status as keyof typeof statusConfig] || statusConfig.pending;
-                      const StatusIcon = statusInfo.icon;
+                      const StatusIcon = statusConfig[dealer.dealer_status as keyof typeof statusConfig]?.icon || Clock;
                       return (
                         <TableRow key={dealer.id}>
                           <TableCell className="font-medium">{dealer.business_name || 'N/A'}</TableCell>
                           <TableCell>{dealer.full_name}</TableCell>
                           <TableCell>{dealer.email}</TableCell>
                           <TableCell>
-                            <Badge className={statusInfo.color}>
-                              <StatusIcon className="mr-1 h-3 w-3" />
-                              {dealer.dealer_status?.charAt(0).toUpperCase() + dealer.dealer_status?.slice(1)}
+                            <Badge className={statusConfig[dealer.dealer_status as keyof typeof statusConfig]?.color || 'bg-gray-100 text-gray-800'}>
+                              <StatusIcon className="h-3 w-3 mr-1" />
+                              {dealer.dealer_status}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button size="sm" variant="outline" onClick={() => openDetailDialog(dealer)}>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => showDetails(dealer)}
+                              >
                                 <Eye className="h-4 w-4 mr-1" />
                                 View
                               </Button>
                               {dealer.dealer_status === 'pending' && (
-                                <>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    className="text-green-600 border-green-600 hover:bg-green-50" 
-                                    onClick={() => handleStatusChange(dealer.id, 'approved')}
-                                  >
-                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                    Approve
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    className="text-red-600 border-red-600 hover:bg-red-50" 
-                                    onClick={() => handleStatusChange(dealer.id, 'rejected')}
-                                  >
-                                    <XCircle className="h-4 w-4 mr-1" />
-                                    Reject
-                                  </Button>
-                                </>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-green-600 border-green-600 hover:bg-green-50" 
+                                  onClick={() => handleStatusChange(dealer.id, 'approved')}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Approve
+                                </Button>
                               )}
                             </div>
                           </TableCell>
@@ -432,21 +356,6 @@ Phone: +977-1-XXXXXXX`;
             <Card>
               <CardHeader>
                 <CardTitle>Pending Applications</CardTitle>
-                <div className="flex gap-4 items-center">
-                  <div className="flex-1">
-                    <label htmlFor="tempPassword" className="text-sm font-medium text-gray-700">
-                      Temporary Password (optional - will auto-generate if empty)
-                    </label>
-                    <Input
-                      id="tempPassword"
-                      type="text"
-                      placeholder="e.g., DealerPass123"
-                      value={tempPassword}
-                      onChange={(e) => setTempPassword(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -465,14 +374,16 @@ Phone: +977-1-XXXXXXX`;
                         <TableCell className="font-medium">{app.business_name}</TableCell>
                         <TableCell>{app.contact_person}</TableCell>
                         <TableCell>{app.email}</TableCell>
-                        <TableCell>
-                          {app.created_at ? format(new Date(app.created_at), 'MMM d, yyyy') : 'N/A'}
-                        </TableCell>
+                        <TableCell>{format(new Date(app.created_date), 'MMM dd, yyyy')}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline" onClick={() => openDetailDialog(app)}>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => showDetails(app)}
+                            >
                               <Eye className="h-4 w-4 mr-1" />
-                              Review
+                              View
                             </Button>
                             <Button 
                               size="sm" 
@@ -503,72 +414,70 @@ Phone: +977-1-XXXXXXX`;
           </TabsContent>
 
           <TabsContent value="invite">
-            <DealerInvitationForm />
+            <Card>
+              <CardHeader>
+                <CardTitle>Invite New Dealer</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DealerInvitationForm onSuccess={fetchData} />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 
         {/* Detail Dialog */}
         <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>
-                {selectedItem?.business_name ? 'Business Details' : 'Application Details'}
+                {selectedItem?.business_name || selectedItem?.full_name || 'Details'}
               </DialogTitle>
             </DialogHeader>
             {selectedItem && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Building className="h-4 w-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm text-gray-500">Business Name</p>
-                        <p className="font-medium">{selectedItem.business_name || 'N/A'}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <UserIcon className="h-4 w-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm text-gray-500">Contact Person</p>
-                        <p className="font-medium">{selectedItem.contact_person || selectedItem.full_name || 'N/A'}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm text-gray-500">Email</p>
-                        <p className="font-medium">{selectedItem.email || 'N/A'}</p>
-                      </div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2">
+                    <Building className="h-4 w-4 text-gray-400" />
+                    <div>
+                      <div className="text-sm text-gray-500">Business Name</div>
+                      <div className="font-medium">{selectedItem.business_name || 'N/A'}</div>
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm text-gray-500">Phone</p>
-                        <p className="font-medium">{selectedItem.phone || 'N/A'}</p>
-                      </div>
+                  <div className="flex items-center gap-2">
+                    <UserIcon className="h-4 w-4 text-gray-400" />
+                    <div>
+                      <div className="text-sm text-gray-500">Contact Person</div>
+                      <div className="font-medium">{selectedItem.contact_person || selectedItem.full_name}</div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm text-gray-500">WhatsApp</p>
-                        <p className="font-medium">{selectedItem.whatsapp || 'N/A'}</p>
-                      </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-gray-400" />
+                    <div>
+                      <div className="text-sm text-gray-500">Email</div>
+                      <div className="font-medium">{selectedItem.email}</div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm text-gray-500">Address</p>
-                        <p className="font-medium">{selectedItem.address || 'N/A'}</p>
-                      </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-gray-400" />
+                    <div>
+                      <div className="text-sm text-gray-500">Phone</div>
+                      <div className="font-medium">{selectedItem.phone || 'N/A'}</div>
                     </div>
                   </div>
                 </div>
-                {selectedItem.vat_pan && (
+                {selectedItem.address && (
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-gray-400 mt-1" />
+                    <div>
+                      <div className="text-sm text-gray-500">Address</div>
+                      <div className="font-medium">{selectedItem.address}</div>
+                    </div>
+                  </div>
+                )}
+                {selectedItem.message && (
                   <div>
-                    <p className="text-sm text-gray-500">VAT/PAN Number</p>
-                    <p className="font-medium">{selectedItem.vat_pan}</p>
+                    <div className="text-sm text-gray-500 mb-1">Message</div>
+                    <div className="bg-gray-50 p-3 rounded-lg text-sm">{selectedItem.message}</div>
                   </div>
                 )}
               </div>
