@@ -91,12 +91,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if dealer record already exists
-    const { data: existingDealer } = await supabaseAdmin
+    // Check if dealer record already exists (user signed up but not yet approved)
+    const { data: existingDealer, error: checkError } = await supabaseAdmin
       .from('users')
-      .select('id, dealer_status')
+      .select('id, dealer_status, role, clerk_user_id')
       .eq('email', application.email)
       .single();
+
+    console.log('Existing dealer check:', { existingDealer, checkError });
 
     let dealerRecord;
     
@@ -138,7 +140,12 @@ export async function POST(req: NextRequest) {
       }
       dealerRecord = updatedDealer;
     } else {
-      // Create new dealer record - try with clerk_user_id first, fallback without it
+      // User doesn't exist in database yet - this shouldn't happen if they signed up
+      // But let's handle it gracefully by creating the user record
+      console.log('User not found in database, this is unexpected since they should have signed up');
+      
+      // Since user signed up with Clerk but doesn't exist in our database,
+      // we need to create them with a proper ID
       let insertData: any = {
         email: application.email,
         full_name: application.contact_person,
@@ -148,60 +155,76 @@ export async function POST(req: NextRequest) {
         vat_pan: application.vat_pan || null,
         whatsapp: application.whatsapp || null,
         role: 'dealer',
-        dealer_status: 'approved',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        dealer_status: 'approved'
       };
       
       // Try to add clerk_user_id if the column exists
       try {
         insertData.clerk_user_id = clerkUser.id;
+      } catch (error) {
+        console.log('clerk_user_id column may not exist');
+      }
+      
+      const { data: newDealer, error: createError } = await supabaseAdmin
+        .from('users')
+        .insert(insertData)
+        .select()
+        .single();
         
-        const { data: newDealer, error: createError } = await supabaseAdmin
-          .from('users')
-          .insert(insertData)
-          .select()
-          .single();
-          
-        if (createError) {
-          // If error is about clerk_user_id column not existing, retry without it
-          if (createError.message.includes('clerk_user_id') || createError.code === '42703') {
-            console.log('clerk_user_id column not found, retrying without it...');
-            delete insertData.clerk_user_id;
+      if (createError) {
+        console.error('Error creating dealer record:', createError);
+        console.error('Application data:', application);
+        console.error('Clerk user data:', { id: clerkUser.id, email: clerkUser.emailAddresses?.[0]?.emailAddress });
+        
+        // If it's still an ID constraint issue, the user might exist but our query failed
+        if (createError.message.includes('duplicate key') || createError.message.includes('already exists')) {
+          // Try to find and update the existing user
+          const { data: foundUser, error: findError } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('email', application.email)
+            .single();
             
-            const { data: retryDealer, error: retryError } = await supabaseAdmin
+          if (foundUser) {
+            console.log('Found existing user, updating instead:', foundUser.id);
+            const { data: updatedUser, error: updateError } = await supabaseAdmin
               .from('users')
-              .insert(insertData)
+              .update({
+                full_name: application.contact_person,
+                business_name: application.business_name,
+                phone: application.phone || null,
+                address: application.address || null,
+                vat_pan: application.vat_pan || null,
+                whatsapp: application.whatsapp || null,
+                role: 'dealer',
+                dealer_status: 'approved',
+                updated_at: new Date().toISOString()
+              })
+              .eq('email', application.email)
               .select()
               .single();
               
-            if (retryError) {
-              console.error('Error creating dealer record (retry):', retryError);
-              console.error('Application data:', application);
+            if (updateError) {
               return NextResponse.json(
-                { error: `Failed to create dealer record: ${retryError.message}` },
+                { error: `Failed to update existing user: ${updateError.message}` },
                 { status: 500 }
               );
             }
-            dealerRecord = retryDealer;
+            dealerRecord = updatedUser;
           } else {
-            console.error('Error creating dealer record:', createError);
-            console.error('Application data:', application);
-            console.error('Clerk user data:', { id: clerkUser.id, email: clerkUser.emailAddresses?.[0]?.emailAddress });
             return NextResponse.json(
               { error: `Failed to create dealer record: ${createError.message}` },
               { status: 500 }
             );
           }
         } else {
-          dealerRecord = newDealer;
+          return NextResponse.json(
+            { error: `Failed to create dealer record: ${createError.message}` },
+            { status: 500 }
+          );
         }
-      } catch (error: any) {
-        console.error('Unexpected error creating dealer record:', error);
-        return NextResponse.json(
-          { error: `Unexpected error: ${error.message}` },
-          { status: 500 }
-        );
+      } else {
+        dealerRecord = newDealer;
       }
     }
 
