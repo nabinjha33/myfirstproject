@@ -30,6 +30,7 @@ import {
   SidebarFooter,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -45,6 +46,40 @@ const dealerRoutes = [
   { title: "Shipments", url: "/dealer/shipments", icon: Ship },
   { title: "Profile", url: "/dealer/profile", icon: User },
 ];
+
+// Custom navigation component that handles sidebar collapse
+function NavigationMenu({ pathname }: { pathname: string }) {
+  const { setOpenMobile } = useSidebar();
+
+  const handleNavClick = () => {
+    // Close mobile sidebar when navigation item is clicked
+    setOpenMobile(false);
+  };
+
+  return (
+    <SidebarMenu>
+      {dealerRoutes.map((item) => (
+        <SidebarMenuItem key={item.title}>
+          <SidebarMenuButton 
+            asChild 
+            className={`hover:bg-red-50 hover:text-red-700 transition-colors duration-200 rounded-lg mb-1 ${
+              pathname === item.url ? 'bg-red-50 text-red-700' : ''
+            }`}
+          >
+            <Link 
+              href={item.url} 
+              className="flex items-center gap-3 px-3 py-2"
+              onClick={handleNavClick}
+            >
+              <item.icon className="w-4 h-4" />
+              <span className="font-medium">{item.title}</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
+  );
+}
 
 export default function DealerLayout({
   children,
@@ -191,23 +226,7 @@ export default function DealerLayout({
                 Navigation
               </SidebarGroupLabel>
               <SidebarGroupContent>
-                <SidebarMenu>
-                  {dealerRoutes.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton 
-                        asChild 
-                        className={`hover:bg-red-50 hover:text-red-700 transition-colors duration-200 rounded-lg mb-1 ${
-                          pathname === item.url ? 'bg-red-50 text-red-700' : ''
-                        }`}
-                      >
-                        <Link href={item.url} className="flex items-center gap-3 px-3 py-2">
-                          <item.icon className="w-4 h-4" />
-                          <span className="font-medium">{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
+                <NavigationMenu pathname={pathname} />
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>

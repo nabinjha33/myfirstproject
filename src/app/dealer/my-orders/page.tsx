@@ -247,9 +247,9 @@ export default function MyOrders() {
                           </Button>
                         </DialogTrigger>
                         {selectedOrder && selectedOrder.id === order.id && (
-                          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                          <DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] overflow-y-auto sm:max-h-[90vh]">
                             <DialogHeader>
-                              <DialogTitle>Order Details - {selectedOrder.order_number}</DialogTitle>
+                              <DialogTitle className="text-lg">Order Details - {selectedOrder.order_number}</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-6 py-4">
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg border">

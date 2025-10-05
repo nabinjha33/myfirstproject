@@ -103,6 +103,10 @@ const useCart = (cartKey: string): {
   }, [cart]);
 
   const getCartItemCount = useCallback(() => {
+    return cart.length; // Return number of unique products instead of total quantity
+  }, [cart]);
+
+  const getCartTotalQuantity = useCallback(() => {
     return cart.reduce((count, item) => count + item.quantity, 0);
   }, [cart]);
 
@@ -114,7 +118,8 @@ const useCart = (cartKey: string): {
     removeFromCart, 
     clearCart, 
     getCartTotal,
-    getCartItemCount
+    getCartItemCount,
+    getCartTotalQuantity
   };
 };
 
