@@ -53,16 +53,31 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      console.log('Fetching dashboard data...');
+      
       const [products, users, shipments, recentOrdersData, applications, visits] = await Promise.all([
-        Product.list(),
-        User.list(),
-        Shipment.list(),
-        Order.list('-created_at', 5),
-        DealerApplication.list(),
-        PageVisit.list('-created_at', 1000)
+        Product.list().catch(err => { console.error('Products fetch error:', err); return []; }),
+        User.list().catch(err => { console.error('Users fetch error:', err); return []; }),
+        Shipment.list().catch(err => { console.error('Shipments fetch error:', err); return []; }),
+        Order.list('-created_at', 5).catch(err => { console.error('Recent orders fetch error:', err); return []; }),
+        DealerApplication.list().catch(err => { console.error('Applications fetch error:', err); return []; }),
+        PageVisit.list('-created_at', 1000).catch(err => { console.error('Page visits fetch error:', err); return []; })
       ]);
 
-      const allOrders = await Order.list();
+      console.log('Dashboard data fetched:', {
+        products: products.length,
+        users: users.length,
+        shipments: shipments.length,
+        orders: recentOrdersData.length,
+        applications: applications.length,
+        visits: visits.length
+      });
+
+      const allOrders = await Order.list().catch(err => { 
+        console.error('All orders fetch error:', err); 
+        return []; 
+      });
+      
       const orderStats = {
         submitted: allOrders.filter((o: any) => o.status === 'Submitted').length,
         confirmed: allOrders.filter((o: any) => o.status === 'Confirmed').length,
@@ -71,6 +86,8 @@ export default function AdminDashboard() {
         delivered: allOrders.filter((o: any) => o.status === 'Delivered').length,
         cancelled: allOrders.filter((o: any) => o.status === 'Cancelled').length
       };
+
+      console.log('Order stats calculated:', orderStats);
 
       const today = new Date();
       const visitorsTodayCount = visits.filter((v: any) => new Date(v.visited_at || v.created_at) >= startOfDay(today)).length;

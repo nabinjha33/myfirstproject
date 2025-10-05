@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Product, Brand } from "@/lib/entities";
+import { Product, Brand, SiteSettings } from "@/lib/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,6 +80,13 @@ export default function Home() {
   const router = useRouter();
   const [featuredProducts, setFeaturedProducts] = useState<ProductData[]>([]);
   const [brands, setBrands] = useState<BrandData[]>([]);
+  const [siteSettings, setSiteSettings] = useState<any>({
+    company_name: 'Jeen Mata Impex',
+    tagline: 'Premium Import Solutions from China & India',
+    contact_email: 'info@jeenmataimpex.com',
+    contact_phone: '+977-1-XXXXXXX',
+    contact_address: 'Kathmandu, Nepal'
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -92,12 +99,20 @@ export default function Home() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [products, activeBrands] = await Promise.all([
+      const [products, activeBrands, settingsList] = await Promise.all([
         Product.getFeatured(),
-        Brand.getActive()
+        Brand.getActive(),
+        SiteSettings.list()
       ]);
+      
       setFeaturedProducts(products.slice(0, 6));
       setBrands(activeBrands);
+      
+      // Update site settings if available
+      if (settingsList && settingsList.length > 0) {
+        setSiteSettings(settingsList[0]);
+        console.log('Site settings loaded:', settingsList[0]);
+      }
     } catch (error) {
       console.error('Failed to load data:', error);
     }
@@ -119,9 +134,9 @@ export default function Home() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight text-white">
-              {getText('Premium Import Solutions', 'प्रिमियम आयात समाधान')}
+              {getText(siteSettings.company_name || 'Jeen Mata Impex', 'जीन माता इम्पेक्स')}
               <span className="block text-2xl md:text-3xl font-normal mt-2 text-blue-200">
-                {getText('From China & India to Nepal', 'चीन र भारतबाट नेपालमा')}
+                {getText(siteSettings.tagline || 'Premium Import Solutions from China & India', 'चीन र भारतबाट प्रिमियम आयात समाधान')}
               </span>
             </h1>
             <p className="text-xl md:text-2xl mb-8 text-blue-100 max-w-3xl mx-auto">
@@ -333,7 +348,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-slate-100 mb-4">
-              {getText("Why Choose Jeen Mata Impex", "किन जीन माता इम्पेक्स छनौट गर्ने")}
+              {getText(`Why Choose ${siteSettings.company_name || 'Jeen Mata Impex'}`, `किन ${siteSettings.company_name || 'जीन माता इम्पेक्स'} छनौट गर्ने`)}
             </h2>
             <p className="text-xl text-gray-600 dark:text-slate-300 max-w-2xl mx-auto">
               {getText(
@@ -381,6 +396,48 @@ export default function Home() {
               </Button>
             </Link>
           </div>
+        </div>
+      </section>
+
+      {/* Contact Information Section */}
+      <section className="py-12 bg-gray-100 dark:bg-slate-900">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-6">
+            {getText("Get in Touch", "सम्पर्कमा रहनुहोस्")}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">
+                {getText("Email", "इमेल")}
+              </div>
+              <p className="text-gray-600 dark:text-slate-300">
+                {siteSettings.contact_email || 'info@jeenmataimpex.com'}
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">
+                {getText("Phone", "फोन")}
+              </div>
+              <p className="text-gray-600 dark:text-slate-300">
+                {siteSettings.contact_phone || '+977-1-XXXXXXX'}
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">
+                {getText("Address", "ठेगाना")}
+              </div>
+              <p className="text-gray-600 dark:text-slate-300">
+                {siteSettings.contact_address || 'Kathmandu, Nepal'}
+              </p>
+            </div>
+          </div>
+          {siteSettings.whatsapp_number && (
+            <div className="mt-6">
+              <p className="text-sm text-gray-600 dark:text-slate-400">
+                {getText("WhatsApp:", "व्हाट्सएप:")} {siteSettings.whatsapp_number}
+              </p>
+            </div>
+          )}
         </div>
       </section>
     </div>);

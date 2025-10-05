@@ -23,6 +23,21 @@ import {
   Eye,
   Download
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useCart from '@/components/useCart';
 import DealerAuthWrapper from '@/components/dealer/DealerAuthWrapper';
 

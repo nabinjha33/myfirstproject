@@ -20,7 +20,7 @@ import {
   Package, 
   Star, 
   Share2, 
-  Heart,
+  Download,
   ShoppingCart,
   Info
 } from "lucide-react";
@@ -30,6 +30,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 interface ProductVariant {
   id: string;
   name: string;
+  size?: string;
+  packaging?: string;
   price_npr?: number;
   price_usd?: number;
   stock_quantity?: number;
@@ -52,25 +54,59 @@ interface ProductData {
   updated_at?: string;
 }
 
-export default function ProductDetail() {
+export default function ProductDetailsPage() {
   const params = useParams();
   const [product, setProduct] = useState<ProductData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  useEffect(() => {
-    loadProduct();
-  }, [params.slug]);
-
-  const loadProduct = async () => {
+  const fetchProduct = async (slug: string) => {
     setIsLoading(true);
-    const slug = params.slug as string;
-    
-    if (slug) {
+    try {
       const foundProduct = await Product.findBySlug(slug);
       setProduct(foundProduct);
+    } catch (error) {
+      console.error('Error fetching product:', error);
     }
     setIsLoading(false);
+  };
+
+  useEffect(() => {
+    if (params.slug) {
+      fetchProduct(params.slug as string);
+    }
+  }, [params.slug]);
+
+  // Function to download product details as PDF/text
+  const downloadProductDetails = (product: ProductData) => {
+    const productInfo = `
+PRODUCT DETAILS
+===============
+
+Name: ${product.name}
+Brand: ${product.brand || 'N/A'}
+Category: ${product.category || 'N/A'}
+Description: ${product.description || 'No description available'}
+
+VARIANTS:
+${product.variants?.map((variant, index) => 
+  `${index + 1}. Size: ${variant.size || 'N/A'} | Packaging: ${variant.packaging || 'N/A'} | Stock: ${variant.stock_status || 'N/A'}`
+).join('\n') || 'No variants available'}
+
+Contact us for pricing and availability.
+Website: ${window.location.origin}
+Generated on: ${new Date().toLocaleDateString()}
+    `;
+    
+    const blob = new Blob([productInfo], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${product.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_details.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   if (isLoading) {
@@ -205,8 +241,14 @@ export default function ProductDetail() {
                 </Button>
               </Link>
               <div className="flex gap-2">
-                <Button variant="outline" size="icon" className="h-12 w-12">
-                  <Heart className="w-5 h-5" />
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-12 w-12"
+                  onClick={() => downloadProductDetails(product)}
+                  title="Download Product Details"
+                >
+                  <Download className="w-5 h-5" />
                 </Button>
                 <Button variant="outline" size="icon" className="h-12 w-12">
                   <Share2 className="w-5 h-5" />
