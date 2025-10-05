@@ -88,12 +88,12 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 min-w-0 flex-1 md:flex-none">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-red-600 to-red-700 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Package className="w-4 h-4 md:w-6 md:h-6 text-white" />
+          <Link href="/" className="flex items-center space-x-3 min-w-0 flex-1 md:flex-none">
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-r from-red-600 to-red-700 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+              <Package className="w-5 h-5 md:w-7 md:h-7 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-sm md:text-xl font-bold text-gray-900 dark:text-white transition-colors truncate">
+              <h1 className="text-base md:text-xl font-bold text-gray-900 dark:text-white transition-colors truncate">
                 {siteInfo.company_name}
               </h1>
               <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors hidden sm:block">

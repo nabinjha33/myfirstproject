@@ -1,18 +1,33 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
+import { SiteSettings } from '@/lib/entities';
 
 export default function Footer() {
   const { getText } = useAppContext();
-
-  const siteInfo = {
+  const [siteInfo, setSiteInfo] = useState({
     company_name: 'Jeen Mata Impex',
     tagline: 'Premium Import Solutions',
     contact_email: 'jeenmataimpex8@gmail.com',
     contact_phone: '+977-1-XXXXXXX',
-    contact_address: 'Kathmandu, Nepal'
-  };
+    contact_address: 'Kathmandu, Nepal',
+    whatsapp_number: ''
+  });
+
+  useEffect(() => {
+    const loadSiteSettings = async () => {
+      try {
+        const settingsList = await SiteSettings.list();
+        if (settingsList && settingsList.length > 0) {
+          setSiteInfo(settingsList[0]);
+        }
+      } catch (error) {
+        console.error('Failed to load site settings for footer:', error);
+      }
+    };
+    loadSiteSettings();
+  }, []);
 
   return (
     <footer className="bg-gray-900 dark:bg-black text-white py-12 transition-colors duration-300">
@@ -48,6 +63,7 @@ export default function Footer() {
               {siteInfo.contact_address && <p>{siteInfo.contact_address}</p>}
               {siteInfo.contact_email && <p>{siteInfo.contact_email}</p>}
               {siteInfo.contact_phone && <p>{siteInfo.contact_phone}</p>}
+              {siteInfo.whatsapp_number && <p>WhatsApp: {siteInfo.whatsapp_number}</p>}
             </div>
           </div>
         </div>

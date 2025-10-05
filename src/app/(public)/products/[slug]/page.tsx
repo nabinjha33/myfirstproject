@@ -77,9 +77,15 @@ export default function ProductDetailsPage() {
     }
   }, [params.slug]);
 
-  // Function to download product details as PDF/text
-  const downloadProductDetails = (product: ProductData) => {
-    const productInfo = `
+  // Function to download product details as PDF
+  const downloadProductDetails = async (product: ProductData) => {
+    try {
+      const { generateProductPDF } = await import('@/lib/pdfGenerator');
+      await generateProductPDF(product, false); // false = public user (no pricing)
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      // Fallback to text download
+      const productInfo = `
 PRODUCT DETAILS
 ===============
 
@@ -96,17 +102,18 @@ ${product.variants?.map((variant, index) =>
 Contact us for pricing and availability.
 Website: ${window.location.origin}
 Generated on: ${new Date().toLocaleDateString()}
-    `;
-    
-    const blob = new Blob([productInfo], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${product.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_details.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+      `;
+      
+      const blob = new Blob([productInfo], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${product.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_details.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }
   };
 
   if (isLoading) {
