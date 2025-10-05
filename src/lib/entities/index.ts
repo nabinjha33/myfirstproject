@@ -466,7 +466,7 @@ class SiteSettings extends BaseEntity {
 
   static async update(id: string, updates: any): Promise<any> {
     try {
-      return await siteSettingsService.update(id, updates);
+      return await siteSettingsService.updateSettings(updates);
     } catch (error) {
       console.error('Error updating site settings:', error);
       throw error;

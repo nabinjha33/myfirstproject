@@ -110,24 +110,24 @@ export default function Shipments() {
 
   return (
     <DealerAuthWrapper>
-      <div className="p-6 bg-gray-50 min-h-screen">
+      <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Import Shipments</h1>
-          <p className="text-gray-600">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">Import Shipments</h1>
+          <p className="text-sm sm:text-base text-gray-600">
             Track your import shipments from China and India with real-time ETA updates
           </p>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+          <div className="flex flex-col gap-4">
+            <div className="relative">
               <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
               <Input
                 type="text"
-                placeholder="Search by tracking number, product, or origin..."
+                placeholder="Search by tracking number, product..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -135,7 +135,6 @@ export default function Shipments() {
             </div>
             <div className="flex gap-2 flex-wrap">
               {[
-                { key: "All", label: "All" },
                 { key: "pending", label: "Pending" },
                 { key: "in_transit", label: "In Transit" },
                 { key: "customs", label: "Customs" },
@@ -145,7 +144,8 @@ export default function Shipments() {
                   key={status.key}
                   variant={selectedStatus === status.key ? "default" : "outline"}
                   onClick={() => setSelectedStatus(status.key)}
-                  className="whitespace-nowrap"
+                  className="whitespace-nowrap text-sm px-3 py-2"
+                  size="sm"
                 >
                   {status.label}
                 </Button>
@@ -187,86 +187,86 @@ export default function Shipments() {
 
               return (
                 <Card key={shipment.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                  <CardHeader className="bg-gray-50 border-b">
-                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-gray-200">
-                          <Ship className="w-6 h-6 text-red-600" />
+                  <CardHeader className="bg-gray-50 border-b p-4 sm:p-6">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-start gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center border-2 border-gray-200 flex-shrink-0">
+                          <Ship className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
                         </div>
-                        <div>
-                          <CardTitle className="text-xl">
-                            Tracking: {shipment.tracking_number}
+                        <div className="min-w-0 flex-1">
+                          <CardTitle className="text-lg sm:text-xl truncate">
+                            {shipment.tracking_number}
                           </CardTitle>
-                          <p className="text-gray-600 flex items-center gap-1">
-                            <MapPin className="w-4 h-4" />
-                            From {shipment.origin_country} to Nepal
+                          <p className="text-sm sm:text-base text-gray-600 flex items-center gap-1 mt-1">
+                            <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                            <span className="truncate">From {shipment.origin_country} to Nepal</span>
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <Badge variant="outline" className={`${statusInfo.color} border font-medium`}>
-                          <StatusIcon className="w-4 h-4 mr-1" />
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <Badge variant="outline" className={`${statusInfo.color} border font-medium text-xs sm:text-sm`}>
+                          <StatusIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                           {shipment.status}
                         </Badge>
 
-                        <div className={`flex items-center gap-1 text-sm font-medium ${etaStatus.color}`}>
-                          <EtaIcon className="w-4 h-4" />
+                        <div className={`flex items-center gap-1 text-xs sm:text-sm font-medium ${etaStatus.color}`}>
+                          <EtaIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                           {etaStatus.text}
                         </div>
                       </div>
                     </div>
                   </CardHeader>
 
-                  <CardContent className="p-6">
-                    <div className="space-y-6">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="space-y-4 sm:space-y-6">
                       {/* Status Timeline */}
                       <div>
-                        <h4 className="font-semibold mb-3 text-gray-800">Shipment Progress</h4>
+                        <h4 className="font-semibold mb-3 text-gray-800 text-sm sm:text-base">Shipment Progress</h4>
                         <ShipmentStepper currentStatus={shipment.status} />
                       </div>
 
                       {/* Shipment Details */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-3">Shipment Info</h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                        <div className="lg:col-span-1">
+                          <h4 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">Shipment Info</h4>
+                          <div className="space-y-2 text-xs sm:text-sm">
+                            <div className="flex justify-between items-start">
                               <span className="text-gray-600">ETA Date:</span>
-                              <span className="font-medium">
+                              <span className="font-medium text-right">
                                 {format(new Date(shipment.eta_date), "MMM d, yyyy")}
                               </span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex justify-between items-start">
                               <span className="text-gray-600">Origin:</span>
-                              <span className="font-medium">{shipment.origin_country}</span>
+                              <span className="font-medium text-right">{shipment.origin_country}</span>
                             </div>
                             {shipment.port_name && (
-                              <div className="flex justify-between">
+                              <div className="flex justify-between items-start">
                                 <span className="text-gray-600">Port:</span>
-                                <span className="font-medium">{shipment.port_name}</span>
+                                <span className="font-medium text-right">{shipment.port_name}</span>
                               </div>
                             )}
-                            <div className="flex justify-between">
+                            <div className="flex justify-between items-start">
                               <span className="text-gray-600">Last Updated:</span>
-                              <span className="font-medium">
+                              <span className="font-medium text-right">
                                 {format(new Date(shipment.last_updated || shipment.created_date), "MMM d, HH:mm")}
                               </span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="md:col-span-2">
-                          <h4 className="font-semibold text-gray-900 mb-3">Products in Shipment</h4>
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex flex-wrap gap-2">
+                        <div className="lg:col-span-2">
+                          <h4 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">Products in Shipment</h4>
+                          <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2">
                               {shipment.product_names.map((productName: string, index: number) => (
-                                <Badge key={index} variant="secondary" className="text-sm">
+                                <Badge key={index} variant="secondary" className="text-xs sm:text-sm">
                                   {productName}
                                 </Badge>
                               ))}
                             </div>
-                            <p className="text-sm text-gray-600 mt-3">
+                            <p className="text-xs sm:text-sm text-gray-600 mt-2 sm:mt-3">
                               {shipment.product_names.length} product{shipment.product_names.length > 1 ? 's' : ''} in this shipment
                             </p>
                           </div>

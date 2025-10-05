@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { SiteSettings as SiteSettingsEntity } from '@/lib/entities';
 import { 
     Save, 
     Settings, 
@@ -22,7 +23,7 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-interface SiteSettings {
+interface SiteSettingsData {
     id?: string;
     company_name: string;
     tagline: string;
@@ -39,7 +40,7 @@ interface SiteSettings {
 }
 
 export default function AdminSettings() {
-    const [settings, setSettings] = useState<SiteSettings>({
+    const [settings, setSettings] = useState<SiteSettingsData>({
         company_name: 'Jeen Mata Impex',
         tagline: 'Premium Import Solutions from China & India',
         contact_email: 'info@jeenmataimpex.com',
@@ -53,7 +54,7 @@ export default function AdminSettings() {
         enable_whatsapp_notifications: false,
         auto_approve_dealers: false,
     });
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
@@ -66,16 +67,56 @@ export default function AdminSettings() {
         setSettings(prev => ({ ...prev, [id]: checked }));
     };
 
+    // Load existing settings on component mount
+    useEffect(() => {
+        const loadSettings = async () => {
+            setIsLoading(true);
+            try {
+                const settingsList = await SiteSettingsEntity.list();
+                if (settingsList && settingsList.length > 0) {
+                    const existingSettings = settingsList[0];
+                    console.log('Loaded existing settings:', existingSettings);
+                    setSettings({
+                        id: existingSettings.id,
+                        company_name: existingSettings.company_name || 'Jeen Mata Impex',
+                        tagline: existingSettings.tagline || 'Premium Import Solutions from China & India',
+                        contact_email: existingSettings.contact_email || 'info@jeenmataimpex.com',
+                        contact_phone: existingSettings.contact_phone || '+977-1-4567890',
+                        contact_address: existingSettings.contact_address || 'Kathmandu, Nepal',
+                        whatsapp_number: existingSettings.whatsapp_number || '+977-9876543210',
+                        default_theme: existingSettings.default_theme || 'light',
+                        default_language: existingSettings.default_language || 'en',
+                        enable_dealer_notifications: existingSettings.enable_dealer_notifications ?? true,
+                        enable_inquiry_notifications: existingSettings.enable_inquiry_notifications ?? true,
+                        enable_whatsapp_notifications: existingSettings.enable_whatsapp_notifications ?? false,
+                        auto_approve_dealers: existingSettings.auto_approve_dealers ?? false,
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+                setSaveStatus('error');
+            }
+            setIsLoading(false);
+        };
+        
+        loadSettings();
+    }, []);
+
     const handleSave = async () => {
         setIsSaving(true);
         setSaveStatus(null);
         
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.log('Saving settings to database:', settings);
             
-            // Here you would save to your database
-            // await SiteSettings.update(settings.id, settings);
+            if (settings.id) {
+                // Update existing settings
+                await SiteSettingsEntity.update(settings.id, settings);
+                console.log('Settings updated successfully');
+            } else {
+                // This shouldn't happen as we should always have a settings record
+                console.warn('No settings ID found, this might indicate a database issue');
+            }
             
             setSaveStatus('success');
             setTimeout(() => setSaveStatus(null), 3000);
@@ -87,6 +128,18 @@ export default function AdminSettings() {
         
         setIsSaving(false);
     };
+
+    if (isLoading) {
+        return (
+            <div className="p-6 bg-gray-50 min-h-screen">
+                <div className="max-w-4xl mx-auto">
+                    <div className="flex items-center justify-center py-12">
+                        <div className="text-lg text-gray-600">Loading settings...</div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">

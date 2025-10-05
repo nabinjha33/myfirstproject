@@ -42,8 +42,8 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
   const [categories, setCategories] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Load brands and categories on mount
   useEffect(() => {
-    // Load brands and categories
     const loadData = async () => {
       try {
         const [brandsData, categoriesData] = await Promise.all([
@@ -52,22 +52,18 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
         ]);
         setBrands(brandsData);
         setCategories(categoriesData);
-        
-        // Set default values if no brands/categories exist
-        if (brandsData.length > 0 && !formData.brand_id) {
-          setFormData(prev => ({ ...prev, brand_id: brandsData[0].id }));
-        }
-        if (categoriesData.length > 0 && !formData.category_id) {
-          setFormData(prev => ({ ...prev, category_id: categoriesData[0].id }));
-        }
       } catch (error) {
         console.error('Failed to load brands/categories:', error);
       }
     };
     
     loadData();
-    
+  }, []);
+
+  // Set form data when product changes or when brands/categories are loaded
+  useEffect(() => {
     if (product) {
+      console.log('Setting form data for product:', product);
       setFormData({
         name: product.name || '',
         slug: product.slug || '',
@@ -78,12 +74,30 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
         variants: product.variants || [],
         featured: product.featured || false,
       });
+    } else {
+      // Reset form for new product and set defaults
+      setFormData({
+        name: '',
+        slug: '',
+        description: '',
+        brand_id: brands.length > 0 ? brands[0].id : '',
+        category_id: categories.length > 0 ? categories[0].id : '',
+        images: [],
+        variants: [],
+        featured: false,
+      });
     }
-  }, [product]);
+  }, [product, brands, categories]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
+    
+    // Auto-generate slug from name if slug field is empty
+    if (id === 'name' && !formData.slug) {
+      const autoSlug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      setFormData(prev => ({ ...prev, slug: autoSlug }));
+    }
   };
   
   const handleSelectChange = (id: string, value: string) => {
@@ -94,6 +108,20 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
     e.preventDefault();
     setIsSaving(true);
     try {
+      // Validate required fields
+      if (!formData.name.trim()) {
+        alert('Product name is required');
+        return;
+      }
+      if (!formData.brand_id) {
+        alert('Please select a brand');
+        return;
+      }
+      if (!formData.category_id) {
+        alert('Please select a category');
+        return;
+      }
+
       const dataToSave = {
         ...formData,
         // Generate slug if empty
@@ -101,6 +129,8 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
         // Ensure active is set
         active: true
       };
+      
+      console.log('Saving product data:', dataToSave);
       
       if (product && product.id) {
         await Product.update(product.id, dataToSave);

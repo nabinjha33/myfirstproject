@@ -191,12 +191,12 @@ export default function MyOrders() {
   
   return (
     <DealerAuthWrapper>
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">My Orders</h1>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40" suppressHydrationWarning>
+            <SelectTrigger className="w-full sm:w-40" suppressHydrationWarning>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -212,21 +212,154 @@ export default function MyOrders() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Your Placed Orders ({filteredOrders.length})</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">Your Placed Orders ({filteredOrders.length})</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Order #</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Total (NPR)</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+          <CardContent className="p-0 sm:p-6">
+            {/* Mobile Card View */}
+            <div className="block sm:hidden">
+              {filteredOrders.length > 0 ? filteredOrders.map((order: any) => (
+                <div key={order.id} className="border-b border-gray-200 p-4 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-gray-900">{order.order_number}</p>
+                      <p className="text-sm text-gray-500">
+                        {order.created_at || order.created_date 
+                          ? format(new Date(order.created_at || order.created_date), 'MMM d, yyyy')
+                          : 'N/A'
+                        }
+                      </p>
+                    </div>
+                    <Badge className={getStatusBadgeClass(order.status)}>
+                      {order.status}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm text-gray-600">{order.product_items?.length || 0} items</p>
+                      <p className="font-semibold text-gray-900">NPR {(order.total_amount_npr || 0).toLocaleString('en-US')}</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)} className="w-full">
+                            <Eye className="w-4 h-4 mr-2" />
+                            Details
+                          </Button>
+                        </DialogTrigger>
+                        {selectedOrder && selectedOrder.id === order.id && (
+                          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>Order Details - {selectedOrder.order_number}</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-6 py-4">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg border">
+                                <div>
+                                  <h4 className="font-semibold text-gray-700 text-sm">Order Date</h4>
+                                  <p className="text-base">
+                                    {selectedOrder.created_at || selectedOrder.created_date 
+                                      ? format(new Date(selectedOrder.created_at || selectedOrder.created_date), 'MMMM d, yyyy')
+                                      : 'N/A'
+                                    }
+                                  </p>
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-gray-700 text-sm">Status</h4>
+                                  <Badge className={getStatusBadgeClass(selectedOrder.status)}>{selectedOrder.status}</Badge>
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-gray-700 text-sm">Total Amount</h4>
+                                  <p className="text-base font-bold text-red-600">NPR {(selectedOrder.total_amount_npr || 0).toLocaleString('en-US')}</p>
+                                </div>
+                              </div>
+
+                              <div>
+                                <h4 className="font-semibold mb-4 text-lg">Order Items</h4>
+                                <div className="space-y-4">
+                                  {(selectedOrder.product_items || []).map((item: any, index: number) => (
+                                    <Card key={index} className="border border-gray-200 shadow-sm">
+                                      <CardContent className="p-4">
+                                        <div className="flex flex-col sm:flex-row gap-4">
+                                          {item.product_image ? (
+                                            <img 
+                                              src={item.product_image} 
+                                              alt={item.product_name}
+                                              className="w-24 h-24 object-cover rounded-lg border flex-shrink-0"
+                                            />
+                                          ) : (
+                                            <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center border flex-shrink-0">
+                                              <Package className="w-8 h-8 text-gray-400" />
+                                            </div>
+                                          )}
+                                          <div className="flex-1">
+                                            <h5 className="font-semibold text-lg">{item.product_name || `Product ID: ${item.product_id}`}</h5>
+                                            <p className="text-sm text-gray-600 mb-1">
+                                              <span className="font-medium">Variant:</span> {item.variant_details || 'Standard'}
+                                            </p>
+                                            <p className="text-sm text-gray-600 mb-2">
+                                              <span className="font-medium">Unit Price:</span> NPR {item.unit_price_npr.toLocaleString('en-US')}
+                                            </p>
+                                             <p className="text-sm text-gray-600 mb-1">
+                                              <span className="font-medium">Quantity:</span> {item.quantity}
+                                            </p>
+                                          </div>
+                                          <div className="text-right mt-4 sm:mt-0">
+                                            <p className="font-bold text-lg">NPR {(item.unit_price_npr * item.quantity).toLocaleString('en-US')}</p>
+                                          </div>
+                                        </div>
+                                        {item.notes && (
+                                          <div className="mt-4 pt-3 border-t">
+                                            <div className="flex items-start gap-2 text-sm">
+                                              <FileText className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                              <div>
+                                                <span className="font-medium text-blue-800">Special Notes:</span>
+                                                <p className="text-blue-700 mt-1">{item.notes}</p>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </CardContent>
+                                    </Card>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        )}
+                      </Dialog>
+
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => generatePrintableSlip(order)}
+                        className="w-full"
+                      >
+                        <Printer className="w-4 h-4 mr-2" />
+                        Print
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <div className="p-8 text-center">
+                  <p className="text-gray-500">No orders found with the selected filters.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Order #</TableHead>
+                    <TableHead>Items</TableHead>
+                    <TableHead>Total (NPR)</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                 {filteredOrders.length > 0 ? filteredOrders.map((order: any) => (
                   <TableRow key={order.id}>
                     <TableCell>
@@ -344,13 +477,14 @@ export default function MyOrders() {
                       </div>
                     </TableCell>
                   </TableRow>
-                )) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center">No orders found with the selected filters.</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center">No orders found with the selected filters.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>

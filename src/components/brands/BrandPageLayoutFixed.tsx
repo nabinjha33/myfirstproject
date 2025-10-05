@@ -314,10 +314,10 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
           </div>
         )}
         
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 lg:py-32">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            <div className="space-y-8">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-24 lg:py-32">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
+            <div className="space-y-6 sm:space-y-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 lg:gap-6">
                 {brand.logo && (
                   <div className="relative flex-shrink-0">
                     <div className={`${brand.name === 'Gorkha' ? 'w-20 h-20 sm:w-28 sm:h-28 rounded-full' : 'w-16 h-16 sm:w-24 sm:h-24 rounded-2xl'} bg-white/95 backdrop-blur-sm p-3 sm:p-4 shadow-2xl border-4 border-white/30`}>
@@ -330,15 +330,15 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
                   </div>
                 )}
                 <div className="min-w-0">
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-black mb-2 bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent leading-tight">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl xl:text-7xl font-black mb-2 bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent leading-tight">
                     {brand.name}
                   </h1>
-                  <p className="text-base sm:text-lg md:text-xl lg:text-2xl font-medium text-white/90">{brand.tagline || brand.description}</p>
+                  <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-white/90">{brand.tagline || brand.description}</p>
                 </div>
               </div>
               
               {/* Enhanced Brand Information Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 py-4 sm:py-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 py-3 sm:py-4 lg:py-6">
                 {brand.established_year && (
                   <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 sm:p-4 border border-white/20 hover:bg-white/15 transition-all">
                     <div className="flex items-center gap-2 sm:gap-3 mb-2">
@@ -381,11 +381,11 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
                 </div>
               </div>
               
-              <p className="text-lg md:text-xl leading-relaxed text-white/90 font-light">
+              <p className="text-base sm:text-lg md:text-xl leading-relaxed text-white/90 font-light">
                 {brand.description}
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-3 sm:pt-4">
                 <Link href="/dealer-login">
                   <button className="h-14 px-8 border-2 border-white/50 text-white hover:bg-white hover:text-gray-900 hover:border-white backdrop-blur-sm transition-all duration-300 font-semibold rounded-md flex items-center justify-center gap-2" style={{ color: 'white' }}>
                     <ShoppingCart className="w-5 h-5" />
@@ -396,7 +396,7 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
             </div>
             
             {/* Brand Stats */}
-            <div className="grid grid-cols-2 gap-4 lg:gap-6">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mt-6 lg:mt-0">
               <StatCard
                 icon={Package}
                 title="Total Products"
@@ -426,20 +426,20 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
       </section>
 
       {/* Products Section */}
-      <section className="py-20 lg:py-28">
+      <section className="py-12 sm:py-16 lg:py-20 xl:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+          <div className="text-center mb-8 sm:mb-12 lg:mb-16">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
               {brand.name} <span className={`text-${theme.accent}`}>Collection</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
               Discover our premium range of {brand.name} products, engineered for excellence and built to last.
             </p>
           </div>
 
           {/* Advanced Search and Filters */}
-          <div className={`bg-gradient-to-r ${theme.secondary} rounded-2xl shadow-xl border border-${theme.accent}/20 p-8 mb-12`}>
-            <div className="flex flex-col lg:flex-row gap-6">
+          <div className={`bg-gradient-to-r ${theme.secondary} rounded-xl sm:rounded-2xl shadow-xl border border-${theme.accent}/20 p-4 sm:p-6 lg:p-8 mb-8 sm:mb-10 lg:mb-12`}>
+            <div className="flex flex-col sm:flex-row lg:flex-row gap-4 sm:gap-6">
               <div className="flex-1 relative">
                 <Search className={`absolute left-4 top-4 w-5 h-5 text-${theme.text}/50`} />
                 <Input
@@ -449,9 +449,9 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className={`pl-12 h-12 border-2 border-${theme.accent}/20 focus:border-${theme.accent} rounded-xl bg-white/80 backdrop-blur-sm`} />
               </div>
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className={`w-48 h-12 border-2 border-${theme.accent}/20 rounded-xl bg-white/80 backdrop-blur-sm`}>
+                  <SelectTrigger className={`w-full sm:w-48 h-12 border-2 border-${theme.accent}/20 rounded-xl bg-white/80 backdrop-blur-sm`}>
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
@@ -468,7 +468,7 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
 
           {/* Products Grid */}
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               {[...Array(8)].map((_, i) => (
                 <Card key={i} className="animate-pulse h-96">
                   <div className="h-56 bg-gray-200"></div>
@@ -511,7 +511,7 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
                   {' '}product{filteredProducts.length !== 1 ? 's' : ''} found
                 </p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                 {filteredProducts.map((product, index) => (
                   <ProductCard key={product.id} product={product} index={index} />
                 ))}

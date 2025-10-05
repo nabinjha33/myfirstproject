@@ -523,6 +523,13 @@ export class SiteSettingsService extends DatabaseService {
           contact_email: 'jeenmataimpex8@gmail.com',
           contact_phone: '+977-1-XXXXXXX',
           contact_address: 'Kathmandu, Nepal',
+          whatsapp_number: '+977-9876543210',
+          default_theme: 'light',
+          default_language: 'en',
+          enable_dealer_notifications: true,
+          enable_inquiry_notifications: true,
+          enable_whatsapp_notifications: false,
+          auto_approve_dealers: false,
           created_at: new Date().toISOString()
         }
       }
@@ -539,8 +546,91 @@ export class SiteSettingsService extends DatabaseService {
         contact_email: 'jeenmataimpex8@gmail.com',
         contact_phone: '+977-1-XXXXXXX',
         contact_address: 'Kathmandu, Nepal',
+        whatsapp_number: '+977-9876543210',
+        default_theme: 'light',
+        default_language: 'en',
+        enable_dealer_notifications: true,
+        enable_inquiry_notifications: true,
+        enable_whatsapp_notifications: false,
+        auto_approve_dealers: false,
         created_at: new Date().toISOString()
       }
+    }
+  }
+
+  async updateSettings(settingsData: any) {
+    try {
+      console.log('Updating site settings with data:', settingsData)
+      
+      // First, try to get existing settings
+      const { data: existing } = await supabase
+        .from('site_settings')
+        .select('id')
+        .limit(1)
+        .single()
+
+      if (existing) {
+        // Update existing record
+        const { data, error } = await supabase
+          .from('site_settings')
+          .update({
+            company_name: settingsData.company_name,
+            tagline: settingsData.tagline,
+            contact_email: settingsData.contact_email,
+            contact_phone: settingsData.contact_phone,
+            contact_address: settingsData.contact_address,
+            whatsapp_number: settingsData.whatsapp_number,
+            default_theme: settingsData.default_theme,
+            default_language: settingsData.default_language,
+            enable_dealer_notifications: settingsData.enable_dealer_notifications,
+            enable_inquiry_notifications: settingsData.enable_inquiry_notifications,
+            enable_whatsapp_notifications: settingsData.enable_whatsapp_notifications,
+            auto_approve_dealers: settingsData.auto_approve_dealers,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id)
+          .select()
+          .single()
+
+        if (error) {
+          console.error('Error updating site settings:', error)
+          throw error
+        }
+        
+        console.log('Site settings updated successfully:', data)
+        return data
+      } else {
+        // Create new record if none exists
+        const { data, error } = await supabase
+          .from('site_settings')
+          .insert({
+            company_name: settingsData.company_name,
+            tagline: settingsData.tagline,
+            contact_email: settingsData.contact_email,
+            contact_phone: settingsData.contact_phone,
+            contact_address: settingsData.contact_address,
+            whatsapp_number: settingsData.whatsapp_number,
+            default_theme: settingsData.default_theme,
+            default_language: settingsData.default_language,
+            enable_dealer_notifications: settingsData.enable_dealer_notifications,
+            enable_inquiry_notifications: settingsData.enable_inquiry_notifications,
+            enable_whatsapp_notifications: settingsData.enable_whatsapp_notifications,
+            auto_approve_dealers: settingsData.auto_approve_dealers
+          })
+          .select()
+          .single()
+
+        if (error) {
+          console.error('Error creating site settings:', error)
+          throw error
+        }
+        
+        console.log('Site settings created successfully:', data)
+        return data
+      }
+    } catch (error) {
+      console.error('Error in updateSettings:', error)
+      throw error
     }
   }
 }

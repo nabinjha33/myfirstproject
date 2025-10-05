@@ -265,7 +265,6 @@ export default function ProductDetail() {
                         <TableRow>
                           <TableHead>Size</TableHead>
                           <TableHead>Packaging</TableHead>
-                          <TableHead>Estimated Price (NPR)</TableHead>
                           <TableHead>Stock Status</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -276,12 +275,6 @@ export default function ProductDetail() {
                               {variant.size || '-'}
                             </TableCell>
                             <TableCell>{variant.packaging || '-'}</TableCell>
-                            <TableCell>
-                              {variant.estimated_price_npr ? 
-                                `NPR ${variant.estimated_price_npr.toLocaleString()}` : 
-                                'Contact for Price'
-                              }
-                            </TableCell>
                             <TableCell>
                               <Badge
                                 variant="outline"
