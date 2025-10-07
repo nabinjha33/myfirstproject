@@ -161,76 +161,82 @@ export default function OrderCart() {
                 {cart.map((item: any) => (
                   <Card key={item.id} className="border border-gray-200">
                     <CardContent className="p-4">
-                      <div className="flex flex-col lg:flex-row gap-4">
+                      <div className="flex flex-col gap-4">
                         {/* Product Image and Info */}
-                        <div className="flex gap-4 flex-1">
+                        <div className="flex gap-4">
                           {item.product.images?.[0] ? (
                             <img 
                               src={item.product.images[0]} 
                               alt={item.product.name}
-                              className="w-24 h-24 object-cover rounded-lg border"
+                              className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border flex-shrink-0"
                             />
                           ) : (
-                            <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center border">
-                              <Package className="w-8 h-8 text-gray-400" />
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-lg flex items-center justify-center border flex-shrink-0">
+                              <Package className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-lg text-gray-900 mb-1">{item.product.name}</h3>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="outline">{item.product.brand}</Badge>
+                            <h3 className="font-semibold text-base sm:text-lg text-gray-900 mb-2 line-clamp-2">{item.product.name}</h3>
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <Badge variant="outline" className="text-xs">{item.product.brand}</Badge>
                               <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 border border-gray-200 rounded">
                                 {item.variant.size || 'Standard'}
                                 {item.variant.packaging && ` - ${item.variant.packaging}`}
                               </span>
                             </div>
                             <p className="text-sm text-red-600 font-medium">
-                              NPR {item.variant.estimated_price_npr?.toLocaleString() || 'N/A'} each
+                              NPR {item.variant.estimated_price_npr?.toLocaleString() || 'N/A'} each <span className="text-xs text-gray-500">(Est.)</span>
                             </p>
                           </div>
                         </div>
 
-                        {/* Quantity Controls */}
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            size="icon" 
-                            variant="outline" 
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)} 
-                            disabled={item.quantity <= 1}
-                            className="h-8 w-8"
-                          >
-                            <Minus className="w-4 h-4" />
-                          </Button>
-                          <Input 
-                            type="number" 
-                            value={item.quantity} 
-                            onChange={(e) => updateQuantity(item.id, parseInt(e.target.value, 10) || 1)} 
-                            className="w-16 h-8 text-center" 
-                            min="1"
-                          />
-                          <Button 
-                            size="icon" 
-                            variant="outline" 
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="h-8 w-8"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        {/* Quantity Controls and Actions Row */}
+                        <div className="flex items-center justify-between gap-4">
+                          {/* Quantity Controls */}
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              size="icon" 
+                              variant="outline" 
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)} 
+                              disabled={item.quantity <= 1}
+                              className="h-8 w-8"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </Button>
+                            <Input 
+                              type="number" 
+                              value={item.quantity} 
+                              onChange={(e) => updateQuantity(item.id, parseInt(e.target.value, 10) || 1)} 
+                              className="w-16 h-8 text-center" 
+                              min="1"
+                            />
+                            <Button 
+                              size="icon" 
+                              variant="outline" 
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              className="h-8 w-8"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
 
-                        {/* Subtotal and Actions */}
-                        <div className="flex flex-col items-end gap-2 min-w-[120px]">
-                          <p className="text-lg font-bold text-gray-900">
-                            NPR {((item.variant.estimated_price_npr || 0) * item.quantity).toLocaleString()}
-                          </p>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => removeFromCart(item.id)}
-                            className="text-gray-400 hover:text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {/* Subtotal and Remove Button */}
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="text-base sm:text-lg font-bold text-gray-900">
+                                NPR {((item.variant.estimated_price_npr || 0) * item.quantity).toLocaleString()}
+                              </p>
+                              <p className="text-xs text-gray-500">(Est.)</p>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => removeFromCart(item.id)}
+                              className="text-gray-400 hover:text-red-600 hover:bg-red-50 h-8 w-8"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
 
@@ -260,7 +266,7 @@ export default function OrderCart() {
                 <div className="text-right">
                   <div className="text-sm text-gray-600">Estimated Total</div>
                   <div className="text-2xl font-bold text-red-600">
-                    NPR {getCartTotal().toLocaleString()}
+                    NPR {getCartTotal().toLocaleString()} <span className="text-sm text-gray-500">(Est.)</span>
                   </div>
                 </div>
                 <Button onClick={handlePlaceOrder} disabled={isSubmitting} size="lg" className="bg-red-600 hover:bg-red-700">

@@ -149,7 +149,7 @@ export default function Header() {
             </Button>
 
             {/* Dealer Login */}
-            <Link href="/dealer/login">
+            <Link href="/dealer-login">
               <Button className="bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-600 transition-colors">
                 {getText('Dealer Login', 'डीलर लगइन')}
               </Button>
@@ -212,7 +212,7 @@ export default function Header() {
                   <Globe className="w-5 h-5 mr-3" />
                   Language: {language.toUpperCase()}
                 </Button>
-                <Link href="/dealer/login" className="block mt-2">
+                <Link href="/dealer-login" className="block mt-2">
                   <Button 
                     className="w-full bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-600"
                     onClick={() => setIsMobileMenuOpen(false)}

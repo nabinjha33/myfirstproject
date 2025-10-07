@@ -210,16 +210,22 @@ export default function Home() {
                 href={`/brands/${brand.slug}`}
                 className="group">
                 <Card className="h-full overflow-hidden hover:shadow-xl transition-all duration-300 group-hover:-translate-y-2 dark:bg-slate-700/80 dark:border-slate-600 dark:hover:shadow-2xl">
-                  <div className="relative h-48 overflow-hidden">
-                    {brand.logo ?
-                      <img
-                        src={brand.logo}
-                        alt={brand.name}
-                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300 p-8" /> :
+                  <div className="relative h-48 overflow-hidden bg-gradient-to-br from-gray-50 to-white dark:from-slate-600 dark:to-slate-700">
+                    {brand.logo ? (
+                      <div className="relative w-full h-full flex items-center justify-center p-1">
+                        <div className="relative bg-white rounded-2xl shadow-lg p-1 group-hover:shadow-2xl transition-all duration-300 group-hover:scale-105 border-2 border-white/50 dark:bg-slate-800 dark:border-slate-600">
+                          <img
+                            src={brand.logo}
+                            alt={brand.name}
+                            className="w-36 h-36 object-contain group-hover:scale-110 transition-transform duration-300"
+                          />
+                        </div>
+                      </div>
+                    ) : (
                       <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-500 dark:from-teal-600 dark:to-cyan-600 flex items-center justify-center">
                         <Package className="w-16 h-16 text-white" />
                       </div>
-                    }
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                     <div className="absolute bottom-4 left-4 text-white">
                       <h3 className="text-2xl font-bold">{brand.name}</h3>
@@ -227,7 +233,7 @@ export default function Home() {
                   </div>
                   <CardContent className="p-6">
                     <p className="text-gray-600 dark:text-slate-300">{brand.description}</p>
-                    <div className="flex items-center mt-4 text-blue-600 dark:text-teal-400 group-hover:translate-x-2 transition-transform">
+                    <div className="flex items-center mt-4 text-red-600 dark:text-red-400 group-hover:translate-x-2 transition-transform">
                       <span className="font-medium">{getText("Explore Brand", "ब्रान्ड पत्ता लगाउनुहोस्")}</span>
                       <ArrowRight className="ml-2 w-4 h-4" />
                     </div>
@@ -289,7 +295,7 @@ export default function Home() {
                           <Package className="w-16 h-16 text-gray-400 dark:text-slate-400" />
                         </div>
                       }
-                      <Badge className="absolute top-4 left-4 bg-red-600 dark:bg-teal-600">
+                      <Badge className="absolute top-4 left-4 bg-red-600 dark:bg-red-600">
                         {product.brand}
                       </Badge>
                       <div className="absolute top-4 right-4">
@@ -298,7 +304,7 @@ export default function Home() {
                     </div>
                     <CardContent className="p-6 flex-1 flex flex-col">
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold mb-2 group-hover:text-red-600 transition-colors line-clamp-2 min-h-[3.5rem] dark:text-slate-100 dark:group-hover:text-teal-300">
+                        <h3 className="text-xl font-semibold mb-2 group-hover:text-red-600 transition-colors line-clamp-2 min-h-[3.5rem] dark:text-slate-100 dark:group-hover:text-red-400">
                           {product.name}
                         </h3>
 
@@ -399,47 +405,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Contact Information Section */}
-      <section className="py-12 bg-gray-100 dark:bg-slate-900">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-6">
-            {getText("Get in Touch", "सम्पर्कमा रहनुहोस्")}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">
-                {getText("Email", "इमेल")}
-              </div>
-              <p className="text-gray-600 dark:text-slate-300">
-                {siteSettings.contact_email || 'info@jeenmataimpex.com'}
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">
-                {getText("Phone", "फोन")}
-              </div>
-              <p className="text-gray-600 dark:text-slate-300">
-                {siteSettings.contact_phone || '+977-1-XXXXXXX'}
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">
-                {getText("Address", "ठेगाना")}
-              </div>
-              <p className="text-gray-600 dark:text-slate-300">
-                {siteSettings.contact_address || 'Kathmandu, Nepal'}
-              </p>
-            </div>
-          </div>
-          {siteSettings.whatsapp_number && (
-            <div className="mt-6">
-              <p className="text-sm text-gray-600 dark:text-slate-400">
-                {getText("WhatsApp:", "व्हाट्सएप:")} {siteSettings.whatsapp_number}
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
     </div>);
 
 }

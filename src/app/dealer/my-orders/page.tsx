@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Package, FileText, Printer } from 'lucide-react';
+import { Eye, Package, FileText, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import DealerAuthWrapper from '@/components/dealer/DealerAuthWrapper';
 import { useDealerAuth } from '@/hooks/useDealerAuth';
@@ -89,89 +89,63 @@ export default function MyOrders() {
     }
   };
 
-  const generatePrintableSlip = async (order: any) => {
+  const downloadOrderSlip = async (order: any) => {
     const allUsers = await User.list();
     const dealers = allUsers.filter((user: any) => user.email === order.dealer_email);
     const dealer = dealers.length > 0 ? dealers[0] : null;
 
-    const slipHTML = `
-      <html>
-        <head>
-          <title>Order Slip - ${order.order_number}</title>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; color: #1f2937; }
-            .slip-container { max-width: 800px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; }
-            h1, h2, h3 { color: #dc2626; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
-            th { background-color: #f3f4f6; }
-            .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 2px solid #dc2626; }
-            .total { text-align: right; margin-top: 20px; font-size: 1.5em; font-weight: bold; }
-            .item-notes { font-size: 0.8em; color: #555; }
-            @media print {
-              body { padding: 0; }
-              .slip-container { border: none; box-shadow: none; }
-              .no-print { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="slip-container">
-            <div class="header">
-              <div>
-                <h1>Order Slip</h1>
-                <p><strong>Order #:</strong> ${order.order_number}</p>
-                <p><strong>Date:</strong> ${order.created_at || order.created_date ? format(new Date(order.created_at || order.created_date), 'MMMM d, yyyy') : 'N/A'}</p>
-              </div>
-              <div>
-                <h2>Jeen Mata Impex</h2>
-              </div>
-            </div>
-            
-            <h3 style="margin-top: 30px;">Dealer Information</h3>
-            ${dealer ? `
-              <p><strong>Business:</strong> ${dealer.business_name || 'N/A'}</p>
-              <p><strong>Contact:</strong> ${dealer.full_name || 'N/A'}</p>
-              <p><strong>Email:</strong> ${dealer.email}</p>
-              <p><strong>Address:</strong> ${dealer.address || 'N/A'}</p>
-            ` : `<p><strong>Email:</strong> ${order.dealer_email}</p>`}
+    const slipContent = `
+ORDER SLIP
+==========
 
-            <h3 style="margin-top: 30px;">Order Items</h3>
-            <table>
-              <thead>
-                <tr><th>Product</th><th>Variant</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr>
-              </thead>
-              <tbody>
-                ${(order.product_items || []).map((item: any) => `
-                  <tr>
-                    <td>
-                      ${item.product_name}
-                      ${item.notes ? `<p class="item-notes"><em>Note: ${item.notes}</em></p>` : ''}
-                    </td>
-                    <td>${item.variant_details}</td>
-                    <td style="text-align: center;">${item.quantity}</td>
-                    <td style="text-align: right;">NPR ${(item.unit_price_npr || 0).toLocaleString('en-US')}</td>
-                    <td style="text-align: right;">NPR ${((item.unit_price_npr || 0) * (item.quantity || 0)).toLocaleString('en-US')}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-            
-            <div class="total">
-              Total Amount: NPR ${(order.total_amount_npr || 0).toLocaleString('en-US')}
-            </div>
-            <button class="no-print" onclick="window.print()">Print this slip</button>
-          </div>
-        </body>
-      </html>
+Order #: ${order.order_number}
+Date: ${order.created_at || order.created_date ? format(new Date(order.created_at || order.created_date), 'MMMM d, yyyy') : 'N/A'}
+
+COMPANY INFORMATION
+-------------------
+Jeen Mata Impex
+Premium Import Solutions
+
+DEALER INFORMATION
+------------------
+${dealer ? `
+Business: ${dealer.business_name || 'N/A'}
+Contact: ${dealer.full_name || 'N/A'}
+Email: ${dealer.email}
+Address: ${dealer.address || 'N/A'}
+` : `Email: ${order.dealer_email}`}
+
+ORDER ITEMS
+-----------
+${(order.product_items || []).map((item: any, index: number) => `
+${index + 1}. Product: ${item.product_name}
+   Variant: ${item.variant_details || 'Standard'}
+   Quantity: ${item.quantity}
+   Unit Price: NPR ${(item.unit_price_npr || 0).toLocaleString('en-US')} (Estimated)
+   Total: NPR ${((item.unit_price_npr || 0) * (item.quantity || 0)).toLocaleString('en-US')} (Estimated)${item.notes ? `
+   
+   *** SPECIAL NOTES ***
+   ${item.notes}
+   *** END NOTES ***
+   ` : ''}
+`).join('')}
+
+TOTAL AMOUNT: NPR ${(order.total_amount_npr || 0).toLocaleString('en-US')} (Estimated)
+
+Generated on: ${new Date().toLocaleDateString()}
+Generated by: Dealer Portal - Jeen Mata Impex
     `;
 
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(slipHTML);
-      printWindow.document.close();
-      printWindow.focus();
-    }
+    // Create and download the file
+    const blob = new Blob([slipContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `order_slip_${order.order_number}_${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   const getStatusBadgeClass = (status: string) => {
@@ -330,11 +304,11 @@ export default function MyOrders() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => generatePrintableSlip(order)}
+                        onClick={() => downloadOrderSlip(order)}
                         className="w-full"
                       >
-                        <Printer className="w-4 h-4 mr-2" />
-                        Print
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
                       </Button>
                     </div>
                   </div>
@@ -469,10 +443,10 @@ export default function MyOrders() {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => generatePrintableSlip(order)}
+                          onClick={() => downloadOrderSlip(order)}
                         >
-                          <Printer className="w-4 h-4 mr-2" />
-                          Print Slip
+                          <Download className="w-4 h-4 mr-2" />
+                          Download Slip
                         </Button>
                       </div>
                     </TableCell>

@@ -104,19 +104,24 @@ export default function Brands() {
     
     return (
       <Card className="h-full overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col">
-        <div className="relative h-64 overflow-hidden">
+        <div className="relative h-64 overflow-hidden bg-gradient-to-br from-gray-50 to-white">
           {brand.logo ? (
-            <img 
-              src={brand.logo} 
-              alt={brand.name}
-              className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300 p-8"
-            />
+            <div className="relative w-full h-full flex items-center justify-center p-1">
+              <div className="relative bg-white rounded-2xl shadow-lg p-1 group-hover:shadow-2xl transition-all duration-300 group-hover:scale-105 border-2 border-white/50">
+                <img 
+                  src={brand.logo} 
+                  alt={brand.name}
+                  className="w-44 h-44 object-contain group-hover:scale-110 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </div>
+            </div>
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-red-500 to-amber-500 opacity-80 flex items-center justify-center">
               <Package className="w-24 h-24 text-white" />
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
           <div className="absolute top-4 left-4 md:top-6 md:left-6 text-white">
             <h3 className="text-xl md:text-3xl font-bold mb-1 md:mb-2">{brand.name}</h3>
             <p className="text-sm md:text-lg text-white/90 line-clamp-2">{brand.description}</p>
@@ -128,7 +133,7 @@ export default function Brands() {
           </div>
         </div>
         
-        <CardContent className="p-6 flex flex-col flex-1">
+        <CardContent className="p-4 flex flex-col flex-1">
           <div className="space-y-4 flex-1">
             {/* Brand Info */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-sm">
@@ -335,7 +340,7 @@ export default function Brands() {
               </Button>
             </Link>
             <Link href="/dealer-login">
-              <Button size="lg" variant="outline" className="h-12 px-8 border-white text-white hover:bg-white/10 hover:text-red-600">
+              <Button size="lg" variant="outline" className="h-12 px-8 border-white text-red-600 bg-white hover:bg-red-50 hover:text-red-700">
                 <ArrowRight className="w-5 h-5 mr-2" />
                 Become a Dealer
               </Button>

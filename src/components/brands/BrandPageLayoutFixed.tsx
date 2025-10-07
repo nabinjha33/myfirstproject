@@ -164,6 +164,31 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
     setFilteredProducts(filtered);
   }, [products, searchQuery, categoryFilter]);
 
+  // Group products by category
+  const groupProductsByCategory = (products: any[]) => {
+    const grouped = products.reduce((acc: any, product: any) => {
+      const category = product.category || 'Uncategorized';
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(product);
+      return acc;
+    }, {});
+    
+    // Sort categories by product count (descending)
+    return Object.entries(grouped)
+      .sort(([, a]: any, [, b]: any) => b.length - a.length)
+      .reduce((acc: any, [category, products]) => {
+        acc[category] = products;
+        return acc;
+      }, {});
+  };
+
+  const groupedProducts = groupProductsByCategory(filteredProducts);
+  const categoryCount = Object.keys(groupedProducts).length;
+  const totalFilteredProducts = filteredProducts.length;
+  const hasActiveFilters = searchQuery.trim() || categoryFilter !== 'All';
+
   useEffect(() => {
     loadBrandProducts();
   }, [loadBrandProducts]);
@@ -320,7 +345,7 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 lg:gap-6">
                 {brand.logo && (
                   <div className="relative flex-shrink-0">
-                    <div className={`${brand.name === 'Gorkha' ? 'w-20 h-20 sm:w-28 sm:h-28 rounded-full' : 'w-16 h-16 sm:w-24 sm:h-24 rounded-2xl'} bg-white/95 backdrop-blur-sm p-3 sm:p-4 shadow-2xl border-4 border-white/30`}>
+                    <div className={`${brand.name === 'Gorkha' ? 'w-20 h-20 sm:w-28 sm:h-28 rounded-full p-0.5 sm:p-1' : 'w-16 h-16 sm:w-24 sm:h-24 rounded-2xl p-1.5 sm:p-2'} bg-white backdrop-blur-sm shadow-2xl border-4 border-white/30`}>
                       <img src={brand.logo} alt={brand.name} className="w-full h-full object-contain" />
                     </div>
                     <div className={`absolute -inset-1 bg-gradient-to-r from-white/30 to-white/50 ${brand.name === 'Gorkha' ? 'rounded-full' : 'rounded-2xl'} blur-sm -z-10`}></div>
@@ -487,36 +512,65 @@ export default function BrandPageLayout({ brand: originalBrand }: { brand: any }
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">No Products Found</h3>
               <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                {searchQuery || categoryFilter !== 'All' ?
+                {hasActiveFilters ?
                   'Try adjusting your search criteria or filters' :
                   `No ${brand.name} products are currently available`
                 }
               </p>
-              {(searchQuery || categoryFilter !== 'All') && (
+              {hasActiveFilters && (
                 <Button
                   onClick={() => {
                     setSearchQuery('');
                     setCategoryFilter('All');
                   }}
                   className={`bg-${theme.accent} hover:bg-${theme.accentHover} text-white px-8 py-3 rounded-xl font-semibold`}>
-                  Clear Filters
+                  Clear All Filters
                 </Button>
               )}
             </div>
           ) : (
-            <>
-              <div className="flex justify-between items-center mb-8">
-                <p className="text-lg text-gray-600">
-                  <span className={`font-bold text-${theme.accent}`}>{filteredProducts.length}</span> 
-                  {' '}product{filteredProducts.length !== 1 ? 's' : ''} found
-                </p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-                {filteredProducts.map((product, index) => (
-                  <ProductCard key={product.id} product={product} index={index} />
-                ))}
-              </div>
-            </>
+            <div className="space-y-8">
+              {/* Results Summary */}
+              {hasActiveFilters && (
+                <div className={`bg-gradient-to-r ${theme.secondary} border border-${theme.accent}/20 rounded-lg p-4`}>
+                  <div className={`flex items-center gap-2 text-${theme.text}`}>
+                    <Package className="w-5 h-5" />
+                    <span className="font-medium">
+                      Showing {totalFilteredProducts} products in {categoryCount} {categoryCount === 1 ? 'category' : 'categories'}
+                    </span>
+                  </div>
+                  {categoryCount < categories.length - 1 && (
+                    <p className={`text-sm text-${theme.text}/70 mt-2`}>
+                      💡 Tip: Clear filters to see all {categories.length - 1} categories
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Category Groups */}
+              {Object.entries(groupedProducts).map(([category, categoryProducts]: [string, any], index: number) => (
+                <div key={category} className={`space-y-6 ${index > 0 ? 'pt-12 border-t-2 border-gray-100' : ''}`}>
+                  <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 rounded-xl p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-4">
+                        <div className="w-2 h-10 bg-gradient-to-b from-red-500 to-red-600 rounded-full shadow-md"></div>
+                        <span className="bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent">
+                          {category}
+                        </span>
+                        <Badge variant="outline" className="text-sm bg-white border-red-200 text-red-700">
+                          {categoryProducts.length} {categoryProducts.length === 1 ? 'product' : 'products'}
+                        </Badge>
+                      </h3>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+                    {categoryProducts.map((product: any, index: number) => (
+                      <ProductCard key={product.id} product={product} index={index} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </section>

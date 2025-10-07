@@ -115,6 +115,31 @@ function ProductsContent() {
     setFilteredProducts(filtered);
   }, [products, searchQuery, selectedBrand, selectedCategory, selectedStock, sortBy]);
 
+  // Group products by category
+  const groupProductsByCategory = (products: ProductData[]) => {
+    const grouped = products.reduce((acc: any, product: ProductData) => {
+      const category = product.category || 'Uncategorized';
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(product);
+      return acc;
+    }, {});
+    
+    // Sort categories by product count (descending)
+    return Object.entries(grouped)
+      .sort(([, a]: any, [, b]: any) => b.length - a.length)
+      .reduce((acc: any, [category, products]) => {
+        acc[category] = products;
+        return acc;
+      }, {});
+  };
+
+  const groupedProducts = groupProductsByCategory(filteredProducts);
+  const categoryCount = Object.keys(groupedProducts).length;
+  const totalFilteredProducts = filteredProducts.length;
+  const hasActiveFilters = searchQuery.trim() || selectedBrand !== 'All' || selectedCategory !== 'All' || selectedStock !== 'All';
+
   useEffect(() => {
     loadProducts();
     loadCategories();
@@ -320,7 +345,10 @@ function ProductsContent() {
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
           <div>
             <p className="text-gray-600">
-              {isLoading ? 'Loading...' : `${filteredProducts.length} products found`}
+              {isLoading ? 'Loading...' : hasActiveFilters ? 
+                `${totalFilteredProducts} products found in ${categoryCount} ${categoryCount === 1 ? 'category' : 'categories'}` :
+                `${totalFilteredProducts} products found`
+              }
             </p>
           </div>
           
@@ -375,32 +403,71 @@ function ProductsContent() {
               </Card>
             ))}
           </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : totalFilteredProducts === 0 ? (
           <div className="text-center py-16">
             <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold mb-2">No products found</h3>
             <p className="text-gray-600 mb-4">Try adjusting your search or filters</p>
-            <Button onClick={() => {
-              setSearchQuery("");
-              setSelectedBrand("All");
-              setSelectedCategory("All");
-              setSelectedStock("All");
-            }}>
-              Clear Filters
-            </Button>
+            {hasActiveFilters && (
+              <Button onClick={() => {
+                setSearchQuery("");
+                setSelectedBrand("All");
+                setSelectedCategory("All");
+                setSelectedStock("All");
+              }}>
+                Clear All Filters
+              </Button>
+            )}
           </div>
         ) : (
-          <div className={`grid gap-6 ${
-            viewMode === 'grid' 
-              ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
-              : 'grid-cols-1'
-          }`}>
-            {filteredProducts.map((product) => (
-              <ProductCard 
-                key={product.id} 
-                product={product} 
-                isListView={viewMode === 'list'} 
-              />
+          <div className="space-y-8">
+            {/* Results Summary */}
+            {hasActiveFilters && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 text-blue-800">
+                  <Package className="w-5 h-5" />
+                  <span className="font-medium">
+                    Showing {totalFilteredProducts} products in {categoryCount} {categoryCount === 1 ? 'category' : 'categories'}
+                  </span>
+                </div>
+                {categoryCount < categories.length - 1 && (
+                  <p className="text-sm text-blue-600 mt-2">
+                    💡 Tip: Clear filters to see all {categories.length - 1} categories
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Category Groups */}
+            {Object.entries(groupedProducts).map(([category, categoryProducts]: [string, any], index: number) => (
+              <div key={category} className={`space-y-6 ${index > 0 ? 'pt-12 border-t-2 border-gray-100' : ''}`}>
+                <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-4">
+                      <div className="w-2 h-10 bg-gradient-to-b from-red-500 to-red-600 rounded-full shadow-md"></div>
+                      <span className="bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent">
+                        {category}
+                      </span>
+                      <Badge variant="outline" className="text-sm bg-white border-red-200 text-red-700">
+                        {categoryProducts.length} {categoryProducts.length === 1 ? 'product' : 'products'}
+                      </Badge>
+                    </h2>
+                  </div>
+                </div>
+                <div className={`grid gap-6 ${
+                  viewMode === 'grid' 
+                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                    : 'grid-cols-1'
+                }`}>
+                  {categoryProducts.map((product: ProductData) => (
+                    <ProductCard 
+                      key={product.id} 
+                      product={product} 
+                      isListView={viewMode === 'list'} 
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         )}
