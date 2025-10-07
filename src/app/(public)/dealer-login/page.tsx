@@ -453,8 +453,8 @@ export default function DealerLogin() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Side - Information */}
-          <div className="space-y-6">
+          {/* Left Side - Information - Hidden on mobile */}
+          <div className="hidden lg:block space-y-6">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 Join Our Dealer Network
@@ -498,7 +498,7 @@ export default function DealerLogin() {
           </div>
 
           {/* Right Side - Login/Signup Forms */}
-          <Card className="shadow-xl">
+          <Card className="shadow-xl lg:col-span-1 col-span-1 w-full max-w-md mx-auto lg:max-w-none lg:mx-0">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl">Dealer Portal Access</CardTitle>
             </CardHeader>
