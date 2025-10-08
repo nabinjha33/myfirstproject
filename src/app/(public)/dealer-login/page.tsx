@@ -22,6 +22,7 @@ import {
   UserPlus,
   RefreshCw
 } from "lucide-react";
+import { AuthProgress, SuccessAnimation, SmoothTransition, LoadingOverlay } from '@/components/ui/loading-states';
 import { handleSessionConflict, isSessionConflictError } from '@/lib/auth-utils';
 
 export default function DealerLogin() {
@@ -38,6 +39,9 @@ export default function DealerLogin() {
   const [showEmailVerification, setShowEmailVerification] = React.useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [pendingVerification, setPendingVerification] = useState(false);
+  const [authStep, setAuthStep] = useState<'authenticating' | 'verifying' | 'redirecting' | 'success'>('authenticating');
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [currentView, setCurrentView] = useState<'form' | 'loading' | 'success'>('form');
   const [loginForm, setLoginForm] = useState({
     email: "",
     password: ""
@@ -203,25 +207,29 @@ export default function DealerLogin() {
       });
 
       if (result.status === 'complete') {
-        console.log('✅ Clerk login completed, redirecting to dealer portal...');
+        console.log('✅ Clerk login completed, starting seamless transition...');
         
-        // Set success message
-        setSubmissionStatus({
-          type: 'success',
-          message: 'Login successful! Redirecting to dealer portal...'
-        });
+        // Start seamless transition sequence
+        setAuthStep('verifying');
+        setCurrentView('loading');
         
-        // Keep loading state active during redirect
-        // Wait a moment for the success message to show, then redirect with full reload
+        // Step 1: Verifying (500ms)
         setTimeout(() => {
-          setSubmissionStatus({
-            type: 'info',
-            message: 'Loading dealer portal...'
-          });
-          
-          // Use window.location.href for full page reload and clean state
+          setAuthStep('redirecting');
+        }, 500);
+        
+        // Step 2: Success animation (800ms)
+        setTimeout(() => {
+          setAuthStep('success');
+          setCurrentView('success');
+          setShowSuccessAnimation(true);
+        }, 1300);
+        
+        // Step 3: Redirect with smooth transition (1500ms total)
+        setTimeout(() => {
+          // Use window.location.href for reliable state management
           window.location.href = '/dealer/catalog';
-        }, 1500);
+        }, 2800);
       } else {
         setSubmissionStatus({
           type: 'error',
@@ -335,11 +343,11 @@ export default function DealerLogin() {
         emailAddress: signupForm.email,
         password: signupForm.password,
       });
-
       // Send email verification
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
       
       setPendingVerification(true);
+      setCurrentView('form');
       setSubmissionStatus({
         type: 'success',
         message: 'Account created! Please check your email and enter the verification code below to continue.'
@@ -401,18 +409,14 @@ export default function DealerLogin() {
       if (completeSignUp.status === 'complete') {
         console.log('Email verification complete, user created:', completeSignUp.createdUserId);
         
-        setSubmissionStatus({
-          type: 'success',
-          message: 'Email verified successfully! Redirecting to dealer application form...'
-        });
-        
-        // Set flags to prevent interference from useEffect
+        // Start success sequence for email verification
+        setCurrentView('success');
+        setShowSuccessAnimation(true);
         setPendingVerification(false);
         
-        // Redirect to dealer application form with a slight delay to ensure Clerk state is updated
+        // Redirect after success animation
         setTimeout(() => {
           console.log('Redirecting to dealer application form...');
-          // Force a page reload to ensure fresh Clerk state
           window.location.href = '/dealer-application';
         }, 2500);
       }
@@ -440,281 +444,307 @@ export default function DealerLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
-        {/* Back Button */}
-        <div className="mb-6">
-          <Link href="/">
-            <Button variant="ghost" className="text-gray-600">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Side - Information - Hidden on mobile */}
-          <div className="hidden lg:block space-y-6">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                Join Our Dealer Network
-              </h1>
-              <p className="text-lg text-gray-600">
-                Access premium imported products with competitive wholesale pricing and dedicated support.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-start gap-4 p-4 bg-white rounded-xl shadow-sm">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Wholesale Pricing</h3>
-                  <p className="text-gray-600">Get access to competitive dealer prices on all our products</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4 p-4 bg-white rounded-xl shadow-sm">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Shield className="w-6 h-6 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Quality Assurance</h3>
-                  <p className="text-gray-600">All products undergo strict quality checks before import</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4 p-4 bg-white rounded-xl shadow-sm">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <UserPlus className="w-6 h-6 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Dedicated Support</h3>
-                  <p className="text-gray-600">Personal account manager and 24/7 customer support</p>
-                </div>
-              </div>
-            </div>
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-amber-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-4xl">
+          {/* Back Button */}
+          <div className="mb-6">
+            <Link href="/">
+              <Button variant="ghost" className="text-gray-600">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </Button>
+            </Link>
           </div>
 
-          {/* Right Side - Login/Signup Forms */}
-          <Card className="shadow-xl lg:col-span-1 col-span-1 w-full max-w-md mx-auto lg:max-w-none lg:mx-0">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Dealer Portal Access</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Re-login Progress Status */}
-              {isReloginInProgress && reloginStatus && (
-                <Alert className="mb-4 bg-yellow-50 border-yellow-200 text-yellow-800">
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  <AlertDescription>
-                    {reloginStatus}
-                  </AlertDescription>
-                </Alert>
-              )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Side - Information - Hidden on mobile */}
+            <div className="hidden lg:block space-y-6">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                  Join Our Dealer Network
+                </h1>
+                <p className="text-lg text-gray-600">
+                  Access premium imported products with competitive wholesale pricing and dedicated support.
+                </p>
+              </div>
 
-              {/* Status Messages */}
-              {submissionStatus && !isReloginInProgress && (
-                <Alert className={`mb-4 ${
-                  submissionStatus.type === 'success'
-                    ? 'bg-green-50 border-green-200 text-green-800'
-                    : submissionStatus.type === 'info'
-                    ? 'bg-blue-50 border-blue-200 text-blue-800'
-                    : 'bg-red-50 border-red-200 text-red-800'
-                }`}>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    {submissionStatus.message}
-                  </AlertDescription>
-                </Alert>
-              )}
+              <div className="space-y-4">
+                <div className="flex items-start gap-4 p-4 bg-white rounded-xl shadow-sm">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Wholesale Pricing</h3>
+                    <p className="text-gray-600">Get access to competitive dealer prices on all our products</p>
+                  </div>
+                </div>
 
-              {!pendingVerification ? (
-                <Tabs defaultValue="login" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="login">Login</TabsTrigger>
-                    <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="login">
-                    <form onSubmit={handleLogin} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email Address</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                          <Input
-                            id="email"
-                            type="email"
-                            placeholder="Enter your email"
-                            value={loginForm.email}
-                            onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
-                            className="pl-10"
-                            required
-                          />
+                <div className="flex items-start gap-4 p-4 bg-white rounded-xl shadow-sm">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Shield className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Quality Assurance</h3>
+                    <p className="text-gray-600">All products undergo strict quality checks before import</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 bg-white rounded-xl shadow-sm">
+                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <UserPlus className="w-6 h-6 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Dedicated Support</h3>
+                    <p className="text-gray-600">Personal account manager and 24/7 customer support</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side - Login/Signup Forms */}
+            <Card className="shadow-xl lg:col-span-1 col-span-1 w-full max-w-md mx-auto lg:max-w-none lg:mx-0">
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl">Dealer Portal Access</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Re-login Progress Status */}
+                {isReloginInProgress && reloginStatus && (
+                  <Alert className="mb-4 bg-yellow-50 border-yellow-200 text-yellow-800">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <AlertDescription>
+                      {reloginStatus}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Status Messages */}
+                <SmoothTransition show={!!submissionStatus && !isReloginInProgress && currentView === 'form'}>
+                  {submissionStatus && (
+                    <Alert className={`mb-4 ${
+                      submissionStatus.type === 'success'
+                        ? 'bg-green-50 border-green-200 text-green-800'
+                        : submissionStatus.type === 'info'
+                        ? 'bg-blue-50 border-blue-200 text-blue-800'
+                        : 'bg-red-50 border-red-200 text-red-800'
+                    }`}>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        {submissionStatus.message}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </SmoothTransition>
+
+                <SmoothTransition show={currentView === 'form' && !pendingVerification}>
+                  <Tabs defaultValue="login" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="login">Login</TabsTrigger>
+                      <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="login">
+                      <form onSubmit={handleLogin} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email Address</Label>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                            <Input
+                              id="email"
+                              type="email"
+                              placeholder="Enter your email"
+                              value={loginForm.email}
+                              onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
+                              className="pl-10"
+                              required
+                            />
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                          <Input
-                            id="password"
-                            type="password"
-                            placeholder="Enter your password"
-                            value={loginForm.password}
-                            onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
-                            className="pl-10"
-                            required
-                          />
+                        <div className="space-y-2">
+                          <Label htmlFor="password">Password</Label>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                            <Input
+                              id="password"
+                              type="password"
+                              placeholder="Enter your password"
+                              value={loginForm.password}
+                              onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+                              className="pl-10"
+                              required
+                            />
+                          </div>
                         </div>
-                      </div>
 
-                      <Button
-                        type="submit"
-                        className="w-full bg-red-600 hover:bg-red-700 h-11"
-                        disabled={isLoading || isReloginInProgress}
-                      >
-                        {isLoading || isReloginInProgress ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            {isReloginInProgress ? 'Refreshing Session...' : 'Signing In...'}
-                          </>
-                        ) : (
-                          "Sign In to Dealer Portal"
-                        )}
-                      </Button>
+                        <Button
+                          type="submit"
+                          className="w-full bg-red-600 hover:bg-red-700 h-11"
+                          disabled={isLoading || isReloginInProgress}
+                        >
+                          {isLoading || isReloginInProgress ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              {isReloginInProgress ? 'Refreshing Session...' : 'Signing In...'}
+                            </>
+                          ) : (
+                            "Sign In to Dealer Portal"
+                          )}
+                        </Button>
 
-                      <p className="text-center text-sm text-gray-600">
-                        Note: Only approved dealers can login. If you don't have an account, sign up using the tab above.
-                      </p>
-                    </form>
-                  </TabsContent>
-
-                  <TabsContent value="signup">
-                    <form onSubmit={handleSignup} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="signupEmail">Email Address</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                          <Input
-                            id="signupEmail"
-                            type="email"
-                            placeholder="Enter your email"
-                            value={signupForm.email}
-                            onChange={(e) => setSignupForm({...signupForm, email: e.target.value})}
-                            className="pl-10"
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="signupPassword">Password</Label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                          <Input
-                            id="signupPassword"
-                            type="password"
-                            placeholder="Create a strong password"
-                            value={signupForm.password}
-                            onChange={(e) => setSignupForm({...signupForm, password: e.target.value})}
-                            className="pl-10"
-                            required
-                            minLength={8}
-                          />
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          Password must be at least 8 characters long
+                        <p className="text-center text-sm text-gray-600">
+                          Note: Only approved dealers can login. If you don't have an account, sign up using the tab above.
                         </p>
+                      </form>
+                    </TabsContent>
+
+                    <TabsContent value="signup">
+                      <form onSubmit={handleSignup} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="signupEmail">Email Address</Label>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                            <Input
+                              id="signupEmail"
+                              type="email"
+                              placeholder="Enter your email"
+                              value={signupForm.email}
+                              onChange={(e) => setSignupForm({...signupForm, email: e.target.value})}
+                              className="pl-10"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="signupPassword">Password</Label>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                            <Input
+                              id="signupPassword"
+                              type="password"
+                              placeholder="Create a strong password"
+                              value={signupForm.password}
+                              onChange={(e) => setSignupForm({...signupForm, password: e.target.value})}
+                              className="pl-10"
+                              required
+                              minLength={8}
+                            />
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            Password must be at least 8 characters long
+                          </p>
+                        </div>
+
+                        <Button
+                          type="submit"
+                          className="w-full bg-red-600 hover:bg-red-700 h-11"
+                          disabled={isLoading}
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Creating Account...
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="mr-2 h-4 w-4" />
+                              Create Account
+                            </>
+                          )}
+                        </Button>
+
+                        <p className="text-center text-sm text-gray-600">
+                          After email verification, you'll fill out the dealer application form.
+                        </p>
+                      </form>
+                    </TabsContent>
+                  </Tabs>
+                </SmoothTransition>
+                
+                <SmoothTransition show={currentView === 'form' && pendingVerification}>
+                  <div className="space-y-4">
+                    <div className="text-center">
+                      <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        Verify Your Email
+                      </h3>
+                      <p className="text-gray-600 mb-4">
+                        We've sent a verification code to <strong>{signupForm.email}</strong>
+                      </p>
+                    </div>
+
+                    <form onSubmit={handleVerifyEmail} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="verificationCode">Verification Code</Label>
+                        <Input
+                          id="verificationCode"
+                          type="text"
+                          placeholder="Enter 6-digit code"
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value)}
+                          className="text-center text-lg tracking-widest"
+                          maxLength={6}
+                          required
+                        />
                       </div>
 
                       <Button
                         type="submit"
                         className="w-full bg-red-600 hover:bg-red-700 h-11"
-                        disabled={isLoading}
+                        disabled={isLoading || verificationCode.length !== 6}
                       >
                         {isLoading ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Creating Account...
+                            Verifying...
                           </>
                         ) : (
-                          <>
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            Create Account
-                          </>
+                          "Verify Email"
                         )}
                       </Button>
 
-                      <p className="text-center text-sm text-gray-600">
-                        After email verification, you'll fill out the dealer application form.
-                      </p>
+                      <div className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPendingVerification(false);
+                            setVerificationCode("");
+                            setSubmissionStatus(null);
+                          }}
+                          className="text-sm text-gray-600 hover:text-gray-800 underline"
+                        >
+                          Back to signup
+                        </button>
+                      </div>
                     </form>
-                  </TabsContent>
-                </Tabs>
-              ) : (
-                <div className="space-y-4">
-                  <div className="text-center">
-                    <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      Verify Your Email
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                      We've sent a verification code to <strong>{signupForm.email}</strong>
-                    </p>
                   </div>
-
-                  <form onSubmit={handleVerifyEmail} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="verificationCode">Verification Code</Label>
-                      <Input
-                        id="verificationCode"
-                        type="text"
-                        placeholder="Enter 6-digit code"
-                        value={verificationCode}
-                        onChange={(e) => setVerificationCode(e.target.value)}
-                        className="text-center text-lg tracking-widest"
-                        maxLength={6}
-                        required
-                      />
-                    </div>
-
-                    <Button
-                      type="submit"
-                      className="w-full bg-red-600 hover:bg-red-700 h-11"
-                      disabled={isLoading || verificationCode.length !== 6}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Verifying...
-                        </>
-                      ) : (
-                        "Verify Email"
-                      )}
-                    </Button>
-
-                    <div className="text-center">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPendingVerification(false);
-                          setVerificationCode("");
-                          setSubmissionStatus(null);
-                        }}
-                        className="text-sm text-gray-600 hover:text-gray-800 underline"
-                      >
-                        Back to signup
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                </SmoothTransition>
+                
+                <SmoothTransition show={currentView === 'success'}>
+                  <SuccessAnimation
+                    title={showEmailVerification ? "Email Verified!" : "Login Successful!"}
+                    message={showEmailVerification ? "Redirecting to application form..." : "Welcome back! Loading your dashboard..."}
+                    onComplete={() => {/* Handled by timeout above */}}
+                    duration={2500}
+                  />
+                </SmoothTransition>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
-    </div>
+      
+      {/* Loading Overlay for Authentication Process */}
+      <LoadingOverlay
+        show={currentView === 'loading'}
+        progress={{
+          step: authStep,
+          message: authStep === 'verifying' ? 'Checking dealer credentials...' : 
+                  authStep === 'redirecting' ? 'Preparing your dashboard...' : 
+                  'Authenticating...'
+        }}
+      />
+    </>
   );
 }

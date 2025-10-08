@@ -99,135 +99,262 @@ export default function MyOrders() {
     // Create new PDF document
     const pdf = new jsPDF();
     let yPosition = 20;
+    const pageWidth = pdf.internal.pageSize.width;
+    const pageHeight = pdf.internal.pageSize.height;
 
     // Helper function to add text with automatic line wrapping
-    const addText = (text: string, x: number, y: number, maxWidth?: number) => {
+    const addText = (text: string, x: number, y: number, maxWidth?: number, fontSize?: number) => {
+      if (fontSize) pdf.setFontSize(fontSize);
       if (maxWidth) {
         const lines = pdf.splitTextToSize(text, maxWidth);
         pdf.text(lines, x, y);
-        return y + (lines.length * 7);
+        return y + (lines.length * (fontSize ? fontSize * 0.4 : 5));
       } else {
         pdf.text(text, x, y);
-        return y + 7;
+        return y + (fontSize ? fontSize * 0.4 : 5);
       }
     };
 
-    // Header
-    pdf.setFontSize(20);
+    // Check if new page is needed
+    const checkNewPage = (requiredSpace: number = 20) => {
+      if (yPosition + requiredSpace > pageHeight - 30) {
+        pdf.addPage();
+        yPosition = 20;
+        return true;
+      }
+      return false;
+    };
+
+    // Company Header with Logo Area
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(15, 15, pageWidth - 30, 35, 'F');
+    
+    pdf.setFontSize(24);
     pdf.setFont('helvetica', 'bold');
-    yPosition = addText('ORDER SLIP', 20, yPosition);
+    pdf.setTextColor(220, 38, 38); // Red color
+    yPosition = addText('JEEN MATA IMPEX', 20, 30, undefined, 24);
     
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'normal');
-    yPosition = addText('Jeen Mata Impex - Premium Import Solutions', 20, yPosition + 5);
+    pdf.setTextColor(100, 100, 100);
+    yPosition = addText('Premium Import Solutions from China & India', 20, yPosition + 2, undefined, 12);
     
-    // Add line separator
-    pdf.line(20, yPosition + 5, 190, yPosition + 5);
-    yPosition += 15;
+    pdf.setTextColor(0, 0, 0); // Reset to black
+    yPosition = 60;
 
-    // Order Details Section
+    // Document Title
+    pdf.setFontSize(20);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(220, 38, 38);
+    yPosition = addText('ORDER SLIP', pageWidth / 2 - 30, yPosition, undefined, 20);
+    pdf.setTextColor(0, 0, 0);
+    yPosition += 10;
+
+    // Order Information Box
+    checkNewPage(40);
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(15, yPosition, pageWidth - 30, 35, 'F');
+    pdf.setDrawColor(200, 200, 200);
+    pdf.rect(15, yPosition, pageWidth - 30, 35, 'S');
+    
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
-    yPosition = addText('Order Details:', 20, yPosition);
+    yPosition = addText('ORDER INFORMATION', 20, yPosition + 8, undefined, 14);
     
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'normal');
-    yPosition = addText(`Order #: ${order.order_number}`, 25, yPosition + 5);
-    yPosition = addText(`Date: ${order.created_at || order.created_date ? format(new Date(order.created_at || order.created_date), 'MMMM d, yyyy') : 'N/A'}`, 25, yPosition);
+    const orderDate = order.created_at || order.created_date ? format(new Date(order.created_at || order.created_date), 'MMMM d, yyyy \'at\' h:mm a') : 'N/A';
+    
+    yPosition = addText(`Order Number: ${order.order_number}`, 20, yPosition + 5, undefined, 11);
+    yPosition = addText(`Order Date: ${orderDate}`, 20, yPosition + 2, undefined, 11);
+    yPosition = addText(`Order Status: ${order.status || 'Pending'}`, 20, yPosition + 2, undefined, 11);
+    yPosition = addText(`Order Type: ${order.inquiry_type || 'Order'}`, 20, yPosition + 2, undefined, 11);
+    yPosition += 15;
 
-    yPosition += 10;
-
-    // Dealer Information Section
+    // Dealer Information Box
+    checkNewPage(60);
+    pdf.setFillColor(248, 250, 252);
+    const dealerBoxHeight = dealer ? 50 : 30;
+    pdf.rect(15, yPosition, pageWidth - 30, dealerBoxHeight, 'F');
+    pdf.rect(15, yPosition, pageWidth - 30, dealerBoxHeight, 'S');
+    
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
-    yPosition = addText('Dealer Information:', 20, yPosition);
+    yPosition = addText('DEALER INFORMATION', 20, yPosition + 8, undefined, 14);
     
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'normal');
     if (dealer) {
-      yPosition = addText(`Business: ${dealer.business_name || 'N/A'}`, 25, yPosition + 5);
-      yPosition = addText(`Contact: ${dealer.full_name || 'N/A'}`, 25, yPosition);
-      yPosition = addText(`Email: ${dealer.email}`, 25, yPosition);
-      yPosition = addText(`Address: ${dealer.address || 'N/A'}`, 25, yPosition, 150);
+      yPosition = addText(`Business Name: ${dealer.business_name || 'N/A'}`, 20, yPosition + 5, undefined, 11);
+      yPosition = addText(`Contact Person: ${dealer.full_name || order.contact_person || 'N/A'}`, 20, yPosition + 2, undefined, 11);
+      yPosition = addText(`Email: ${dealer.email}`, 20, yPosition + 2, undefined, 11);
+      yPosition = addText(`Phone: ${dealer.phone || order.contact_phone || 'N/A'}`, 20, yPosition + 2, undefined, 11);
+      if (dealer.address) {
+        yPosition = addText(`Address: ${dealer.address}`, 20, yPosition + 2, pageWidth - 50, 11);
+      }
+      if (dealer.vat_pan) {
+        yPosition = addText(`VAT/PAN: ${dealer.vat_pan}`, 20, yPosition + 2, undefined, 11);
+      }
     } else {
-      yPosition = addText(`Email: ${order.dealer_email}`, 25, yPosition + 5);
+      yPosition = addText(`Dealer Email: ${order.dealer_email}`, 20, yPosition + 5, undefined, 11);
+      yPosition = addText(`Contact Person: ${order.contact_person || 'N/A'}`, 20, yPosition + 2, undefined, 11);
+      yPosition = addText(`Contact Phone: ${order.contact_phone || 'N/A'}`, 20, yPosition + 2, undefined, 11);
     }
-
-    yPosition += 10;
+    yPosition += 15;
 
     // Order Items Section
-    pdf.setFontSize(14);
+    checkNewPage(40);
+    pdf.setFontSize(16);
     pdf.setFont('helvetica', 'bold');
-    yPosition = addText('Order Items:', 20, yPosition);
+    yPosition = addText('ORDER ITEMS', 20, yPosition, undefined, 16);
     yPosition += 5;
 
-    // Table headers
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Item', 25, yPosition);
-    pdf.text('Variant', 80, yPosition);
-    pdf.text('Qty', 120, yPosition);
-    pdf.text('Unit Price', 140, yPosition);
-    pdf.text('Total', 170, yPosition);
-    
-    // Table header line
-    pdf.line(20, yPosition + 2, 190, yPosition + 2);
-    yPosition += 8;
-
-    // Order items
-    pdf.setFont('helvetica', 'normal');
     if (order.product_items && order.product_items.length > 0) {
+      // Table headers with background
+      checkNewPage(30);
+      pdf.setFillColor(220, 38, 38);
+      pdf.rect(15, yPosition, pageWidth - 30, 12, 'F');
+      
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(255, 255, 255); // White text
+      pdf.text('S.N.', 20, yPosition + 8);
+      pdf.text('Product Name', 35, yPosition + 8);
+      pdf.text('Variant/Size', 100, yPosition + 8);
+      pdf.text('Qty', 135, yPosition + 8);
+      pdf.text('Unit Price (NPR)', 150, yPosition + 8);
+      pdf.text('Total (NPR)', 180, yPosition + 8);
+      
+      pdf.setTextColor(0, 0, 0); // Reset to black
+      yPosition += 15;
+
+      let totalAmount = 0;
+      
+      // Order items with alternating row colors
       for (let i = 0; i < order.product_items.length; i++) {
         const item = order.product_items[i];
+        checkNewPage(25);
         
-        // Check if we need a new page
-        if (yPosition > 240) {
-          pdf.addPage();
-          yPosition = 20;
+        // Alternating row background
+        if (i % 2 === 0) {
+          pdf.setFillColor(248, 250, 252);
+          pdf.rect(15, yPosition - 3, pageWidth - 30, 20, 'F');
         }
 
-        const productName = pdf.splitTextToSize(item.product_name || 'N/A', 50);
-        const variantName = pdf.splitTextToSize(item.variant_details || 'Standard', 35);
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
         
-        pdf.text(productName, 25, yPosition);
-        pdf.text(variantName, 80, yPosition);
-        pdf.text(item.quantity?.toString() || '0', 120, yPosition);
-        pdf.text(`NPR ${(item.unit_price_npr || 0).toLocaleString()}`, 140, yPosition);
-        pdf.text(`NPR ${((item.unit_price_npr || 0) * (item.quantity || 0)).toLocaleString()}`, 170, yPosition);
+        const productName = pdf.splitTextToSize(item.product_name || `Product ID: ${item.product_id}`, 60);
+        const variantName = pdf.splitTextToSize(item.variant_details || 'Standard', 30);
+        const itemTotal = (item.unit_price_npr || 0) * (item.quantity || 0);
+        totalAmount += itemTotal;
         
-        yPosition += Math.max(productName.length, variantName.length) * 5 + 3;
+        pdf.text((i + 1).toString(), 20, yPosition + 5);
+        pdf.text(productName, 35, yPosition + 5);
+        pdf.text(variantName, 100, yPosition + 5);
+        pdf.text((item.quantity || 0).toString(), 135, yPosition + 5);
+        pdf.text((item.unit_price_npr || 0).toLocaleString(), 150, yPosition + 5);
+        pdf.text(itemTotal.toLocaleString(), 180, yPosition + 5);
+        
+        let rowHeight = Math.max(productName.length, variantName.length) * 4 + 8;
+        
+        // Add brand and category if available
+        if (item.brand_name || item.category_name) {
+          pdf.setFontSize(8);
+          pdf.setFont('helvetica', 'italic');
+          pdf.setTextColor(100, 100, 100);
+          let brandCategoryText = '';
+          if (item.brand_name) brandCategoryText += `Brand: ${item.brand_name}`;
+          if (item.category_name) brandCategoryText += (brandCategoryText ? ' | ' : '') + `Category: ${item.category_name}`;
+          pdf.text(brandCategoryText, 35, yPosition + rowHeight - 5);
+          pdf.setTextColor(0, 0, 0);
+          rowHeight += 5;
+        }
 
         // Add notes if present
         if (item.notes) {
           pdf.setFontSize(8);
           pdf.setFont('helvetica', 'italic');
-          yPosition = addText(`Notes: ${item.notes}`, 25, yPosition, 150);
-          pdf.setFontSize(10);
-          pdf.setFont('helvetica', 'normal');
-          yPosition += 3;
+          pdf.setTextColor(0, 100, 200);
+          const noteLines = pdf.splitTextToSize(`Note: ${item.notes}`, 120);
+          pdf.text(noteLines, 35, yPosition + rowHeight);
+          pdf.setTextColor(0, 0, 0);
+          rowHeight += noteLines.length * 4 + 3;
         }
+        
+        yPosition += rowHeight;
       }
+
+      // Total section
+      checkNewPage(30);
+      pdf.setDrawColor(200, 200, 200);
+      pdf.line(15, yPosition, pageWidth - 15, yPosition);
+      yPosition += 8;
+      
+      pdf.setFillColor(220, 38, 38);
+      pdf.rect(130, yPosition - 3, pageWidth - 145, 15, 'F');
+      
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(`TOTAL: NPR ${totalAmount.toLocaleString()}`, 135, yPosition + 7);
+      pdf.setTextColor(0, 0, 0);
+      yPosition += 20;
+
+      // Summary box
+      checkNewPage(25);
+      pdf.setFillColor(254, 249, 195);
+      pdf.rect(15, yPosition, pageWidth - 30, 20, 'F');
+      pdf.setDrawColor(251, 191, 36);
+      pdf.rect(15, yPosition, pageWidth - 30, 20, 'S');
+      
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      yPosition = addText(`Total Items: ${order.product_items.length}`, 20, yPosition + 6, undefined, 10);
+      yPosition = addText(`Estimated Total Value: NPR ${totalAmount.toLocaleString()}`, 20, yPosition + 2, undefined, 10);
+      yPosition += 15;
+
     } else {
-      pdf.text('No items found', 25, yPosition);
-      yPosition += 10;
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'italic');
+      pdf.setTextColor(150, 150, 150);
+      yPosition = addText('No items found in this order', 20, yPosition, undefined, 12);
+      pdf.setTextColor(0, 0, 0);
+      yPosition += 20;
     }
 
-    // Total line
-    pdf.line(20, yPosition, 190, yPosition);
-    yPosition += 8;
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(`TOTAL AMOUNT: NPR ${(order.total_amount_npr || 0).toLocaleString()} (Estimated)`, 120, yPosition);
-    yPosition += 15;
+    // Additional Notes
+    if (order.additional_notes) {
+      checkNewPage(30);
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      yPosition = addText('ADDITIONAL NOTES', 20, yPosition, undefined, 14);
+      
+      pdf.setFillColor(248, 250, 252);
+      const notesHeight = 25;
+      pdf.rect(15, yPosition, pageWidth - 30, notesHeight, 'F');
+      pdf.rect(15, yPosition, pageWidth - 30, notesHeight, 'S');
+      
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      yPosition = addText(order.additional_notes, 20, yPosition + 8, pageWidth - 50, 10);
+      yPosition += 20;
+    }
 
     // Footer
+    const footerY = pageHeight - 25;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(15, footerY - 5, pageWidth - 15, footerY - 5);
+    
     pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'italic');
-    pdf.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, yPosition + 10);
-    pdf.text('Generated by: Dealer Portal - Jeen Mata Impex', 20, yPosition + 15);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(`Generated on: ${new Date().toLocaleString()}`, 20, footerY);
+    pdf.text('Jeen Mata Impex - Dealer Portal', pageWidth - 80, footerY);
+    pdf.text(`Page 1 of ${pdf.getNumberOfPages()}`, pageWidth / 2 - 15, footerY);
 
     // Save the PDF
-    pdf.save(`order_slip_${order.order_number}_${new Date().toISOString().split('T')[0]}.pdf`);
+    pdf.save(`JeenMata_OrderSlip_${order.order_number}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const getStatusBadgeClass = (status: string) => {

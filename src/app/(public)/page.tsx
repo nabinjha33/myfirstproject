@@ -99,14 +99,17 @@ export default function Home() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [products, activeBrands, settingsList] = await Promise.all([
+      const [products, allBrands, settingsList] = await Promise.all([
         Product.getFeatured(),
         Brand.getActive(),
         SiteSettings.list()
       ]);
       
+      // Filter brands to show only those marked for homepage display
+      const homepageBrands = allBrands.filter(brand => brand.show_on_homepage !== false);
+      
       setFeaturedProducts(products.slice(0, 6));
-      setBrands(activeBrands);
+      setBrands(homepageBrands);
       
       // Update site settings if available
       if (settingsList && settingsList.length > 0) {
@@ -203,44 +206,46 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {brands.map((brand) => (
-              <Link
-                key={brand.id}
-                href={`/brands/${brand.slug}`}
-                className="group">
-                <Card className="h-full overflow-hidden hover:shadow-xl transition-all duration-300 group-hover:-translate-y-2 dark:bg-slate-700/80 dark:border-slate-600 dark:hover:shadow-2xl">
-                  <div className="relative h-48 overflow-hidden bg-gradient-to-br from-gray-50 to-white dark:from-slate-600 dark:to-slate-700">
-                    {brand.logo ? (
-                      <div className="relative w-full h-full flex items-center justify-center p-1">
-                        <div className="relative bg-white rounded-2xl shadow-lg p-1 group-hover:shadow-2xl transition-all duration-300 group-hover:scale-105 border-2 border-white/50 dark:bg-slate-800 dark:border-slate-600">
-                          <img
-                            src={brand.logo}
-                            alt={brand.name}
-                            className="w-36 h-36 object-contain group-hover:scale-110 transition-transform duration-300"
-                          />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 lg:gap-8">
+            {brands.map((brand) => {
+              return (
+                <Link
+                  key={brand.id}
+                  href={`/brands/${brand.slug}`}
+                  className="group">
+                  <Card className="h-full overflow-hidden hover:shadow-xl transition-all duration-300 group-hover:-translate-y-2 dark:bg-slate-700/80 dark:border-slate-600 dark:hover:shadow-2xl">
+                    <div className="relative h-32 md:h-40 lg:h-48 overflow-hidden bg-gradient-to-br from-gray-50 to-white dark:from-slate-600 dark:to-slate-700">
+                      {brand.logo ? (
+                        <div className="relative w-full h-full flex items-center justify-center p-2 md:p-3">
+                          <div className="relative bg-white rounded-xl md:rounded-2xl shadow-lg p-1 md:p-2 group-hover:shadow-2xl transition-all duration-300 group-hover:scale-105 border-2 border-white/50 dark:bg-slate-800 dark:border-slate-600 w-full h-full">
+                            <img
+                              src={brand.logo}
+                              alt={brand.name}
+                              className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300 max-w-[80px] md:max-w-[120px] lg:max-w-[140px] mx-auto"
+                            />
+                          </div>
                         </div>
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-500 dark:from-teal-600 dark:to-cyan-600 flex items-center justify-center">
+                          <Package className="w-8 h-8 md:w-12 md:h-12 lg:w-16 lg:h-16 text-white" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                      <div className="absolute bottom-2 md:bottom-4 left-2 md:left-4 text-white">
+                        <h3 className="text-sm md:text-lg lg:text-2xl font-bold leading-tight">{brand.name}</h3>
                       </div>
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-500 dark:from-teal-600 dark:to-cyan-600 flex items-center justify-center">
-                        <Package className="w-16 h-16 text-white" />
+                    </div>
+                    <CardContent className="p-3 md:p-4 lg:p-6">
+                      <p className="text-xs md:text-sm lg:text-base text-gray-600 dark:text-slate-300 line-clamp-2 md:line-clamp-3">{brand.description}</p>
+                      <div className="flex items-center mt-2 md:mt-4 text-red-600 dark:text-red-400 group-hover:translate-x-2 transition-transform">
+                        <span className="font-medium text-xs md:text-sm">{getText("Explore Brand", "ब्रान्ड पत्ता लगाउनुहोस्")}</span>
+                        <ArrowRight className="ml-1 md:ml-2 w-3 h-3 md:w-4 md:h-4" />
                       </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                    <div className="absolute bottom-4 left-4 text-white">
-                      <h3 className="text-2xl font-bold">{brand.name}</h3>
-                    </div>
-                  </div>
-                  <CardContent className="p-6">
-                    <p className="text-gray-600 dark:text-slate-300">{brand.description}</p>
-                    <div className="flex items-center mt-4 text-red-600 dark:text-red-400 group-hover:translate-x-2 transition-transform">
-                      <span className="font-medium">{getText("Explore Brand", "ब्रान्ड पत्ता लगाउनुहोस्")}</span>
-                      <ArrowRight className="ml-2 w-4 h-4" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>

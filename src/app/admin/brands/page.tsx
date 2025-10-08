@@ -30,6 +30,7 @@ interface BrandData {
   established_year: string;
   specialty: string;
   active: boolean;
+  show_on_homepage: boolean;
 }
 
 export default function AdminBrands() {
@@ -46,7 +47,8 @@ export default function AdminBrands() {
     origin_country: '',
     established_year: '',
     specialty: '',
-    active: true
+    active: true,
+    show_on_homepage: true
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -86,7 +88,8 @@ export default function AdminBrands() {
         origin_country: '',
         established_year: '',
         specialty: '',
-        active: true
+        active: true,
+        show_on_homepage: true
       });
     }
     setIsFormOpen(true);
@@ -104,7 +107,8 @@ export default function AdminBrands() {
       origin_country: '',
       established_year: '',
       specialty: '',
-      active: true
+      active: true,
+      show_on_homepage: true
     });
   };
 
@@ -152,7 +156,8 @@ export default function AdminBrands() {
         origin_country: formData.origin_country || null,
         established_year: formData.established_year || null,
         specialty: formData.specialty || null,
-        active: formData.active
+        active: formData.active,
+        show_on_homepage: formData.show_on_homepage
         // Note: sort_order is not in the database schema, so we exclude it
       };
       
@@ -260,6 +265,7 @@ export default function AdminBrands() {
                   <TableHead>Origin</TableHead>
                   <TableHead>Specialty</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Homepage</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -306,6 +312,11 @@ export default function AdminBrands() {
                     <TableCell>
                       <Badge variant={brand.active ? "default" : "secondary"}>
                         {brand.active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={brand.show_on_homepage ? "default" : "outline"}>
+                        {brand.show_on_homepage ? 'Visible' : 'Hidden'}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -515,7 +526,18 @@ export default function AdminBrands() {
                       />
                       <div>
                         <Label htmlFor="active" className="text-sm font-medium">Active Brand</Label>
-                        <p className="text-xs text-gray-500">Show this brand on the website</p>
+                        <p className="text-xs text-gray-500">Enable this brand on the website</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Checkbox
+                        id="show_on_homepage"
+                        checked={formData.show_on_homepage}
+                        onCheckedChange={(checked) => handleInputChange('show_on_homepage', checked)}
+                      />
+                      <div>
+                        <Label htmlFor="show_on_homepage" className="text-sm font-medium">Show on Homepage</Label>
+                        <p className="text-xs text-gray-500">Display this brand in the homepage brands section</p>
                       </div>
                     </div>
                   </div>
