@@ -141,9 +141,25 @@ export default function DealerLogin() {
       if (response.ok) {
         const data = await response.json();
         if (data.isApprovedDealer) {
-          console.log('Dealer login successful, redirecting...');
-          router.push('/dealer/catalog');
+          console.log('✅ Dealer verification successful, starting success sequence...');
+          
+          // Step 2: Show redirecting state
+          setAuthStep('redirecting');
+          
+          // Step 3: Success animation (800ms)
+          setTimeout(() => {
+            setAuthStep('success');
+            setCurrentView('success');
+            setShowSuccessAnimation(true);
+          }, 800);
+          
+          // Step 4: Redirect with smooth transition (2300ms total)
+          setTimeout(() => {
+            // Use window.location.href for reliable state management
+            window.location.href = '/dealer/catalog';
+          }, 2300);
         } else {
+          setCurrentView('form');
           setSubmissionStatus({
             type: 'error',
             message: 'Your dealer account is not approved yet or does not exist. Please apply for dealer access first.'
@@ -154,6 +170,7 @@ export default function DealerLogin() {
         await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 500));
         await verifyDealerStatusWithRetry(retryCount + 1, maxRetries);
       } else {
+        setCurrentView('form');
         setSubmissionStatus({
           type: 'error',
           message: 'Unable to verify dealer status. Please try again.'
@@ -165,6 +182,7 @@ export default function DealerLogin() {
         await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 500));
         await verifyDealerStatusWithRetry(retryCount + 1, maxRetries);
       } else {
+        setCurrentView('form');
         setSubmissionStatus({
           type: 'error',
           message: 'Unable to verify dealer status. Please try again.'
@@ -207,29 +225,14 @@ export default function DealerLogin() {
       });
 
       if (result.status === 'complete') {
-        console.log('✅ Clerk login completed, starting seamless transition...');
+        console.log('✅ Clerk login completed, starting dealer verification...');
         
         // Start seamless transition sequence
         setAuthStep('verifying');
         setCurrentView('loading');
         
-        // Step 1: Verifying (500ms)
-        setTimeout(() => {
-          setAuthStep('redirecting');
-        }, 500);
-        
-        // Step 2: Success animation (800ms)
-        setTimeout(() => {
-          setAuthStep('success');
-          setCurrentView('success');
-          setShowSuccessAnimation(true);
-        }, 1300);
-        
-        // Step 3: Redirect with smooth transition (1500ms total)
-        setTimeout(() => {
-          // Use window.location.href for reliable state management
-          window.location.href = '/dealer/catalog';
-        }, 2800);
+        // Step 1: Verify dealer status with retry mechanism (crucial for Clerk race condition)
+        await verifyDealerStatusWithRetry();
       } else {
         setSubmissionStatus({
           type: 'error',
@@ -238,6 +241,7 @@ export default function DealerLogin() {
       }
     } catch (error: any) {
       console.error('Login error:', error);
+      setCurrentView('form'); // Reset view on error
       
       if (error.errors && error.errors[0]) {
         const errorCode = error.errors[0].code;
