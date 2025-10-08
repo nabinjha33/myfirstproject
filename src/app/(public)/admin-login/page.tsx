@@ -21,6 +21,9 @@ import {
   RefreshCw
 } from "lucide-react";
 import { handleSessionConflict, isSessionConflictError } from '@/lib/auth-utils';
+import { AuthProgress, SuccessAnimation, SmoothTransition, LoadingOverlay } from '@/components/ui/loading-states';
+import { EnhancedEmailInput, EnhancedPasswordInput } from '@/components/auth/enhanced-form-validation';
+import { AuthButton } from '@/components/ui/enhanced-button';
 
 function AdminLoginContent() {
   const router = useRouter();
@@ -34,6 +37,9 @@ function AdminLoginContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [isReloginInProgress, setIsReloginInProgress] = useState(false);
   const [reloginStatus, setReloginStatus] = useState<string | null>(null);
+  const [authStep, setAuthStep] = useState<'authenticating' | 'verifying' | 'redirecting' | 'success'>('authenticating');
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [currentView, setCurrentView] = useState<'form' | 'loading' | 'success'>('form');
   const [loginForm, setLoginForm] = useState({
     email: "",
     password: ""
@@ -174,18 +180,35 @@ function AdminLoginContent() {
       });
 
       if (result.status === 'complete') {
-        console.log('✅ Clerk login completed, reloading page to ensure session sync...');
+        console.log('✅ Clerk admin login completed, starting seamless transition...');
         
-        // Store redirect URL in sessionStorage
-        sessionStorage.setItem('admin_redirect_after_login', redirectUrl);
+        // Start seamless transition sequence
+        setAuthStep('verifying');
+        setCurrentView('loading');
         
-        // Force page reload to ensure session is fully established
-        window.location.reload();
+        // Step 1: Verifying (800ms) - Allow time for Clerk state to propagate
+        setTimeout(() => {
+          setAuthStep('redirecting');
+        }, 800);
+        
+        // Step 2: Success animation (1300ms)
+        setTimeout(() => {
+          setAuthStep('success');
+          setCurrentView('success');
+          setShowSuccessAnimation(true);
+        }, 1300);
+        
+        // Step 3: Redirect with smooth transition (2800ms total)
+        setTimeout(() => {
+          // Use window.location.href for reliable state management
+          window.location.href = redirectUrl;
+        }, 2800);
       } else {
         setError('Login incomplete. Please try again.');
       }
     } catch (error: any) {
       console.error('Admin login error:', error);
+      setCurrentView('form'); // Reset view on error
       if (error.errors && error.errors[0]) {
         const errorCode = error.errors[0].code;
         switch (errorCode) {
@@ -323,84 +346,82 @@ function AdminLoginContent() {
             )}
 
             {/* Error Alert */}
-            {error && (
-              <Alert className="mb-6 bg-red-900/50 border-red-700 text-red-200">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            <SmoothTransition show={!!error && currentView === 'form'}>
+              {error && (
+                <Alert className="mb-6 bg-red-900/50 border-red-700 text-red-200">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+            </SmoothTransition>
 
-            <form onSubmit={handleLogin} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-200">Admin Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="admin@jeenmataimpex.com"
-                    value={loginForm.email}
-                    onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
-                    className="pl-10 bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-red-500"
-                    required
-                  />
-                </div>
-              </div>
+            <SmoothTransition show={currentView === 'form'}>
+              <form onSubmit={handleLogin} className="space-y-6">
+                <EnhancedEmailInput
+                  id="email"
+                  label="Admin Email"
+                  placeholder="admin@jeenmataimpex.com"
+                  value={loginForm.email}
+                  onChange={(value) => setLoginForm({...loginForm, email: value})}
+                  darkMode={true}
+                  required
+                />
 
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-gray-200">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter admin password"
-                    value={loginForm.password}
-                    onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
-                    className="pl-10 pr-10 bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-red-500"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-200"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
+                <EnhancedPasswordInput
+                  id="password"
+                  label="Password"
+                  placeholder="Enter admin password"
+                  value={loginForm.password}
+                  onChange={(value) => setLoginForm({...loginForm, password: value})}
+                  darkMode={true}
+                  required
+                />
 
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white h-12 font-medium"
+              <AuthButton
+                loading={isLoading || isReloginInProgress}
+                loadingText={isReloginInProgress ? 'Refreshing Session...' : 'Verifying Access...'}
                 disabled={isLoading || isReloginInProgress}
+                darkMode={true}
+                className="h-12"
               >
-                {isLoading || isReloginInProgress ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    {isReloginInProgress ? 'Refreshing Session...' : 'Verifying Access...'}
-                  </>
-                ) : (
-                  <>
-                    <Shield className="mr-2 h-5 w-5" />
-                    Access Admin Portal
-                  </>
-                )}
-              </Button>
-            </form>
-
-            <div className="mt-6 pt-6 border-t border-gray-700">
-              <p className="text-center text-sm text-gray-400">
-                <AlertCircle className="w-4 h-4 inline mr-1" />
-                Restricted access. Admin credentials required.
-              </p>
-              <p className="text-center text-xs text-gray-500 mt-2">
-                Contact IT support if you need admin access.
-              </p>
-            </div>
+                <Shield className="mr-2 h-5 w-5" />
+                Access Admin Portal
+              </AuthButton>
+              
+              <div className="mt-6 pt-6 border-t border-gray-700">
+                <p className="text-center text-sm text-gray-400">
+                  <AlertCircle className="w-4 h-4 inline mr-1" />
+                  Restricted access. Admin credentials required.
+                </p>
+                <p className="text-center text-xs text-gray-500 mt-2">
+                  Contact IT support if you need admin access.
+                </p>
+              </div>
+              </form>
+            </SmoothTransition>
+            
+            <SmoothTransition show={currentView === 'success'}>
+              <SuccessAnimation
+                title="Admin Access Granted!"
+                message="Welcome back! Loading your dashboard..."
+                onComplete={() => {/* Handled by timeout above */}}
+                duration={1500}
+              />
+            </SmoothTransition>
           </CardContent>
         </Card>
       </div>
+      
+      {/* Loading Overlay for Authentication Process */}
+      <LoadingOverlay
+        show={currentView === 'loading'}
+        progress={{
+          step: authStep,
+          message: authStep === 'verifying' ? 'Verifying admin credentials...' : 
+                  authStep === 'redirecting' ? 'Preparing admin dashboard...' : 
+                  'Authenticating...'
+        }}
+      />
     </div>
   );
 }

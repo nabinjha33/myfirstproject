@@ -23,6 +23,8 @@ import {
   RefreshCw
 } from "lucide-react";
 import { AuthProgress, SuccessAnimation, SmoothTransition, LoadingOverlay } from '@/components/ui/loading-states';
+import { EnhancedEmailInput, EnhancedPasswordInput } from '@/components/auth/enhanced-form-validation';
+import { AuthButton } from '@/components/ui/enhanced-button';
 import { handleSessionConflict, isSessionConflictError } from '@/lib/auth-utils';
 
 export default function DealerLogin() {
@@ -225,14 +227,29 @@ export default function DealerLogin() {
       });
 
       if (result.status === 'complete') {
-        console.log('✅ Clerk login completed, starting dealer verification...');
+        console.log('✅ Clerk login completed, starting seamless transition...');
         
         // Start seamless transition sequence
         setAuthStep('verifying');
         setCurrentView('loading');
         
-        // Step 1: Verify dealer status with retry mechanism (crucial for Clerk race condition)
-        await verifyDealerStatusWithRetry();
+        // Step 1: Verifying (800ms) - Allow time for Clerk state to propagate
+        setTimeout(() => {
+          setAuthStep('redirecting');
+        }, 800);
+        
+        // Step 2: Success animation (1300ms)
+        setTimeout(() => {
+          setAuthStep('success');
+          setCurrentView('success');
+          setShowSuccessAnimation(true);
+        }, 1300);
+        
+        // Step 3: Redirect with smooth transition (2800ms total)
+        setTimeout(() => {
+          // Use window.location.href for reliable state management
+          window.location.href = '/dealer/catalog';
+        }, 2800);
       } else {
         setSubmissionStatus({
           type: 'error',
@@ -549,52 +566,31 @@ export default function DealerLogin() {
                     
                     <TabsContent value="login">
                       <form onSubmit={handleLogin} className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email Address</Label>
-                          <div className="relative">
-                            <Mail className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                            <Input
-                              id="email"
-                              type="email"
-                              placeholder="Enter your email"
-                              value={loginForm.email}
-                              onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
-                              className="pl-10"
-                              required
-                            />
-                          </div>
-                        </div>
+                        <EnhancedEmailInput
+                          id="email"
+                          label="Email Address"
+                          placeholder="Enter your email"
+                          value={loginForm.email}
+                          onChange={(value) => setLoginForm({...loginForm, email: value})}
+                          required
+                        />
 
-                        <div className="space-y-2">
-                          <Label htmlFor="password">Password</Label>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                            <Input
-                              id="password"
-                              type="password"
-                              placeholder="Enter your password"
-                              value={loginForm.password}
-                              onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
-                              className="pl-10"
-                              required
-                            />
-                          </div>
-                        </div>
+                        <EnhancedPasswordInput
+                          id="password"
+                          label="Password"
+                          placeholder="Enter your password"
+                          value={loginForm.password}
+                          onChange={(value) => setLoginForm({...loginForm, password: value})}
+                          required
+                        />
 
-                        <Button
-                          type="submit"
-                          className="w-full bg-red-600 hover:bg-red-700 h-11"
+                        <AuthButton
+                          loading={isLoading || isReloginInProgress}
+                          loadingText={isReloginInProgress ? 'Refreshing Session...' : 'Signing In...'}
                           disabled={isLoading || isReloginInProgress}
                         >
-                          {isLoading || isReloginInProgress ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              {isReloginInProgress ? 'Refreshing Session...' : 'Signing In...'}
-                            </>
-                          ) : (
-                            "Sign In to Dealer Portal"
-                          )}
-                        </Button>
+                          Sign In to Dealer Portal
+                        </AuthButton>
 
                         <p className="text-center text-sm text-gray-600">
                           Note: Only approved dealers can login. If you don't have an account, sign up using the tab above.
@@ -604,59 +600,33 @@ export default function DealerLogin() {
 
                     <TabsContent value="signup">
                       <form onSubmit={handleSignup} className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="signupEmail">Email Address</Label>
-                          <div className="relative">
-                            <Mail className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                            <Input
-                              id="signupEmail"
-                              type="email"
-                              placeholder="Enter your email"
-                              value={signupForm.email}
-                              onChange={(e) => setSignupForm({...signupForm, email: e.target.value})}
-                              className="pl-10"
-                              required
-                            />
-                          </div>
-                        </div>
+                        <EnhancedEmailInput
+                          id="signupEmail"
+                          label="Email Address"
+                          placeholder="Enter your email"
+                          value={signupForm.email}
+                          onChange={(value) => setSignupForm({...signupForm, email: value})}
+                          required
+                        />
 
-                        <div className="space-y-2">
-                          <Label htmlFor="signupPassword">Password</Label>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                            <Input
-                              id="signupPassword"
-                              type="password"
-                              placeholder="Create a strong password"
-                              value={signupForm.password}
-                              onChange={(e) => setSignupForm({...signupForm, password: e.target.value})}
-                              className="pl-10"
-                              required
-                              minLength={8}
-                            />
-                          </div>
-                          <p className="text-xs text-gray-500">
-                            Password must be at least 8 characters long
-                          </p>
-                        </div>
+                        <EnhancedPasswordInput
+                          id="signupPassword"
+                          label="Password"
+                          placeholder="Create a strong password"
+                          value={signupForm.password}
+                          onChange={(value) => setSignupForm({...signupForm, password: value})}
+                          showStrength={true}
+                          required
+                        />
 
-                        <Button
-                          type="submit"
-                          className="w-full bg-red-600 hover:bg-red-700 h-11"
+                        <AuthButton
+                          loading={isLoading}
+                          loadingText="Creating Account..."
                           disabled={isLoading}
                         >
-                          {isLoading ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Creating Account...
-                            </>
-                          ) : (
-                            <>
-                              <UserPlus className="mr-2 h-4 w-4" />
-                              Create Account
-                            </>
-                          )}
-                        </Button>
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Create Account
+                        </AuthButton>
 
                         <p className="text-center text-sm text-gray-600">
                           After email verification, you'll fill out the dealer application form.
@@ -727,10 +697,10 @@ export default function DealerLogin() {
                 
                 <SmoothTransition show={currentView === 'success'}>
                   <SuccessAnimation
-                    title={showEmailVerification ? "Email Verified!" : "Login Successful!"}
-                    message={showEmailVerification ? "Redirecting to application form..." : "Welcome back! Loading your dashboard..."}
+                    title={pendingVerification ? "Email Verified!" : "Login Successful!"}
+                    message={pendingVerification ? "Redirecting to application form..." : "Welcome back! Loading your dashboard..."}
                     onComplete={() => {/* Handled by timeout above */}}
-                    duration={2500}
+                    duration={1500}
                   />
                 </SmoothTransition>
               </CardContent>
