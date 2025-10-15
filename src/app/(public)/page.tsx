@@ -206,13 +206,13 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 lg:gap-8">
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6 lg:gap-8">
             {brands.map((brand) => {
               return (
                 <Link
                   key={brand.id}
                   href={`/brands/${brand.slug}`}
-                  className="group">
+                  className="group w-36 md:w-44 lg:w-52">
                   <Card className="h-full overflow-hidden hover:shadow-xl transition-all duration-300 group-hover:-translate-y-2 dark:bg-slate-700/80 dark:border-slate-600 dark:hover:shadow-2xl">
                     <div className="relative h-32 md:h-40 lg:h-48 overflow-hidden bg-gradient-to-br from-gray-50 to-white dark:from-slate-600 dark:to-slate-700">
                       {brand.logo ? (
@@ -290,7 +290,7 @@ export default function Home() {
                   href={`/products/${product.slug}`}
                   className="group block h-full">
                   <Card className="h-full overflow-hidden hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1 flex flex-col dark:bg-slate-700/70 dark:border-slate-600 dark:hover:shadow-2xl">
-                    <div className="relative h-48 overflow-hidden bg-gray-100 dark:bg-slate-600/50 flex-shrink-0">
+                    <div className="relative h-72 overflow-hidden bg-gray-100 dark:bg-slate-600/50 flex-shrink-0">
                       {product.images && product.images.length > 0 ?
                         <img
                           src={product.images[0]}
@@ -307,15 +307,15 @@ export default function Home() {
                         <Star className="w-5 h-5 text-yellow-400 dark:text-cyan-400 fill-current" />
                       </div>
                     </div>
-                    <CardContent className="p-6 flex-1 flex flex-col">
+                    <CardContent className="p-4 flex-1 flex flex-col">
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold mb-2 group-hover:text-red-600 transition-colors line-clamp-2 min-h-[3.5rem] dark:text-slate-100 dark:group-hover:text-red-400">
+                        <h3 className="text-lg font-semibold mb-1 group-hover:text-red-600 transition-colors line-clamp-2 min-h-[2.5rem] dark:text-slate-100 dark:group-hover:text-red-400">
                           {product.name}
                         </h3>
 
                         {/* Variants Display */}
                         {product.variants && product.variants.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-3">
+                          <div className="flex flex-wrap gap-1 mb-2">
                             {product.variants.slice(0, 3).map((variant: any, index: number) => (
                               <span
                                 key={index}
@@ -332,7 +332,7 @@ export default function Home() {
                           </div>
                         )}
 
-                        <p className="text-gray-600 dark:text-slate-300 mb-4 line-clamp-3 min-h-[4rem]">
+                        <p className="text-gray-600 dark:text-slate-300 mb-2 line-clamp-2 min-h-[2.5rem] text-sm">
                           {product.description || getText('No description available', 'विवरण उपलब्ध छैन')}
                         </p>
                       </div>

@@ -192,7 +192,7 @@ function ProductsContent() {
         isListView ? 'flex' : 'flex flex-col'
       }`}>
         <div className={`relative overflow-hidden bg-gray-100 flex-shrink-0 ${
-          isListView ? 'w-48' : 'h-44'
+          isListView ? 'w-48' : 'h-64'
         }`}>
           {product.images && product.images.length > 0 ? (
             <img

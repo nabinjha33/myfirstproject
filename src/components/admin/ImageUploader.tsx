@@ -15,7 +15,8 @@ import {
   AlertCircle, 
   Loader2,
   Copy,
-  Trash2
+  Trash2,
+  Download
 } from 'lucide-react';
 import { validateImageFile, fileToBase64 } from '@/lib/storage';
 
@@ -47,6 +48,7 @@ export default function ImageUploader({
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+  const [deletingImages, setDeletingImages] = useState<Set<string>>(new Set());
 
   const handleFiles = useCallback(async (files: FileList) => {
     const newImages: ImageFile[] = [];
@@ -122,9 +124,39 @@ export default function ImageUploader({
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const removeExistingImage = (index: number) => {
-    const updatedImages = existingImages.filter((_, i) => i !== index);
-    onImagesUploaded(updatedImages);
+  const removeExistingImage = async (index: number) => {
+    const imageUrl = existingImages[index];
+    
+    // Add to deleting set to show loading state
+    setDeletingImages(prev => new Set(prev).add(imageUrl));
+    
+    try {
+      // Call delete API
+      const response = await fetch(`/api/delete-image?url=${encodeURIComponent(imageUrl)}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        // Remove from array only if deletion was successful
+        const updatedImages = existingImages.filter((_, i) => i !== index);
+        onImagesUploaded(updatedImages);
+        console.log('Image deleted successfully from storage');
+      } else {
+        const error = await response.json();
+        console.error('Failed to delete image:', error);
+        alert('Failed to delete image from storage: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      alert('Error deleting image. Please try again.');
+    } finally {
+      // Remove from deleting set
+      setDeletingImages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(imageUrl);
+        return newSet;
+      });
+    }
   };
 
   const uploadImages = async () => {
@@ -217,6 +249,34 @@ export default function ImageUploader({
     navigator.clipboard.writeText(text);
   };
 
+  const downloadImage = async (url: string, filename?: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      
+      // Create download link
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      
+      // Extract filename from URL or use provided filename
+      const urlParts = url.split('/');
+      const defaultFilename = urlParts[urlParts.length - 1] || 'image.jpg';
+      link.download = filename || defaultFilename;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      alert('Failed to download image. Please try again.');
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -280,33 +340,52 @@ export default function ImageUploader({
           <div>
             <h4 className="font-medium mb-2">Existing Images</h4>
             <div className="grid grid-cols-1 gap-2">
-              {existingImages.map((url, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                  <img
-                    src={url}
-                    alt={`Existing ${index + 1}`}
-                    className="w-12 h-12 object-cover rounded border"
-                  />
-                  <code className="flex-1 text-sm truncate">{url}</code>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => copyToClipboard(url)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => removeExistingImage(index)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+              {existingImages.map((url, index) => {
+                const isDeleting = deletingImages.has(url);
+                return (
+                  <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                    <img
+                      src={url}
+                      alt={`Existing ${index + 1}`}
+                      className="w-12 h-12 object-cover rounded border"
+                    />
+                    <code className="flex-1 text-sm truncate">{url}</code>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(url)}
+                      disabled={isDeleting}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => downloadImage(url)}
+                      disabled={isDeleting}
+                      title="Download image"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => removeExistingImage(index)}
+                      disabled={isDeleting}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -402,6 +481,15 @@ export default function ImageUploader({
                             onClick={() => copyToClipboard(image.url!)}
                           >
                             <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => downloadImage(image.url!, image.file.name)}
+                            title="Download image"
+                          >
+                            <Download className="h-4 w-4" />
                           </Button>
                         </div>
                       )}

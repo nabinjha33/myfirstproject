@@ -41,19 +41,32 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
   const [brands, setBrands] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   // Load brands and categories on mount
   useEffect(() => {
     const loadData = async () => {
       try {
+        console.log('Loading brands and categories...');
         const [brandsData, categoriesData] = await Promise.all([
           Brand.list(),
           Category.list()
         ]);
-        setBrands(brandsData);
-        setCategories(categoriesData);
+        console.log('Brands loaded:', brandsData);
+        console.log('Categories loaded:', categoriesData);
+        setBrands(brandsData || []);
+        setCategories(categoriesData || []);
       } catch (error) {
         console.error('Failed to load brands/categories:', error);
+        console.error('Error details:', error.message);
+        // Set empty arrays as fallback
+        setBrands([]);
+        setCategories([]);
+        
+        // Show user-friendly error
+        alert('Failed to load brands and categories. Please check your database connection and ensure the tables are properly set up.');
+      } finally {
+        setIsLoadingData(false);
       }
     };
     
@@ -166,23 +179,35 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="brand_id">Brand</Label>
-          <Select value={formData.brand_id} onValueChange={(value) => handleSelectChange('brand_id', value)}>
-            <SelectTrigger><SelectValue placeholder="Select a brand" /></SelectTrigger>
+          <Select value={formData.brand_id} onValueChange={(value) => handleSelectChange('brand_id', value)} disabled={isLoadingData}>
+            <SelectTrigger>
+              <SelectValue placeholder={isLoadingData ? "Loading brands..." : brands.length === 0 ? "No brands available" : "Select a brand"} />
+            </SelectTrigger>
             <SelectContent>
-              {brands.map((brand) => (
-                <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
-              ))}
+              {brands.length > 0 ? (
+                brands.map((brand) => (
+                  <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
+                ))
+              ) : (
+                <SelectItem value="" disabled>No brands available</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="category_id">Category</Label>
-          <Select value={formData.category_id} onValueChange={(value) => handleSelectChange('category_id', value)}>
-            <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+          <Select value={formData.category_id} onValueChange={(value) => handleSelectChange('category_id', value)} disabled={isLoadingData}>
+            <SelectTrigger>
+              <SelectValue placeholder={isLoadingData ? "Loading categories..." : categories.length === 0 ? "No categories available" : "Select a category"} />
+            </SelectTrigger>
             <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
-              ))}
+              {categories.length > 0 ? (
+                categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                ))
+              ) : (
+                <SelectItem value="" disabled>No categories available</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
