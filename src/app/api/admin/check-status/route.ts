@@ -4,8 +4,8 @@ import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(req: NextRequest) {
   try {
-    // Small delay to ensure Clerk authentication state is ready
-    await new Promise(resolve => setTimeout(resolve, 200));
+    // Longer delay to ensure Clerk server-side authentication state is ready
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Get current user from Clerk
     const clerkUser = await currentUser();

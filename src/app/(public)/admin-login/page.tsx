@@ -152,8 +152,12 @@ function AdminLoginContent() {
         console.log(`❌ Admin verification failed with status ${response.status}`);
         const errorData = await response.json().catch(() => ({}));
         console.log('🔍 Error response:', errorData);
+        
+        // Clear redirect tracking on failure
+        sessionStorage.removeItem('login_redirect_in_progress');
+        setCurrentView('form');
         setIsLoading(false);
-        setError(`Unable to verify admin status (${response.status}). Please try again.`);
+        setError(`Authentication verification failed. Please try logging in again.`);
       }
     } catch (error) {
       console.error('❌ Error verifying admin status:', error);
@@ -163,8 +167,11 @@ function AdminLoginContent() {
         await verifyAdminStatusWithRetry(retryCount + 1, maxRetries);
       } else {
         console.log('❌ All retry attempts exhausted');
+        // Clear redirect tracking on failure
+        sessionStorage.removeItem('login_redirect_in_progress');
+        setCurrentView('form');
         setIsLoading(false);
-        setError('Unable to verify admin status. Please try again.');
+        setError('Authentication verification failed. Please try logging in again.');
       }
     }
   };
@@ -204,10 +211,14 @@ function AdminLoginContent() {
           setShowSuccessAnimation(true);
         }, 1000);
         
-        // Step 3: Redirect with smooth transition (2000ms total)
+        // Step 3: Redirect with smooth transition (3000ms total - more time for Clerk state sync)
         setTimeout(async () => {
           // Mark that we're starting a redirect to prevent loops
           sessionStorage.setItem('login_redirect_in_progress', 'true');
+          
+          // Add extra delay to ensure Clerk server-side state is ready
+          console.log('⏳ Allowing extra time for Clerk server-side state sync...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
           // Verify admin status before redirecting to prevent loops
           console.log('🔄 Verifying admin access before redirect...');
@@ -220,7 +231,7 @@ function AdminLoginContent() {
             setIsLoading(false);
             setError('Unable to verify admin access. Please try again.');
           }
-        }, 2000);
+        }, 3000);
       } else {
         setError('Login incomplete. Please try again.');
       }
