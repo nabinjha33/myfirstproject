@@ -48,24 +48,30 @@ function AdminLoginContent() {
   const redirectUrl = searchParams.get('redirect_url') || '/admin/dashboard';
 
   useEffect(() => {
-    // Only check for existing authentication on initial page load, not during login flow
-    // Skip if we're coming from a redirect (to prevent loops)
-    const isFromRedirect = sessionStorage.getItem('login_redirect_in_progress');
-    
-    if (isLoaded && user && currentView === 'form' && !isLoading && !isFromRedirect) {
+    // Handle post-login flow and existing authentication
+    if (isLoaded && user && currentView === 'form' && !isLoading) {
       console.log('User already logged in, checking admin status...');
-      setIsLoading(true);
       
-      // Check if we just reloaded after login
+      // Check if we just completed login and reloaded
+      const justCompleted = sessionStorage.getItem('login_just_completed');
       const storedRedirectUrl = sessionStorage.getItem('admin_redirect_after_login');
-      if (storedRedirectUrl) {
-        console.log('Found stored redirect URL after login:', storedRedirectUrl);
+      
+      if (justCompleted && storedRedirectUrl) {
+        console.log('🎉 Login just completed, proceeding with redirect...');
+        sessionStorage.removeItem('login_just_completed');
         sessionStorage.removeItem('admin_redirect_after_login');
         
-        // Verify admin status and redirect
-        verifyAdminStatusWithRetry();
+        // Show a brief "Redirecting..." message then verify and redirect
+        setIsLoading(true);
+        setAuthStep('verifying');
+        setCurrentView('loading');
+        
+        // Give a moment for UI to update, then verify
+        setTimeout(() => {
+          verifyAdminStatusWithRetry();
+        }, 500);
       } else {
-        // Normal check for already logged in user - but don't auto-redirect
+        // Normal check for already logged in user - show manual options
         console.log('User already authenticated, showing manual options');
         setIsLoading(false);
       }
@@ -136,8 +142,6 @@ function AdminLoginContent() {
         if (data.isAdmin) {
           console.log('✅ Admin verification successful, redirecting...');
           setIsLoading(false);
-          // Clear redirect tracking before successful redirect
-          sessionStorage.removeItem('login_redirect_in_progress');
           window.location.replace(redirectUrl);
         } else {
           console.log('❌ User is not admin:', data);
@@ -153,8 +157,6 @@ function AdminLoginContent() {
         const errorData = await response.json().catch(() => ({}));
         console.log('🔍 Error response:', errorData);
         
-        // Clear redirect tracking on failure
-        sessionStorage.removeItem('login_redirect_in_progress');
         setCurrentView('form');
         setIsLoading(false);
         setError(`Authentication verification failed. Please try logging in again.`);
@@ -167,8 +169,6 @@ function AdminLoginContent() {
         await verifyAdminStatusWithRetry(retryCount + 1, maxRetries);
       } else {
         console.log('❌ All retry attempts exhausted');
-        // Clear redirect tracking on failure
-        sessionStorage.removeItem('login_redirect_in_progress');
         setCurrentView('form');
         setIsLoading(false);
         setError('Authentication verification failed. Please try logging in again.');
@@ -211,27 +211,16 @@ function AdminLoginContent() {
           setShowSuccessAnimation(true);
         }, 1000);
         
-        // Step 3: Redirect with smooth transition (3000ms total - more time for Clerk state sync)
-        setTimeout(async () => {
-          // Mark that we're starting a redirect to prevent loops
-          sessionStorage.setItem('login_redirect_in_progress', 'true');
+        // Step 3: Redirect with smooth transition (2500ms total)
+        setTimeout(() => {
+          // Store redirect info and reload page to ensure clean Clerk state
+          console.log('🚀 Completing login and refreshing for clean state...');
+          sessionStorage.setItem('admin_redirect_after_login', redirectUrl);
+          sessionStorage.setItem('login_just_completed', 'true');
           
-          // Add extra delay to ensure Clerk server-side state is ready
-          console.log('⏳ Allowing extra time for Clerk server-side state sync...');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Verify admin status before redirecting to prevent loops
-          console.log('🔄 Verifying admin access before redirect...');
-          try {
-            await verifyAdminStatusWithRetry();
-          } catch (error) {
-            console.error('Admin verification failed:', error);
-            sessionStorage.removeItem('login_redirect_in_progress');
-            setCurrentView('form');
-            setIsLoading(false);
-            setError('Unable to verify admin access. Please try again.');
-          }
-        }, 3000);
+          // Use window.location.reload to ensure Clerk server-side state is ready
+          window.location.reload();
+        }, 2500);
       } else {
         setError('Login incomplete. Please try again.');
       }
