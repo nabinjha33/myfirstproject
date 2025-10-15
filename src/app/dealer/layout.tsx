@@ -102,9 +102,12 @@ export default function DealerLayout({
     setIsDark(isDarkMode);
   }, []);
 
-  // Simple authentication check - trust Clerk session after login
+  // Simple authentication check - trust Clerk session after login (only run once)
   useEffect(() => {
     if (!isLoaded || !mounted) return;
+    
+    // Skip if already authenticated
+    if (dealerUser && !isCheckingAuth) return;
     
     if (!user) {
       // No user logged in, redirect to login
@@ -112,10 +115,10 @@ export default function DealerLayout({
       return;
     }
 
-    // User is authenticated via Clerk, check role metadata
+    // User is authenticated via Clerk - instant access
     const userEmail = user.primaryEmailAddress?.emailAddress;
     const userRole = user.unsafeMetadata?.role;
-    console.log('Dealer user authenticated:', userEmail, 'Role:', userRole);
+    console.log('Dealer user authenticated - instant access:', userEmail, 'Role:', userRole);
     
     // Optional: Check if user has dealer role in metadata (for extra security)
     if (userRole && userRole !== 'dealer') {
@@ -132,8 +135,9 @@ export default function DealerLayout({
       role: 'dealer'
     });
     
+    // Instant access - no verification needed
     setIsCheckingAuth(false);
-  }, [user, isLoaded, mounted]);
+  }, [user, isLoaded, mounted, dealerUser, isCheckingAuth]);
 
   const toggleTheme = () => {
     setIsDark(!isDark);
@@ -148,13 +152,13 @@ export default function DealerLayout({
     signOut();
   };
 
-  // Show loading while checking authentication
+  // Show loading only while Clerk is loading (no verification needed)
   if (!mounted || !isLoaded || isCheckingAuth) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Verifying dealer access...</p>
+          <p className="text-gray-600">Loading dealer portal...</p>
         </div>
       </div>
     );

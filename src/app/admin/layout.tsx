@@ -87,9 +87,12 @@ export default function AdminLayout({
     }
   };
 
-  // Simple authentication check - trust Clerk session after login
+  // Simple authentication check - trust Clerk session after login (only run once)
   useEffect(() => {
     if (!isLoaded) return;
+    
+    // Skip if already authenticated
+    if (adminUser && !isCheckingAuth) return;
     
     if (!user) {
       // No user logged in, redirect to login
@@ -97,9 +100,9 @@ export default function AdminLayout({
       return;
     }
 
-    // User is authenticated via Clerk, check role metadata
+    // User is authenticated via Clerk - instant access
     const userRole = user.unsafeMetadata?.role;
-    console.log('Admin user authenticated:', user.emailAddresses?.[0]?.emailAddress, 'Role:', userRole);
+    console.log('Admin user authenticated - instant access:', user.emailAddresses?.[0]?.emailAddress, 'Role:', userRole);
     
     // Optional: Check if user has admin role in metadata (for extra security)
     if (userRole && userRole !== 'admin') {
@@ -116,16 +119,17 @@ export default function AdminLayout({
       role: 'admin'
     });
     
+    // Instant access - no verification needed
     setIsCheckingAuth(false);
-  }, [user, isLoaded, router]);
+  }, [user, isLoaded, router, adminUser, isCheckingAuth]);
 
-  // Show loading while checking authentication
+  // Show loading only while Clerk is loading (no verification needed)
   if (!isLoaded || isCheckingAuth) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Verifying admin access...</p>
+          <p className="text-gray-600">Loading admin portal...</p>
         </div>
       </div>
     );
