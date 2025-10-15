@@ -87,69 +87,36 @@ export default function AdminLayout({
     }
   };
 
-  // Check admin status on mount and user change
+  // Simple authentication check - trust Clerk session after login
   useEffect(() => {
-    const checkAdminStatus = async (retryCount = 0, maxRetries = 3) => {
-      if (!isLoaded) return;
-      
-      if (!user) {
-        router.push('/admin-login');
-        return;
-      }
+    if (!isLoaded) return;
+    
+    if (!user) {
+      // No user logged in, redirect to login
+      router.push('/admin-login');
+      return;
+    }
 
-      // Add delay to allow Clerk state to propagate after redirect
-      if (retryCount === 0) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-
-      try {
-        const response = await fetch('/api/admin/check-status');
-        const data = await response.json();
-        
-        console.log('Admin status check response:', { status: response.status, data, attempt: retryCount + 1 });
-        
-        if (response.ok) {
-          if (data.isAdmin) {
-            setAdminUser(data.user);
-            setIsCheckingAuth(false);
-          } else {
-            console.log('User is not admin:', data);
-            router.push('/access-denied?reason=admin_required');
-            return;
-          }
-        } else if (response.status === 401 && retryCount < maxRetries) {
-          // Retry after a short delay if authentication is not ready
-          console.log(`Admin status check failed (401), retrying in ${(retryCount + 1) * 500}ms... (attempt ${retryCount + 1}/${maxRetries})`);
-          setTimeout(() => {
-            checkAdminStatus(retryCount + 1, maxRetries);
-          }, (retryCount + 1) * 500);
-          return;
-        } else {
-          console.error('Admin status check failed:', data);
-          
-          // Show specific error messages
-          if (response.status === 404) {
-            alert(`Admin user not found in database. Please run this SQL in Supabase:\n\nINSERT INTO users (id, email, full_name, role, dealer_status, created_at, updated_at) VALUES (gen_random_uuid(), '${data.debug?.includes('@') ? data.debug.split(': ')[1] : 'admin@jeenmataimpex.com'}', 'Admin User', 'admin', 'approved', NOW(), NOW());`);
-          }
-          
-          router.push('/admin-login');
-          return;
-        }
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-        if (retryCount < maxRetries) {
-          setTimeout(() => {
-            checkAdminStatus(retryCount + 1, maxRetries);
-          }, (retryCount + 1) * 500);
-          return;
-        }
-        alert('Network error checking admin status. Please check your connection.');
-        router.push('/admin-login');
-        return;
-      }
-    };
-
-    checkAdminStatus();
+    // User is authenticated via Clerk, check role metadata
+    const userRole = user.unsafeMetadata?.role;
+    console.log('Admin user authenticated:', user.emailAddresses?.[0]?.emailAddress, 'Role:', userRole);
+    
+    // Optional: Check if user has admin role in metadata (for extra security)
+    if (userRole && userRole !== 'admin') {
+      console.log('User does not have admin role, redirecting to login');
+      router.push('/admin-login');
+      return;
+    }
+    
+    // Set basic user info for UI display
+    setAdminUser({
+      id: user.id,
+      email: user.emailAddresses?.[0]?.emailAddress,
+      name: user.fullName || user.firstName || 'Admin User',
+      role: 'admin'
+    });
+    
+    setIsCheckingAuth(false);
   }, [user, isLoaded, router]);
 
   // Show loading while checking authentication

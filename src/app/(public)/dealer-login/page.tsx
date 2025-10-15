@@ -250,7 +250,19 @@ export default function DealerLogin() {
       });
 
       if (result.status === 'complete') {
-        console.log('✅ Clerk login completed, starting seamless transition...');
+        console.log('✅ Clerk login completed, storing dealer role and starting seamless transition...');
+        
+        // Store dealer role in Clerk session metadata
+        try {
+          await user?.update({
+            unsafeMetadata: {
+              role: 'dealer',
+              verifiedAt: new Date().toISOString()
+            }
+          });
+        } catch (error) {
+          console.log('Note: Could not update user metadata, but proceeding with transition');
+        }
         
         // Start seamless transition sequence
         setAuthStep('verifying');

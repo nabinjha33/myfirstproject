@@ -140,7 +140,20 @@ function AdminLoginContent() {
         console.log('📊 API Data:', data);
         
         if (data.isAdmin) {
-          console.log('✅ Admin verification successful, redirecting...');
+          console.log('✅ Admin verification successful, storing role and redirecting...');
+          
+          // Store admin role in Clerk session metadata
+          try {
+            await user?.update({
+              unsafeMetadata: {
+                role: 'admin',
+                verifiedAt: new Date().toISOString()
+              }
+            });
+          } catch (error) {
+            console.log('Note: Could not update user metadata, but proceeding with redirect');
+          }
+          
           setIsLoading(false);
           window.location.replace(redirectUrl);
         } else {

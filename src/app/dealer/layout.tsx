@@ -102,82 +102,38 @@ export default function DealerLayout({
     setIsDark(isDarkMode);
   }, []);
 
-  // Check dealer status on mount and user change
+  // Simple authentication check - trust Clerk session after login
   useEffect(() => {
-    const checkDealerStatus = async (retryCount = 0, maxRetries = 3) => {
-      if (!isLoaded || !mounted) return;
-      
-      if (!user) {
-        window.location.href = '/dealer-login';
-        return;
-      }
+    if (!isLoaded || !mounted) return;
+    
+    if (!user) {
+      // No user logged in, redirect to login
+      window.location.href = '/dealer-login';
+      return;
+    }
 
-      try {
-        const userEmail = user.primaryEmailAddress?.emailAddress;
-        if (!userEmail) {
-          console.error('No email found for user');
-          window.location.href = '/dealer-login';
-          return;
-        }
-
-        console.log('Checking dealer status for:', {
-          clerkUserId: user.id,
-          userEmail: userEmail,
-          attempt: retryCount + 1
-        });
-
-        // Check dealer status in database
-        const response = await fetch('/api/dealers/check-status', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: userEmail,
-            clerkUserId: user.id
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.isApprovedDealer) {
-            setDealerUser(data.user);
-            setIsCheckingAuth(false);
-          } else {
-            console.log('User is not an approved dealer:', data);
-            alert('Your dealer account is not approved yet. Please contact support.');
-            await signOut();
-            return;
-          }
-        } else if (response.status === 401 && retryCount < maxRetries) {
-          // Retry after a short delay if authentication is not ready
-          console.log(`Dealer status check failed (401), retrying in ${(retryCount + 1) * 500}ms... (attempt ${retryCount + 1}/${maxRetries})`);
-          setTimeout(() => {
-            checkDealerStatus(retryCount + 1, maxRetries);
-          }, (retryCount + 1) * 500);
-          return;
-        } else {
-          console.error('Dealer status check failed:', response.status);
-          alert('Unable to verify dealer status. Please try logging in again.');
-          await signOut();
-          return;
-        }
-      } catch (error) {
-        console.error('Error checking dealer status:', error);
-        if (retryCount < maxRetries) {
-          setTimeout(() => {
-            checkDealerStatus(retryCount + 1, maxRetries);
-          }, (retryCount + 1) * 500);
-          return;
-        }
-        alert('Network error checking dealer status. Please check your connection.');
-        await signOut();
-        return;
-      }
-    };
-
-    checkDealerStatus();
-  }, [user, isLoaded, mounted, signOut]);
+    // User is authenticated via Clerk, check role metadata
+    const userEmail = user.primaryEmailAddress?.emailAddress;
+    const userRole = user.unsafeMetadata?.role;
+    console.log('Dealer user authenticated:', userEmail, 'Role:', userRole);
+    
+    // Optional: Check if user has dealer role in metadata (for extra security)
+    if (userRole && userRole !== 'dealer') {
+      console.log('User does not have dealer role, redirecting to login');
+      window.location.href = '/dealer-login';
+      return;
+    }
+    
+    // Set basic user info for UI display
+    setDealerUser({
+      id: user.id,
+      email: userEmail,
+      name: user.fullName || user.firstName || 'Dealer User',
+      role: 'dealer'
+    });
+    
+    setIsCheckingAuth(false);
+  }, [user, isLoaded, mounted]);
 
   const toggleTheme = () => {
     setIsDark(!isDark);
