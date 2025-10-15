@@ -186,24 +186,24 @@ function AdminLoginContent() {
         setAuthStep('verifying');
         setCurrentView('loading');
         
-        // Step 1: Verifying (800ms) - Allow time for Clerk state to propagate
+        // Step 1: Verifying (600ms) - Allow time for Clerk state to propagate
         setTimeout(() => {
           setAuthStep('redirecting');
-        }, 800);
+        }, 600);
         
-        // Step 2: Success animation (1300ms)
+        // Step 2: Success animation (1000ms)
         setTimeout(() => {
           setAuthStep('success');
           setCurrentView('success');
           setShowSuccessAnimation(true);
-        }, 1300);
+        }, 1000);
         
-        // Step 3: Redirect with smooth transition (2800ms total)
+        // Step 3: Redirect with smooth transition (2000ms total)
         setTimeout(() => {
           // Force navigation after successful authentication
           console.log('🚀 Redirecting to admin dashboard:', redirectUrl);
           window.location.replace(redirectUrl);
-        }, 2800);
+        }, 2000);
       } else {
         setError('Login incomplete. Please try again.');
       }

@@ -97,6 +97,11 @@ export default function AdminLayout({
         return;
       }
 
+      // Add delay to allow Clerk state to propagate after redirect
+      if (retryCount === 0) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
       try {
         const response = await fetch('/api/admin/check-status');
         const data = await response.json();
