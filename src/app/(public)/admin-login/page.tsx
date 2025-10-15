@@ -48,8 +48,8 @@ function AdminLoginContent() {
   const redirectUrl = searchParams.get('redirect_url') || '/admin/dashboard';
 
   useEffect(() => {
-    // Redirect if user is already authenticated and is admin
-    if (isLoaded && user) {
+    // Only redirect if user is already authenticated and we're not in the middle of a login flow
+    if (isLoaded && user && !isLoading && currentView === 'form') {
       console.log('User already logged in, checking admin status...');
       setIsLoading(true);
       
@@ -66,7 +66,7 @@ function AdminLoginContent() {
         checkAdminStatus();
       }
     }
-  }, [isLoaded, user, router]);
+  }, [isLoaded, user, router, isLoading, currentView]);
 
   const checkAdminStatus = async (retryCount = 0, maxRetries = 3) => {
     try {
@@ -200,8 +200,8 @@ function AdminLoginContent() {
         
         // Step 3: Redirect with smooth transition (2800ms total)
         setTimeout(() => {
-          // Use window.location.href for reliable state management
-          window.location.href = redirectUrl;
+          // Use Next.js router for seamless navigation without page reload
+          router.push(redirectUrl);
         }, 2800);
       } else {
         setError('Login incomplete. Please try again.');
