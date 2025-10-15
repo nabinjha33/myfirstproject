@@ -48,33 +48,11 @@ function AdminLoginContent() {
   const redirectUrl = searchParams.get('redirect_url') || '/admin/dashboard';
 
   useEffect(() => {
-    // Handle post-login flow and existing authentication
+    // Handle existing authenticated users who navigate back to login page
     if (isLoaded && user && currentView === 'form' && !isLoading) {
-      console.log('User already logged in, checking admin status...');
-      
-      // Check if we just completed login and reloaded
-      const justCompleted = sessionStorage.getItem('login_just_completed');
-      const storedRedirectUrl = sessionStorage.getItem('admin_redirect_after_login');
-      
-      if (justCompleted && storedRedirectUrl) {
-        console.log('🎉 Login just completed, proceeding with redirect...');
-        sessionStorage.removeItem('login_just_completed');
-        sessionStorage.removeItem('admin_redirect_after_login');
-        
-        // Show a brief "Redirecting..." message then verify and redirect
-        setIsLoading(true);
-        setAuthStep('verifying');
-        setCurrentView('loading');
-        
-        // Give a moment for UI to update, then verify
-        setTimeout(() => {
-          verifyAdminStatusWithRetry();
-        }, 500);
-      } else {
-        // Normal check for already logged in user - show manual options
-        console.log('User already authenticated, showing manual options');
-        setIsLoading(false);
-      }
+      console.log('User already logged in, showing manual options');
+      // Don't auto-redirect, let user choose to test admin access or logout
+      setIsLoading(false);
     }
   }, [isLoaded, user]);
 
@@ -211,15 +189,11 @@ function AdminLoginContent() {
           setShowSuccessAnimation(true);
         }, 1000);
         
-        // Step 3: Redirect with smooth transition (2500ms total)
+        // Step 3: Direct redirect after sufficient delay (2500ms total)
         setTimeout(() => {
-          // Store redirect info and reload page to ensure clean Clerk state
-          console.log('🚀 Completing login and refreshing for clean state...');
-          sessionStorage.setItem('admin_redirect_after_login', redirectUrl);
-          sessionStorage.setItem('login_just_completed', 'true');
-          
-          // Use window.location.reload to ensure Clerk server-side state is ready
-          window.location.reload();
+          // Redirect directly with sufficient time for Clerk state to propagate
+          console.log('🚀 Redirecting to admin dashboard...');
+          window.location.href = redirectUrl;
         }, 2500);
       } else {
         setError('Login incomplete. Please try again.');
