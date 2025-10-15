@@ -566,16 +566,102 @@ export default function AdminDealers() {
                       <div className="font-medium">{selectedItem.phone || 'N/A'}</div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-gray-400" />
+                    <div>
+                      <div className="text-sm text-gray-500">WhatsApp</div>
+                      <div className="font-medium">{selectedItem.whatsapp || 'N/A'}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-gray-400" />
+                    <div>
+                      <div className="text-sm text-gray-500">VAT/PAN</div>
+                      <div className="font-medium">{selectedItem.vat_pan || 'N/A'}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Building className="h-4 w-4 text-gray-400" />
+                    <div>
+                      <div className="text-sm text-gray-500">Business Type</div>
+                      <div className="font-medium">{selectedItem.business_type || 'N/A'}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-gray-400" />
+                    <div>
+                      <div className="text-sm text-gray-500">Status</div>
+                      <div className="font-medium">
+                        <Badge className={statusConfig[selectedItem.dealer_status || selectedItem.status as keyof typeof statusConfig]?.color || 'bg-gray-100 text-gray-800'}>
+                          {selectedItem.dealer_status || selectedItem.status || 'N/A'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 {selectedItem.address && (
                   <div className="flex items-start gap-2">
                     <MapPin className="h-4 w-4 text-gray-400 mt-1" />
                     <div>
-                      <div className="text-sm text-gray-500">Address</div>
+                      <div className="text-sm text-gray-500">Business Address</div>
                       <div className="font-medium">{selectedItem.address}</div>
                     </div>
                   </div>
                 )}
+                
+                {/* Additional dealer information */}
+                {(selectedItem.years_in_business || selectedItem.annual_turnover || selectedItem.interested_brands) && (
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Business Details</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      {selectedItem.years_in_business && (
+                        <div>
+                          <div className="text-sm text-gray-500">Years in Business</div>
+                          <div className="font-medium">{selectedItem.years_in_business}</div>
+                        </div>
+                      )}
+                      {selectedItem.annual_turnover && (
+                        <div>
+                          <div className="text-sm text-gray-500">Annual Turnover</div>
+                          <div className="font-medium">{selectedItem.annual_turnover}</div>
+                        </div>
+                      )}
+                      {selectedItem.interested_brands && (
+                        <div className="col-span-2">
+                          <div className="text-sm text-gray-500">Interested Brands</div>
+                          <div className="font-medium">
+                            {Array.isArray(selectedItem.interested_brands) 
+                              ? selectedItem.interested_brands.join(', ') 
+                              : selectedItem.interested_brands}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Timestamps */}
+                <div className="border-t pt-4">
+                  <h4 className="font-medium text-gray-900 mb-3">Timeline</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    {(selectedItem.created_at || selectedItem.created_date) && (
+                      <div>
+                        <div className="text-gray-500">Created</div>
+                        <div className="font-medium">
+                          {format(new Date(selectedItem.created_at || selectedItem.created_date), 'MMM dd, yyyy HH:mm')}
+                        </div>
+                      </div>
+                    )}
+                    {(selectedItem.updated_at || selectedItem.updated_date) && (
+                      <div>
+                        <div className="text-gray-500">Last Updated</div>
+                        <div className="font-medium">
+                          {format(new Date(selectedItem.updated_at || selectedItem.updated_date), 'MMM dd, yyyy HH:mm')}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
                 {selectedItem.message && (
                   <div>
                     <div className="text-sm text-gray-500 mb-1">Message</div>
