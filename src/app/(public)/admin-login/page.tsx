@@ -49,7 +49,10 @@ function AdminLoginContent() {
 
   useEffect(() => {
     // Only check for existing authentication on initial page load, not during login flow
-    if (isLoaded && user && currentView === 'form' && !isLoading) {
+    // Skip if we're coming from a redirect (to prevent loops)
+    const isFromRedirect = sessionStorage.getItem('login_redirect_in_progress');
+    
+    if (isLoaded && user && currentView === 'form' && !isLoading && !isFromRedirect) {
       console.log('User already logged in, checking admin status...');
       setIsLoading(true);
       
@@ -62,8 +65,9 @@ function AdminLoginContent() {
         // Verify admin status and redirect
         verifyAdminStatusWithRetry();
       } else {
-        // Normal check for already logged in user
-        checkAdminStatus();
+        // Normal check for already logged in user - but don't auto-redirect
+        console.log('User already authenticated, showing manual options');
+        setIsLoading(false);
       }
     }
   }, [isLoaded, user]);
@@ -132,7 +136,9 @@ function AdminLoginContent() {
         if (data.isAdmin) {
           console.log('✅ Admin verification successful, redirecting...');
           setIsLoading(false);
-          router.push(redirectUrl);
+          // Clear redirect tracking before successful redirect
+          sessionStorage.removeItem('login_redirect_in_progress');
+          window.location.replace(redirectUrl);
         } else {
           console.log('❌ User is not admin:', data);
           setIsLoading(false);
@@ -199,10 +205,21 @@ function AdminLoginContent() {
         }, 1000);
         
         // Step 3: Redirect with smooth transition (2000ms total)
-        setTimeout(() => {
-          // Force navigation after successful authentication
-          console.log('🚀 Redirecting to admin dashboard:', redirectUrl);
-          window.location.replace(redirectUrl);
+        setTimeout(async () => {
+          // Mark that we're starting a redirect to prevent loops
+          sessionStorage.setItem('login_redirect_in_progress', 'true');
+          
+          // Verify admin status before redirecting to prevent loops
+          console.log('🔄 Verifying admin access before redirect...');
+          try {
+            await verifyAdminStatusWithRetry();
+          } catch (error) {
+            console.error('Admin verification failed:', error);
+            sessionStorage.removeItem('login_redirect_in_progress');
+            setCurrentView('form');
+            setIsLoading(false);
+            setError('Unable to verify admin access. Please try again.');
+          }
         }, 2000);
       } else {
         setError('Login incomplete. Please try again.');
