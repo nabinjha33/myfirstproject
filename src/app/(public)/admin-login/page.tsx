@@ -48,11 +48,33 @@ function AdminLoginContent() {
   const redirectUrl = searchParams.get('redirect_url') || '/admin/dashboard';
 
   useEffect(() => {
-    // Handle existing authenticated users who navigate back to login page
+    // Handle post-login flow and existing authentication
     if (isLoaded && user && currentView === 'form' && !isLoading) {
-      console.log('User already logged in, showing manual options');
-      // Don't auto-redirect, let user choose to test admin access or logout
-      setIsLoading(false);
+      console.log('User already logged in, checking admin status...');
+      
+      // Check if we just completed login and reloaded
+      const justCompleted = sessionStorage.getItem('admin_login_just_completed');
+      const storedRedirectUrl = sessionStorage.getItem('admin_redirect_after_login');
+      
+      if (justCompleted && storedRedirectUrl) {
+        console.log('🎉 Login just completed, proceeding with redirect...');
+        sessionStorage.removeItem('admin_login_just_completed');
+        sessionStorage.removeItem('admin_redirect_after_login');
+        
+        // Show brief loading then verify and redirect
+        setIsLoading(true);
+        setAuthStep('verifying');
+        setCurrentView('loading');
+        
+        // Quick verification
+        setTimeout(() => {
+          verifyAdminStatusWithRetry();
+        }, 200);
+      } else {
+        // Normal check for already logged in user - show manual options
+        console.log('User already authenticated, showing manual options');
+        setIsLoading(false);
+      }
     }
   }, [isLoaded, user]);
 
@@ -177,24 +199,28 @@ function AdminLoginContent() {
         setAuthStep('verifying');
         setCurrentView('loading');
         
-        // Step 1: Verifying (600ms) - Allow time for Clerk state to propagate
+        // Step 1: Verifying (400ms) - Faster transition
         setTimeout(() => {
           setAuthStep('redirecting');
-        }, 600);
+        }, 400);
         
-        // Step 2: Success animation (1000ms)
+        // Step 2: Success animation (800ms)
         setTimeout(() => {
           setAuthStep('success');
           setCurrentView('success');
           setShowSuccessAnimation(true);
-        }, 1000);
+        }, 800);
         
-        // Step 3: Direct redirect after sufficient delay (2500ms total)
+        // Step 3: Fast reload with state tracking (1500ms total)
         setTimeout(() => {
-          // Redirect directly with sufficient time for Clerk state to propagate
-          console.log('🚀 Redirecting to admin dashboard...');
-          window.location.href = redirectUrl;
-        }, 2500);
+          // Store redirect info and reload for clean Clerk state
+          console.log('🚀 Completing login and refreshing for clean state...');
+          sessionStorage.setItem('admin_redirect_after_login', redirectUrl);
+          sessionStorage.setItem('admin_login_just_completed', 'true');
+          
+          // Fast reload to ensure Clerk server-side state is ready
+          window.location.reload();
+        }, 1500);
       } else {
         setError('Login incomplete. Please try again.');
       }

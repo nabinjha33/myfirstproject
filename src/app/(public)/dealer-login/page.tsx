@@ -66,11 +66,34 @@ export default function DealerLogin() {
       setShowEmailVerification(true);
     }
     
-    // Only check dealer status if user is loaded and not in the middle of signup/verification
-    if (isLoaded && user && !pendingVerification && !showEmailVerification) {
-      checkDealerStatus();
+    // Handle post-login flow and existing authentication
+    if (isLoaded && user && !pendingVerification && !showEmailVerification && currentView === 'form' && !isLoading) {
+      console.log('User already logged in, checking dealer status...');
+      
+      // Check if we just completed login and reloaded
+      const justCompleted = sessionStorage.getItem('dealer_login_just_completed');
+      const storedRedirectUrl = sessionStorage.getItem('dealer_redirect_after_login');
+      
+      if (justCompleted && storedRedirectUrl) {
+        console.log('🎉 Dealer login just completed, proceeding with redirect...');
+        sessionStorage.removeItem('dealer_login_just_completed');
+        sessionStorage.removeItem('dealer_redirect_after_login');
+        
+        // Show brief loading then redirect
+        setIsLoading(true);
+        setAuthStep('verifying');
+        setCurrentView('loading');
+        
+        // Quick redirect to dealer catalog
+        setTimeout(() => {
+          window.location.href = storedRedirectUrl;
+        }, 300);
+      } else {
+        // Normal check for already logged in user
+        checkDealerStatus();
+      }
     }
-  }, [isLoaded, user, router, pendingVerification, showEmailVerification]);
+  }, [isLoaded, user, router, pendingVerification, showEmailVerification, currentView, isLoading]);
 
   const checkDealerStatus = async (retryCount = 0, maxRetries = 3) => {
     if (!user) return;
@@ -233,23 +256,28 @@ export default function DealerLogin() {
         setAuthStep('verifying');
         setCurrentView('loading');
         
-        // Step 1: Verifying (800ms) - Allow time for Clerk state to propagate
+        // Step 1: Verifying (400ms) - Faster transition
         setTimeout(() => {
           setAuthStep('redirecting');
-        }, 800);
+        }, 400);
         
-        // Step 2: Success animation (1300ms)
+        // Step 2: Success animation (800ms)
         setTimeout(() => {
           setAuthStep('success');
           setCurrentView('success');
           setShowSuccessAnimation(true);
-        }, 1300);
+        }, 800);
         
-        // Step 3: Redirect with smooth transition (2800ms total)
+        // Step 3: Fast reload with state tracking (1500ms total)
         setTimeout(() => {
-          // Use window.location.href for reliable state management
-          window.location.href = '/dealer/catalog';
-        }, 2800);
+          // Store redirect info and reload for clean Clerk state
+          console.log('🚀 Completing dealer login and refreshing for clean state...');
+          sessionStorage.setItem('dealer_redirect_after_login', '/dealer/catalog');
+          sessionStorage.setItem('dealer_login_just_completed', 'true');
+          
+          // Fast reload to ensure Clerk server-side state is ready
+          window.location.reload();
+        }, 1500);
       } else {
         setSubmissionStatus({
           type: 'error',
