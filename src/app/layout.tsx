@@ -12,6 +12,15 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Jeen Mata Impex - Premium Import Solutions",
   description: "Your trusted partner for premium imports from China and India to Nepal. FastDrill, Spider, Gorkha, and General Imports brands.",
+  icons: {
+    icon: [
+      { url: '/icon.png', sizes: '32x32', type: 'image/png' }
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }
+    ],
+    shortcut: '/icon.png',
+  },
 };
 
 export default function RootLayout({

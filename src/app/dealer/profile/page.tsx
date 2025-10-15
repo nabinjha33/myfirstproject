@@ -10,7 +10,6 @@ import { Building, Phone, Mail, User as UserIcon, Save, CheckCircle, XCircle } f
 import DealerAuthWrapper from '@/components/dealer/DealerAuthWrapper';
 import { useDealerAuth } from '@/hooks/useDealerAuth';
 import PasswordChangeForm from '@/components/auth/PasswordChangeForm';
-import EmailVerificationForm from '@/components/auth/EmailVerificationForm';
 
 export default function DealerProfile() {
   const [profile, setProfile] = useState({
@@ -20,7 +19,9 @@ export default function DealerProfile() {
     address: "",
     phone: "",
     whatsapp: "",
+    email: ""
   });
+  const [originalProfile, setOriginalProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -39,96 +40,54 @@ export default function DealerProfile() {
     try {
       console.log('Fetching user data for:', dealerUser.email);
       
-      // First try to get current user data
+      // Get current user data from database
       const currentUser = await User.me();
       console.log('Current user data:', currentUser);
-
-      // If user profile is missing business data, check for an approved application and sync it
-      if (currentUser && !currentUser.business_name && currentUser.email) {
-        console.log('User missing business data, checking applications...');
-        const allApps = await DealerApplication.list();
-        const apps = allApps.filter((app: any) => app.email === currentUser.email && app.status === 'approved');
-        console.log('Found approved applications:', apps.length);
-        
-        if (apps.length > 0) {
-          const app = apps[0];
-          console.log('Syncing application data:', app);
-          
-          const profileData = {
-            business_name: app.business_name || "",
-            full_name: app.contact_person || currentUser.full_name || "",
-            vat_pan: app.vat_pan || "",
-            address: app.address || "",
-            phone: app.phone || "",
-            whatsapp: app.whatsapp || app.phone || "",
-            business_type: app.business_type || "",
-            dealer_status: 'approved'
-          };
-          
-          // Update user record in the backend with application data
-          try {
-            await User.updateMyUserData(profileData);
-            console.log('Successfully synced application data to user profile');
-          } catch (syncError) {
-            console.error('Failed to sync application data:', syncError);
-          }
-          
-          // Set local state with the newly synced data
-          setProfile({ 
-            business_name: profileData.business_name,
-            contact_person: profileData.full_name,
-            vat_pan: profileData.vat_pan,
-            address: profileData.address,
-            phone: profileData.phone,
-            whatsapp: profileData.whatsapp
-          });
-        } else {
-          console.log('No approved applications found, using basic user data');
-          // If no business_name and no approved application, populate with existing user data or empty strings
-          setProfile({
-            business_name: dealerUser?.businessName || "",
-            contact_person: dealerUser?.name || currentUser?.full_name || "",
-            vat_pan: "",
-            address: "",
-            phone: dealerUser?.phone || currentUser?.phone || "",
-            whatsapp: "",
-          });
-        }
-      } else if (currentUser) {
-        console.log('Using existing user profile data');
-        // If business data already exists, populate from current user's profile
-        setProfile({
-          business_name: currentUser.business_name || dealerUser?.businessName || "",
-          contact_person: currentUser.full_name || dealerUser?.name || "",
+      
+      if (currentUser) {
+        // Set profile data from current user record
+        const profileData = {
+          business_name: currentUser.business_name || "",
+          contact_person: currentUser.full_name || "",
           vat_pan: currentUser.vat_pan || "",
           address: currentUser.address || "",
-          phone: currentUser.phone || dealerUser?.phone || "",
+          phone: currentUser.phone || "",
           whatsapp: currentUser.whatsapp || "",
-        });
+          email: currentUser.email || dealerUser.email || ""
+        };
+        
+        console.log('Setting profile data:', profileData);
+        setProfile(profileData);
+        setOriginalProfile({...profileData});
       } else {
-        console.log('No user data found, using fallback');
-        // If currentUser is null, use dealerUser data as fallback
-        setProfile({
+        // Fallback to dealerUser data if database fetch fails
+        const fallbackData = {
           business_name: dealerUser?.businessName || "",
           contact_person: dealerUser?.name || "",
-          vat_pan: "",
-          address: "",
+          vat_pan: dealerUser?.vatPan || "",
+          address: dealerUser?.address || "",
           phone: dealerUser?.phone || "",
-          whatsapp: "",
-        });
+          whatsapp: dealerUser?.whatsapp || "",
+          email: dealerUser?.email || ""
+        };
+        console.log('Using fallback data:', fallbackData);
+        setProfile(fallbackData);
+        setOriginalProfile({...fallbackData});
       }
-
     } catch (error) {
       console.error("Failed to fetch user data:", error);
-      // Use dealerUser data as fallback
-      setProfile({
+      // Use dealerUser data as fallback on error
+      const fallbackData = {
         business_name: dealerUser?.businessName || "",
         contact_person: dealerUser?.name || "",
-        vat_pan: "",
-        address: "",
+        vat_pan: dealerUser?.vatPan || "",
+        address: dealerUser?.address || "",
         phone: dealerUser?.phone || "",
-        whatsapp: "",
-      });
+        whatsapp: dealerUser?.whatsapp || "",
+        email: dealerUser?.email || ""
+      };
+      setProfile(fallbackData);
+      setOriginalProfile({...fallbackData});
     }
     setIsLoading(false);
   };
@@ -138,7 +97,26 @@ export default function DealerProfile() {
     setProfile((prev) => ({ ...prev, [id]: value }));
   };
 
+  const hasChanges = () => {
+    if (!originalProfile) return false;
+    return (
+      profile.business_name !== originalProfile.business_name ||
+      profile.contact_person !== originalProfile.contact_person ||
+      profile.vat_pan !== originalProfile.vat_pan ||
+      profile.address !== originalProfile.address ||
+      profile.phone !== originalProfile.phone ||
+      profile.whatsapp !== originalProfile.whatsapp
+    );
+  };
+
   const handleSaveProfile = async () => {
+    // Check if there are any changes before saving
+    if (!hasChanges()) {
+      setSaveStatus("no_changes");
+      setTimeout(() => setSaveStatus(null), 3000);
+      return;
+    }
+
     setIsSaving(true);
     setSaveStatus(null);
     
@@ -149,44 +127,50 @@ export default function DealerProfile() {
       
       console.log('Saving profile data:', profile);
       
-      // Prepare data for saving
+      // Prepare data for saving to database
       const saveData = {
-        business_name: profile.business_name,
-        full_name: profile.contact_person,
-        vat_pan: profile.vat_pan,
-        address: profile.address,
-        phone: profile.phone,
-        whatsapp: profile.whatsapp,
-        // Ensure dealer status is maintained
+        business_name: profile.business_name.trim(),
+        full_name: profile.contact_person.trim(),
+        vat_pan: profile.vat_pan.trim(),
+        address: profile.address.trim(),
+        phone: profile.phone.trim(),
+        whatsapp: profile.whatsapp.trim(),
         dealer_status: 'approved',
         role: 'dealer'
       };
       
-      console.log('Sending update request with data:', saveData);
+      console.log('Sending update request to database:', saveData);
       
       // Save to database
       const result = await User.updateMyUserData(saveData);
-      console.log('Save result:', result);
+      console.log('Database update result:', result);
+      
+      // Update original profile to match saved data
+      const updatedProfile = {
+        business_name: saveData.business_name,
+        contact_person: saveData.full_name,
+        vat_pan: saveData.vat_pan,
+        address: saveData.address,
+        phone: saveData.phone,
+        whatsapp: saveData.whatsapp,
+        email: profile.email
+      };
+      setOriginalProfile(updatedProfile);
       
       setSaveStatus("success");
-      
-      // Refresh data to confirm save
-      setTimeout(() => {
-        fetchUserData();
-      }, 1000);
+      console.log('Profile successfully updated in database');
       
     } catch (error: any) {
       console.error("Failed to save profile:", error);
       setSaveStatus("error");
       
-      // Show specific error message if available
       if (error.message) {
         console.error('Error details:', error.message);
       }
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveStatus(null), 5000);
     }
-    
-    setIsSaving(false);
-    setTimeout(() => setSaveStatus(null), 5000);
   };
   
   if (isLoading) {
@@ -260,13 +244,18 @@ export default function DealerProfile() {
               {saveStatus === 'success' && (
                 <div className="flex items-center gap-2 text-sm text-green-600">
                   <CheckCircle className="w-4 h-4" />
-                  <span>Profile saved successfully! Changes have been updated in the database.</span>
+                  <span>Profile updated successfully in database!</span>
                 </div>
               )}
               {saveStatus === 'error' && (
                 <div className="flex items-center gap-2 text-sm text-red-600">
                   <XCircle className="w-4 h-4" />
-                  <span>Failed to save profile. Please check your connection and try again.</span>
+                  <span>Failed to save profile. Please try again.</span>
+                </div>
+              )}
+              {saveStatus === 'no_changes' && (
+                <div className="flex items-center gap-2 text-sm text-blue-600">
+                  <span>No changes detected to save.</span>
                 </div>
               )}
             </div>
@@ -280,7 +269,6 @@ export default function DealerProfile() {
           
           {/* Security Settings */}
           <div className="space-y-6">
-            <EmailVerificationForm />
             <PasswordChangeForm userType="dealer" />
           </div>
         </div>

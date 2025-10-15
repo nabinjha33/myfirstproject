@@ -44,10 +44,10 @@ async function handleDealerStatusCheck(req: NextRequest, email?: string, clerkUs
       );
     }
 
-    // Check user role and dealer status in Supabase
+    // Check user role and dealer status in Supabase - fetch ALL fields
     const { data: user, error } = await supabaseAdmin
       .from('users')
-      .select('id, email, full_name, role, dealer_status, business_name, phone')
+      .select('id, email, full_name, role, dealer_status, business_name, phone, vat_pan, address, whatsapp')
       .eq('email', email)
       .single();
 
@@ -132,6 +132,9 @@ async function handleDealerStatusCheck(req: NextRequest, email?: string, clerkUs
         phone: user.phone,
         role: user.role,
         dealerStatus: user.dealer_status,
+        vatPan: user.vat_pan,
+        address: user.address,
+        whatsapp: user.whatsapp
       }
     });
 

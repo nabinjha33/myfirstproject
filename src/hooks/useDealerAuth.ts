@@ -12,6 +12,9 @@ interface DealerUser {
   phone?: string;
   role: string;
   dealerStatus: string;
+  vatPan?: string;
+  address?: string;
+  whatsapp?: string;
 }
 
 interface UseDealerAuthReturn {
@@ -28,12 +31,40 @@ export function useDealerAuth(): UseDealerAuthReturn {
   const [dealerUser, setDealerUser] = useState<DealerUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasVerified, setHasVerified] = useState(false);
 
   useEffect(() => {
     const checkDealerAuth = async (retryCount = 0, maxRetries = 3) => {
       if (!isLoaded) return;
 
+      // If already verified in this session, skip API call
+      if (hasVerified && dealerUser) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Check session storage for cached dealer data
+      const cachedData = sessionStorage.getItem('dealerUser');
+      if (cachedData && clerkUser) {
+        try {
+          const cached = JSON.parse(cachedData);
+          // Verify cache is for current user and has complete data
+          if (cached.id === clerkUser.id && cached.vatPan !== undefined) {
+            setDealerUser(cached);
+            setHasVerified(true);
+            setIsLoading(false);
+            return;
+          } else {
+            // Clear old cache that doesn't have complete data
+            sessionStorage.removeItem('dealerUser');
+          }
+        } catch (e) {
+          sessionStorage.removeItem('dealerUser');
+        }
+      }
+
       if (!clerkUser) {
+        sessionStorage.removeItem('dealerUser');
         setError('Not authenticated');
         setIsLoading(false);
         router.push('/dealer-login');
@@ -73,7 +104,10 @@ export function useDealerAuth(): UseDealerAuthReturn {
           const data = await response.json();
           if (data.isApprovedDealer) {
             setDealerUser(data.user);
+            setHasVerified(true);
             setError(null);
+            // Cache the dealer user data in session storage
+            sessionStorage.setItem('dealerUser', JSON.stringify(data.user));
           } else {
             setError('Dealer account not approved');
             router.push('/dealer-login?error=not_approved');
@@ -109,7 +143,7 @@ export function useDealerAuth(): UseDealerAuthReturn {
     };
 
     checkDealerAuth();
-  }, [clerkUser, isLoaded, router]);
+  }, [clerkUser, isLoaded, router, hasVerified, dealerUser]);
 
   return {
     user: dealerUser,
