@@ -114,6 +114,10 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
   };
   
   const handleSelectChange = (id: string, value: string) => {
+    // Don't set placeholder values
+    if (value === 'no-brands' || value === 'no-categories') {
+      return;
+    }
     setFormData(prev => ({ ...prev, [id]: value }));
   };
 
@@ -126,11 +130,11 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
         alert('Product name is required');
         return;
       }
-      if (!formData.brand_id) {
+      if (!formData.brand_id || formData.brand_id === 'no-brands') {
         alert('Please select a brand');
         return;
       }
-      if (!formData.category_id) {
+      if (!formData.category_id || formData.category_id === 'no-categories') {
         alert('Please select a category');
         return;
       }
@@ -189,7 +193,7 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
                   <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
                 ))
               ) : (
-                <SelectItem value="" disabled>No brands available</SelectItem>
+                <SelectItem value="no-brands" disabled>No brands available</SelectItem>
               )}
             </SelectContent>
           </Select>
@@ -206,7 +210,7 @@ export default function ProductForm({ product, onSubmitSuccess }: ProductFormPro
                   <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
                 ))
               ) : (
-                <SelectItem value="" disabled>No categories available</SelectItem>
+                <SelectItem value="no-categories" disabled>No categories available</SelectItem>
               )}
             </SelectContent>
           </Select>

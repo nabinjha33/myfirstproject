@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -132,6 +133,9 @@ export default function AdminProducts() {
           <DialogContent className="sm:max-w-4xl">
             <DialogHeader>
               <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+              <DialogDescription>
+                {editingProduct ? 'Update the product information below.' : 'Fill in the details to create a new product.'}
+              </DialogDescription>
             </DialogHeader>
             <ProductForm product={editingProduct} onSubmitSuccess={handleFormSubmit} />
           </DialogContent>
