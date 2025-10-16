@@ -1,69 +1,69 @@
-// Brand theme generator utility
+// Brand theme generator utility - Returns neutral color themes for all brands
 export const generateBrandTheme = (brandName: string) => {
   const themes = [
     {
-      primary: 'from-emerald-600 to-emerald-800',
-      secondary: 'from-emerald-50 to-green-50',
-      accent: 'emerald-600',
-      accentHover: 'emerald-700',
-      text: 'emerald-800',
-      gradient: 'bg-gradient-to-br from-emerald-600 via-emerald-700 to-green-700'
-    },
-    {
-      primary: 'from-purple-600 to-purple-800',
-      secondary: 'from-purple-50 to-violet-50',
-      accent: 'purple-600',
-      accentHover: 'purple-700',
-      text: 'purple-800',
-      gradient: 'bg-gradient-to-br from-purple-600 via-purple-700 to-violet-700'
-    },
-    {
-      primary: 'from-indigo-600 to-indigo-800',
-      secondary: 'from-indigo-50 to-blue-50',
-      accent: 'indigo-600',
-      accentHover: 'indigo-700',
-      text: 'indigo-800',
-      gradient: 'bg-gradient-to-br from-indigo-600 via-indigo-700 to-blue-700'
-    },
-    {
-      primary: 'from-orange-600 to-orange-800',
-      secondary: 'from-orange-50 to-amber-50',
-      accent: 'orange-600',
-      accentHover: 'orange-700',
-      text: 'orange-800',
-      gradient: 'bg-gradient-to-br from-orange-600 via-orange-700 to-red-700'
-    },
-    {
-      primary: 'from-teal-600 to-teal-800',
-      secondary: 'from-teal-50 to-cyan-50',
-      accent: 'teal-600',
-      accentHover: 'teal-700',
-      text: 'teal-800',
-      gradient: 'bg-gradient-to-br from-teal-600 via-teal-700 to-cyan-700'
-    },
-    {
-      primary: 'from-rose-600 to-rose-800',
-      secondary: 'from-rose-50 to-pink-50',
-      accent: 'rose-600',
-      accentHover: 'rose-700',
-      text: 'rose-800',
-      gradient: 'bg-gradient-to-br from-rose-600 via-rose-700 to-pink-700'
-    },
-    {
-      primary: 'from-slate-600 to-slate-800',
+      primary: 'from-slate-700 to-slate-800',
       secondary: 'from-slate-50 to-gray-50',
+      accent: 'slate-700',
+      accentHover: 'slate-800',
+      text: 'slate-800',
+      gradient: 'bg-gradient-to-br from-slate-700 via-slate-800 to-gray-800'
+    },
+    {
+      primary: 'from-gray-700 to-gray-800',
+      secondary: 'from-gray-50 to-slate-50',
+      accent: 'gray-700',
+      accentHover: 'gray-800',
+      text: 'gray-800',
+      gradient: 'bg-gradient-to-br from-gray-700 via-gray-800 to-slate-800'
+    },
+    {
+      primary: 'from-zinc-700 to-zinc-800',
+      secondary: 'from-zinc-50 to-gray-50',
+      accent: 'zinc-700',
+      accentHover: 'zinc-800',
+      text: 'zinc-800',
+      gradient: 'bg-gradient-to-br from-zinc-700 via-zinc-800 to-gray-800'
+    },
+    {
+      primary: 'from-neutral-700 to-neutral-800',
+      secondary: 'from-neutral-50 to-gray-50',
+      accent: 'neutral-700',
+      accentHover: 'neutral-800',
+      text: 'neutral-800',
+      gradient: 'bg-gradient-to-br from-neutral-700 via-neutral-800 to-gray-800'
+    },
+    {
+      primary: 'from-stone-700 to-stone-800',
+      secondary: 'from-stone-50 to-gray-50',
+      accent: 'stone-700',
+      accentHover: 'stone-800',
+      text: 'stone-800',
+      gradient: 'bg-gradient-to-br from-stone-700 via-stone-800 to-gray-800'
+    },
+    {
+      primary: 'from-gray-600 to-gray-700',
+      secondary: 'from-gray-50 to-slate-100',
+      accent: 'gray-600',
+      accentHover: 'gray-700',
+      text: 'gray-700',
+      gradient: 'bg-gradient-to-br from-gray-600 via-gray-700 to-slate-700'
+    },
+    {
+      primary: 'from-slate-600 to-slate-700',
+      secondary: 'from-slate-50 to-gray-100',
       accent: 'slate-600',
       accentHover: 'slate-700',
-      text: 'slate-800',
+      text: 'slate-700',
       gradient: 'bg-gradient-to-br from-slate-600 via-slate-700 to-gray-700'
     },
     {
-      primary: 'from-cyan-600 to-cyan-800',
-      secondary: 'from-cyan-50 to-blue-50',
-      accent: 'cyan-600',
-      accentHover: 'cyan-700',
-      text: 'cyan-800',
-      gradient: 'bg-gradient-to-br from-cyan-600 via-cyan-700 to-blue-700'
+      primary: 'from-zinc-600 to-zinc-700',
+      secondary: 'from-zinc-50 to-slate-100',
+      accent: 'zinc-600',
+      accentHover: 'zinc-700',
+      text: 'zinc-700',
+      gradient: 'bg-gradient-to-br from-zinc-600 via-zinc-700 to-slate-700'
     }
   ];
   

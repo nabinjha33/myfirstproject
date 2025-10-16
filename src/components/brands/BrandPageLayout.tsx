@@ -41,20 +41,20 @@ import {
 // Brand-specific themes
 const brandThemes: any = {
   'FastDrill': {
-    primary: 'from-blue-900 to-blue-950',
-    secondary: 'from-blue-50 to-cyan-50',
-    accent: 'blue-600',
-    accentHover: 'blue-700',
-    text: 'blue-800',
-    gradient: 'bg-gradient-to-br from-blue-900 via-blue-950 to-slate-900'
-  },
-  'Spider': {
-    primary: 'from-red-600 to-red-800',
-    secondary: 'from-red-50 to-orange-50',
+    primary: 'from-red-700 to-red-900',
+    secondary: 'from-red-50 to-gray-100',
     accent: 'red-600',
     accentHover: 'red-700',
     text: 'red-800',
-    gradient: 'bg-gradient-to-br from-red-600 via-red-700 to-orange-700'
+    gradient: 'bg-gradient-to-br from-red-700 via-red-800 to-gray-700'
+  },
+  'Spider': {
+    primary: 'from-[#0a1929] to-[#1a2332]',
+    secondary: 'from-slate-50 to-slate-100',
+    accent: 'slate-900',
+    accentHover: 'slate-800',
+    text: 'slate-900',
+    gradient: 'bg-gradient-to-br from-[#0a1929] via-[#0f1f30] to-[#1a2332]'
   },
   'Gorkha': {
     primary: 'from-amber-700 to-red-900',
